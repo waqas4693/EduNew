@@ -13,6 +13,8 @@ import AddResource from './components/forms/AddResource'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import Units from './components/app-components/Units'
+import Section from './components/app-components/Section'
+import LearnerFrame from './components/app-components/LearnerFrame'
 
 const theme = createTheme({
   palette: {
@@ -62,6 +64,8 @@ function App() {
                       <Routes>
                         <Route path="/dashboard" element={<StudentDashboard />} />
                         <Route path="/units/:courseId" element={<Units />} />
+                        <Route path="/units/:courseId/section/:unitId" element={<Section />} />
+                        <Route path="/units/:courseId/section/:unitId/learn/:sectionId" element={<LearnerFrame />} />
                       </Routes>
                     </DashboardLayout>
                   </PrivateRoute>

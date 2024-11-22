@@ -39,7 +39,7 @@ app.get('/', function (req, res) {
 })
 
 // app.use('/api/login', loginRoutes)
-// app.use('/api/s3', s3Routes)
+app.use('/s3', s3Routes)
 app.use('/student', studentRoutes)
 app.use('/courses', courseRoutes)
 app.use('/units', unitRoutes)

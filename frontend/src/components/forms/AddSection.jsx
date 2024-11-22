@@ -7,7 +7,7 @@ import {
   Paper,
   Autocomplete
 } from '@mui/material'
-import { postData } from '../../api/api'
+import { postData, getData } from '../../api/api'
 
 const AddSection = () => {
   const [name, setName] = useState('')
@@ -28,10 +28,9 @@ const AddSection = () => {
 
   const fetchCourses = async () => {
     try {
-      const response = await fetch('/api/courses')
-      if (response.ok) {
-        const data = await response.json()
-        setCourses(data.data)
+      const response = await getData('courses')
+      if (response.status === 200) {
+        setCourses(response.data.data)
       }
     } catch (error) {
       console.error('Error fetching courses:', error)
@@ -40,10 +39,9 @@ const AddSection = () => {
 
   const fetchUnits = async () => {
     try {
-      const response = await fetch(`/api/units?courseId=${courseId}`)
-      if (response.ok) {
-        const data = await response.json()
-        setUnits(data.data)
+      const response = await getData(`units/${courseId}`)
+      if (response.status === 200) {
+        setUnits(response.data.units)
       }
     } catch (error) {
       console.error('Error fetching units:', error)

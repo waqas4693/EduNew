@@ -1,34 +1,62 @@
 import Resource from '../models/resource.js'
-import Section from '../models/section.js'
 import { handleError } from '../utils/errorHandler.js'
 
 export const createResource = async (req, res) => {
   try {
-    const { name, sectionId } = req.body
-
-    const section = await Section.findById(sectionId)
-    if (!section) {
-      return res.status(404).json({
-        success: false,
-        message: 'Section not found'
-      })
-    }
-
+    const { name, resourceType, content, sectionId } = req.body
+    
     const resource = new Resource({
       name,
-      sectionId
+      resourceType,
+      sectionId,
+      content: {
+        text: content?.text || '',
+        questions: content?.questions || [],
+        backgroundImage: content?.backgroundImage || '',
+        previewImage: content?.previewImage || ''
+      }
     })
 
     const savedResource = await resource.save()
     
-    section.resources.push(savedResource._id)
-    await section.save()
-
     res.status(201).json({
       success: true,
       data: savedResource
     })
 
+  } catch (error) {
+    handleError(res, error)
+  }
+}
+
+export const getResources = async (req, res) => {
+  try {
+    const { sectionId } = req.query
+    const resources = await Resource.find({ 
+      sectionId,
+      status: 1 
+    })
+    res.status(200).json({
+      success: true,
+      data: resources
+    })
+  } catch (error) {
+    handleError(res, error)
+  }
+}
+
+export const getSectionResources = async (req, res) => {
+  try {
+    const { sectionId } = req.params
+    const resources = await Resource.find({
+      sectionId,
+      status: 1
+    }).lean()
+
+    res.status(200).json({
+      success: true,
+      data: resources
+    })
   } catch (error) {
     handleError(res, error)
   }

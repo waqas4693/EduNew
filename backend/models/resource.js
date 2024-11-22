@@ -10,6 +10,20 @@ const resourceSchema = new mongoose.Schema({
     ref: 'Section',
     required: true
   },
+  resourceType: {
+    type: String,
+    enum: ['VIDEO', 'IMAGE', 'AUDIO', 'PDF', 'PPT', 'TEXT'],
+    required: true
+  },
+  content: {
+    text: String,
+    questions: [{
+      question: String,
+      answer: String
+    }],
+    backgroundImage: String,
+    previewImage: String
+  },
   status: {
     type: Number,
     enum: [1, 2],
