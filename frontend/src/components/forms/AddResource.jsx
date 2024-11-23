@@ -364,10 +364,14 @@ const AddResource = () => {
     }
   }
 
-  const uploadFileToS3 = async (file) => {
+  const uploadFileToS3 = async (file, resourceName) => {
     try {
-      const { data: { signedUrl } } = await axios.post(url + 's3', {
-        fileName: file.name,
+      const fileExtension = file.name.split('.').pop()
+      const sanitizedResourceName = resourceName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()
+      const newFileName = `${sanitizedResourceName}.${fileExtension}`
+
+      const { data: { signedUrl } } = await axios.post(url + 'api/s3', {
+        fileName: newFileName,
         fileType: file.type
       })
 
@@ -381,7 +385,7 @@ const AddResource = () => {
         }
       })
 
-      return file.name
+      return newFileName
     } catch (error) {
       console.error('Error uploading to S3:', error)
       throw error
@@ -391,9 +395,6 @@ const AddResource = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsUploading(true)
-
-    console.log('Submitting Correctly')
-    console.log(formData)
     
     try {
       if (!formData.name || !formData.resourceType || !sectionId) {
@@ -401,17 +402,11 @@ const AddResource = () => {
         return
       }
 
-      console.log('formData')
-      console.log(formData)
-
       const resourceData = {
         name: formData.name,
         resourceType: formData.resourceType,
         sectionId: sectionId
       }
-
-      console.log('resourceData')
-      console.log(resourceData)
 
       if (formData.resourceType === 'TEXT') {
         const contentData = {
@@ -420,7 +415,7 @@ const AddResource = () => {
         }
         
         if (formData.content.file) {
-          const fileName = await uploadFileToS3(formData.content.file)
+          const fileName = await uploadFileToS3(formData.content.file, formData.name)
           contentData.imageUrl = fileName
         }
         
