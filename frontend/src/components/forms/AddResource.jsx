@@ -367,7 +367,7 @@ const AddResource = () => {
   const uploadFileToS3 = async (file, resourceName) => {
     try {
 
-      const { data: { signedUrl } } = await axios.post(url + 'api/s3', {
+      const { data: { signedUrl } } = await axios.post(url + 's3', {
         fileName: resourceName,
         fileType: file.type
       })
