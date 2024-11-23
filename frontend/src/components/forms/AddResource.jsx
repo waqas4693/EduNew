@@ -369,7 +369,7 @@ const AddResource = () => {
       const fileExtension = file.name.split('.').pop()
       const finalFileName = `${resourceName}.${fileExtension}`
 
-      const { data: { signedUrl } } = await axios.post(url + 'api/s3', {
+      const { data: { signedUrl } } = await axios.post(url + 's3', {
         fileName: finalFileName,
         fileType: file.type
       })
