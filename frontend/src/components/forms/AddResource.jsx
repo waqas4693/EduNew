@@ -364,67 +364,93 @@ const AddResource = () => {
     }
   }
 
-  const uploadFileToS3 = async (file) => {
-    try {
-      const { data: { signedUrl } } = await axios.post(url + 's3', {
-        fileName: file.name,
-        fileType: file.type
-      })
+  // const uploadFileToS3 = async (file) => {
+  //   try {
+  //     const { data: { signedUrl } } = await axios.post(url + 's3', {
+  //       fileName: file.name,
+  //       fileType: file.type
+  //     })
 
-      await axios.put(signedUrl, file, {
-        headers: {
-          'Content-Type': file.type
-        },
-        onUploadProgress: (progressEvent) => {
-          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-          setUploadProgress(progress)
-        }
-      })
+  //     await axios.put(signedUrl, file, {
+  //       headers: {
+  //         'Content-Type': file.type
+  //       },
+  //       onUploadProgress: (progressEvent) => {
+  //         const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+  //         setUploadProgress(progress)
+  //       }
+  //     })
 
-      return file.name
-    } catch (error) {
-      console.error('Error uploading to S3:', error)
-      throw error
-    }
-  }
+  //     return file.name
+  //   } catch (error) {
+  //     console.error('Error uploading to S3:', error)
+  //     throw error
+  //   }
+  // }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsUploading(true)
+
+    console.log('Submitting Correctly')
+    console.log(formData)
+    
     try {
-      const formDataToSend = new FormData()
-      formDataToSend.append('name', formData.name)
-      formDataToSend.append('resourceType', formData.resourceType)
-      formDataToSend.append('sectionId', sectionId)
+      if (!formData.name || !formData.resourceType || !sectionId) {
+        alert('Please fill all required fields')
+        return
+      }
+
+      console.log('formData')
+      console.log(formData)
+
+      const resourceData = {
+        name: formData.name,
+        resourceType: formData.resourceType,
+        sectionId: sectionId
+      }
+
+      console.log('resourceData')
+      console.log(resourceData)
 
       if (formData.resourceType === 'TEXT') {
         const contentData = {
           text: formData.content.text,
           questions: formData.content.questions
         }
+        
         if (formData.content.file) {
           const fileName = await uploadFileToS3(formData.content.file)
           contentData.imageUrl = fileName
         }
-        formDataToSend.append('content', JSON.stringify(contentData))
+        
+        resourceData.content = contentData
       } else {
+        const contentData = {}
+        
         if (formData.content.file) {
           const fileName = await uploadFileToS3(formData.content.file)
-          formDataToSend.append('fileUrl', fileName)
+          contentData.fileUrl = fileName
         }
 
         if (formData.resourceType === 'AUDIO' && formData.content.backgroundImage) {
           const bgImageName = await uploadFileToS3(formData.content.backgroundImage)
-          formDataToSend.append('backgroundImageUrl', bgImageName)
+          contentData.backgroundImageUrl = bgImageName
         }
 
         if (formData.resourceType === 'PPT' && formData.content.previewImage) {
           const previewImageName = await uploadFileToS3(formData.content.previewImage)
-          formDataToSend.append('previewImageUrl', previewImageName)
+          contentData.previewImageUrl = previewImageName
         }
+        
+        resourceData.content = contentData
       }
 
-      const response = await postData('resources', formDataToSend)
+      console.log('resourceData')
+      console.log(resourceData)
+
+      const response = await postData('resources', resourceData)
+      
       if (response.status === 201) {
         setFormData({
           name: '',
@@ -448,7 +474,7 @@ const AddResource = () => {
       }
     } catch (error) {
       console.error('Error adding resource:', error)
-      alert('Error uploading file. Please try again.')
+      alert('Error uploading resource. Please try again.')
     } finally {
       setIsUploading(false)
       setUploadProgress(0)
