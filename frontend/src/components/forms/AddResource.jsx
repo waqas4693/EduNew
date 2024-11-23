@@ -366,9 +366,11 @@ const AddResource = () => {
 
   const uploadFileToS3 = async (file, resourceName) => {
     try {
+      const fileExtension = file.name.split('.').pop()
+      const finalFileName = `${resourceName}.${fileExtension}`
 
-      const { data: { signedUrl } } = await axios.post(url + 's3', {
-        fileName: resourceName,
+      const { data: { signedUrl } } = await axios.post(url + 'api/s3', {
+        fileName: finalFileName,
         fileType: file.type
       })
 
@@ -382,7 +384,7 @@ const AddResource = () => {
         }
       })
 
-      return resourceName
+      return finalFileName
     } catch (error) {
       console.error('Error uploading to S3:', error)
       throw error
@@ -400,7 +402,6 @@ const AddResource = () => {
       }
 
       const resourceData = {
-        name: formData.name,
         resourceType: formData.resourceType,
         sectionId: sectionId
       }
@@ -417,12 +418,13 @@ const AddResource = () => {
         }
         
         resourceData.content = contentData
+        resourceData.name = formData.name
       } else {
         const contentData = {}
         
         if (formData.content.file) {
           const fileName = await uploadFileToS3(formData.content.file, formData.name)
-          contentData.fileUrl = fileName
+          resourceData.name = fileName
         }
 
         if (formData.resourceType === 'AUDIO' && formData.content.backgroundImage) {
