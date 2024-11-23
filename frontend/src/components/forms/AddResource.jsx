@@ -382,7 +382,7 @@ const AddResource = () => {
         }
       })
 
-      return sanitizedResourceName
+      return resourceName
     } catch (error) {
       console.error('Error uploading to S3:', error)
       throw error
