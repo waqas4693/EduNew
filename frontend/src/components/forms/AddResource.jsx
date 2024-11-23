@@ -364,29 +364,29 @@ const AddResource = () => {
     }
   }
 
-  // const uploadFileToS3 = async (file) => {
-  //   try {
-  //     const { data: { signedUrl } } = await axios.post(url + 's3', {
-  //       fileName: file.name,
-  //       fileType: file.type
-  //     })
+  const uploadFileToS3 = async (file) => {
+    try {
+      const { data: { signedUrl } } = await axios.post(url + 's3', {
+        fileName: file.name,
+        fileType: file.type
+      })
 
-  //     await axios.put(signedUrl, file, {
-  //       headers: {
-  //         'Content-Type': file.type
-  //       },
-  //       onUploadProgress: (progressEvent) => {
-  //         const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-  //         setUploadProgress(progress)
-  //       }
-  //     })
+      await axios.put(signedUrl, file, {
+        headers: {
+          'Content-Type': file.type
+        },
+        onUploadProgress: (progressEvent) => {
+          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          setUploadProgress(progress)
+        }
+      })
 
-  //     return file.name
-  //   } catch (error) {
-  //     console.error('Error uploading to S3:', error)
-  //     throw error
-  //   }
-  // }
+      return file.name
+    } catch (error) {
+      console.error('Error uploading to S3:', error)
+      throw error
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
