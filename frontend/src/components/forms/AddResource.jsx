@@ -366,12 +366,9 @@ const AddResource = () => {
 
   const uploadFileToS3 = async (file, resourceName) => {
     try {
-      const fileExtension = file.name.split('.').pop()
-      const sanitizedResourceName = resourceName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()
-      const newFileName = `${sanitizedResourceName}.${fileExtension}`
 
       const { data: { signedUrl } } = await axios.post(url + 'api/s3', {
-        fileName: newFileName,
+        fileName: resourceName,
         fileType: file.type
       })
 
@@ -385,7 +382,7 @@ const AddResource = () => {
         }
       })
 
-      return newFileName
+      return sanitizedResourceName
     } catch (error) {
       console.error('Error uploading to S3:', error)
       throw error
@@ -424,25 +421,22 @@ const AddResource = () => {
         const contentData = {}
         
         if (formData.content.file) {
-          const fileName = await uploadFileToS3(formData.content.file)
+          const fileName = await uploadFileToS3(formData.content.file, formData.name)
           contentData.fileUrl = fileName
         }
 
         if (formData.resourceType === 'AUDIO' && formData.content.backgroundImage) {
-          const bgImageName = await uploadFileToS3(formData.content.backgroundImage)
-          contentData.backgroundImageUrl = bgImageName
+          const bgFileName = await uploadFileToS3(formData.content.backgroundImage, `${formData.name}_bg`)
+          contentData.backgroundImageUrl = bgFileName
         }
 
         if (formData.resourceType === 'PPT' && formData.content.previewImage) {
-          const previewImageName = await uploadFileToS3(formData.content.previewImage)
-          contentData.previewImageUrl = previewImageName
+          const previewFileName = await uploadFileToS3(formData.content.previewImage, `${formData.name}_preview`)
+          contentData.previewImageUrl = previewFileName
         }
         
         resourceData.content = contentData
       }
-
-      console.log('resourceData')
-      console.log(resourceData)
 
       const response = await postData('resources', resourceData)
       
