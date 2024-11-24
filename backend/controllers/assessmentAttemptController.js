@@ -1,5 +1,5 @@
 import AssessmentAttempt from '../models/AssessmentAttempt.js'
-import Assessment from '../models/Assessment.js'
+import Assessment from '../models/assessment.js'
 import { handleError } from '../utils/errorHandler.js'
 
 export const submitAttempt = async (req, res) => {
