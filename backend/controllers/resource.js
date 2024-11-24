@@ -13,7 +13,9 @@ export const createResource = async (req, res) => {
         text: content?.text || '',
         questions: content?.questions || [],
         backgroundImage: content?.backgroundImage || '',
-        previewImage: content?.previewImage || ''
+        previewImage: content?.previewImage || '',
+        thumbnailUrl: content?.thumbnailUrl || '',
+        externalLink: content?.externalLink || ''
       }
     })
 
@@ -51,11 +53,10 @@ export const getSectionResources = async (req, res) => {
     const resources = await Resource.find({
       sectionId,
       status: 1
-    }).lean()
+    })
 
     res.status(200).json({
-      success: true,
-      data: resources
+      resources
     })
   } catch (error) {
     handleError(res, error)

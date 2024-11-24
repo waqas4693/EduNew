@@ -32,6 +32,15 @@ const StudentDashboard = () => {
     }
   }
 
+  const handleCourseClick = (course) => {
+    navigate(`/units/${course.id}`, {
+      state: {
+        courseName: course.name,
+        courseImage: course.image
+      }
+    })
+  }
+
   return (
     <Grid container spacing={2}>
       <Grid size={7.5}>
@@ -43,12 +52,14 @@ const StudentDashboard = () => {
             {courses.map(course => (
               <Grid item xs={12} key={course.id}>
                 <Card
-                  onClick={() => navigate(`/units/${course.id}`)}
+                  onClick={() => handleCourseClick(course)}
                   sx={{
                     padding: '12px',
                     height: '100%',
                     width: '220px',
                     display: 'flex',
+                    border: '1px solid',
+                    borderColor: '#3366CC33',
                     borderRadius: '20px',
                     flexDirection: 'column',
                     transition: 'transform 0.2s',

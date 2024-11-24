@@ -39,7 +39,9 @@ const AddResource = () => {
       ],
       backgroundImage: '',
       previewImage: '',
-      file: null
+      file: null,
+      thumbnail: null,
+      externalLink: ''
     }
   })
   const [courseId, setCourseId] = useState(null)
@@ -123,6 +125,44 @@ const AddResource = () => {
       }
     })
   }
+
+  const renderCommonFields = () => (
+    <>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant='subtitle1' sx={{ mb: 1 }}>
+          Upload Thumbnail
+        </Typography>
+        <Button variant='outlined' component='label' fullWidth>
+          {formData.content.thumbnail
+            ? formData.content.thumbnail.name
+            : 'Choose Thumbnail Image'}
+          <input
+            type='file'
+            hidden
+            accept='image/*'
+            onChange={e =>
+              handleFormChange('content', {
+                ...formData.content,
+                thumbnail: e.target.files[0]
+              })
+            }
+          />
+        </Button>
+      </Box>
+      <TextField
+        fullWidth
+        label='External Link (Optional)'
+        value={formData.content.externalLink}
+        onChange={e =>
+          handleFormChange('content', {
+            ...formData.content,
+            externalLink: e.target.value
+          })
+        }
+        sx={{ mb: 3 }}
+      />
+    </>
+  )
 
   const renderResourceTypeFields = () => {
     switch (formData.resourceType) {
@@ -406,38 +446,38 @@ const AddResource = () => {
         sectionId: sectionId
       }
 
-      if (formData.resourceType === 'TEXT') {
-        const contentData = {
-          text: formData.content.text,
-          questions: formData.content.questions
-        }
-        
-        if (formData.content.file) {
-          const fileName = await uploadFileToS3(formData.content.file, formData.name)
-          contentData.imageUrl = fileName
-        }
-        
-        resourceData.content = contentData
-        resourceData.name = formData.name
-      } else {
-        const contentData = {}
-        
-        if (formData.content.file) {
-          const fileName = await uploadFileToS3(formData.content.file, formData.name)
-          resourceData.name = fileName
-        }
+      const contentData = {}
+      
+      if (formData.content.file) {
+        const fileName = await uploadFileToS3(formData.content.file, formData.name)
+        resourceData.name = fileName
+      }
 
-        if (formData.resourceType === 'AUDIO' && formData.content.backgroundImage) {
-          const bgFileName = await uploadFileToS3(formData.content.backgroundImage, `${formData.name}_bg`)
-          contentData.backgroundImageUrl = bgFileName
-        }
+      if (formData.resourceType === 'AUDIO' && formData.content.backgroundImage) {
+        const bgFileName = await uploadFileToS3(formData.content.backgroundImage, `${formData.name}_bg`)
+        contentData.backgroundImageUrl = bgFileName
+      }
 
-        if (formData.resourceType === 'PPT' && formData.content.previewImage) {
-          const previewFileName = await uploadFileToS3(formData.content.previewImage, `${formData.name}_preview`)
-          contentData.previewImageUrl = previewFileName
-        }
-        
-        resourceData.content = contentData
+      if (formData.resourceType === 'PPT' && formData.content.previewImage) {
+        const previewFileName = await uploadFileToS3(formData.content.previewImage, `${formData.name}_preview`)
+        contentData.previewImageUrl = previewFileName
+      }
+      
+      if (formData.content.thumbnail) {
+        const thumbnailFileName = await uploadFileToS3(
+          formData.content.thumbnail, 
+          `${formData.name}_thumb`
+        )
+        contentData.thumbnailUrl = thumbnailFileName
+      }
+
+      if (formData.content.externalLink) {
+        contentData.externalLink = formData.content.externalLink
+      }
+      
+      resourceData.content = {
+        ...resourceData.content,
+        ...contentData
       }
 
       const response = await postData('resources', resourceData)
@@ -455,7 +495,9 @@ const AddResource = () => {
             ],
             backgroundImage: '',
             previewImage: '',
-            file: null
+            file: null,
+            thumbnail: null,
+            externalLink: ''
           }
         })
         setSectionId(null)

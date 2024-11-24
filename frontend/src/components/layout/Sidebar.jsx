@@ -17,6 +17,7 @@ import BookmarkIcon from '@mui/icons-material/Bookmark'
 import DescriptionIcon from '@mui/icons-material/Description'
 import PeopleIcon from '@mui/icons-material/People'
 import LogoutIcon from '@mui/icons-material/Logout'
+import AssignmentIcon from '@mui/icons-material/Assignment'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
@@ -29,6 +30,7 @@ const adminMenuItems = [
   { text: 'Add Unit', icon: <LibraryBooksIcon />, path: '/admin/add-unit' },
   { text: 'Add Section', icon: <BookmarkIcon />, path: '/admin/add-section' },
   { text: 'Add Resource', icon: <DescriptionIcon />, path: '/admin/add-resource' },
+  { text: 'Add Assessment', icon: <AssignmentIcon />, path: '/admin/add-assessment' },
   { text: 'Manage Students', icon: <PeopleIcon />, path: '/admin/students' },
   { text: 'Settings', icon: <SettingsIcon />, path: '/admin/settings' }
 ]

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import {
   Box,
   Card,
@@ -14,11 +14,19 @@ import Grid from '@mui/material/Grid2'
 import { getData } from '../../api/api'
 import { useAuth } from '../../context/AuthContext'
 import Calendar from '../calendar/Calendar'
+import {
+  ChevronLeft,
+  PlayArrow,
+  AssignmentOutlined,
+  ChevronRight
+} from '@mui/icons-material'
 
 const Units = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
   const { courseId } = useParams()
+  const location = useLocation()
+  const { courseName, courseImage } = location.state || {}
   const [units, setUnits] = useState([])
 
   useEffect(() => {
@@ -36,8 +44,14 @@ const Units = () => {
     }
   }
 
-  const handleUnitClick = unitId => {
-    navigate(`/units/${courseId}/section/${unitId}`)
+  const handleUnitClick = (unitId, unitName) => {
+    navigate(`/units/${courseId}/section/${unitId}`, {
+      state: {
+        unitName: unitName,
+        courseName: courseName,
+        courseImage: courseImage
+      }
+    })
   }
 
   const handleBackToDashboard = () => {
@@ -60,19 +74,22 @@ const Units = () => {
             <Typography
               variant='body2'
               sx={{
+                fontSize: '14px',
+                cursor: 'pointer',
                 color: 'primary.main',
-                cursor: 'pointer'
+                display: 'flex',
+                alignItems: 'center'
               }}
               onClick={handleBackToDashboard}
             >
-              &lt; Back To Dashboard
+              <ChevronLeft sx={{ m: 0 }} /> Back To Dashboard
             </Typography>
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
             <CardMedia
               component='img'
-              image='/background-images/1.jpg'
+              image={courseImage || '/background-images/1.jpg'}
               alt='Course Image'
               sx={{
                 width: 100,
@@ -88,7 +105,7 @@ const Units = () => {
                 fontWeight: 'bold'
               }}
             >
-              TQUK Level 3 Certificate in Principles of Customer Service (FO)
+              {courseName || 'Course Name Not Available'}
             </Typography>
           </Box>
 
@@ -188,28 +205,51 @@ const Units = () => {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
             <Box
               sx={{
+                border: '1px solid',
+                borderColor: 'primary.main',
+                color: 'primary.main',
+                p: 1,
+                borderRadius: '8px',
+                cursor: 'pointer',
+                textAlign: 'center',
+                width: '48%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 1
+              }}
+            >
+              <AssignmentOutlined sx={{ fontSize: 20 }} />
+              Continue Diagnostic Assessment
+            </Box>
+            <Box
+              sx={{
                 bgcolor: 'primary.main',
                 color: 'white',
                 p: 1,
                 borderRadius: '8px',
                 cursor: 'pointer',
                 textAlign: 'center',
-                width: '48%'
+                width: '48%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 1
               }}
             >
-              Continue Diagnostic Assessment
-            </Box>
-            <Box
-              sx={{
-                bgcolor: 'secondary.main',
-                color: 'white',
-                p: 1,
-                borderRadius: '8px',
-                cursor: 'pointer',
-                textAlign: 'center',
-                width: '48%'
-              }}
-            >
+              <Box
+                sx={{
+                  bgcolor: 'rgba(255, 255, 255, 0.2)',
+                  borderRadius: '50%',
+                  width: 24,
+                  height: 24,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <PlayArrow sx={{ fontSize: 16 }} />
+              </Box>
               Resume Video
             </Box>
           </Box>
@@ -219,67 +259,94 @@ const Units = () => {
           </Typography>
 
           {units.map((unit, index) => (
-            <ListItem
-              key={unit._id}
-              onClick={() => handleUnitClick(unit._id)}
-              sx={{
-                pl: '80px',
-                bgcolor: 'white',
-                borderRadius: '16px',
-                boxShadow: '0px 1px 3px rgba(0,0,0,0.1)',
-                mb: 2,
-                position: 'relative',
-                cursor: 'pointer'
-              }}
-            >
-              <Box
+            <>
+              <ListItem
+                key={unit._id}
+                onClick={() => handleUnitClick(unit._id, unit.name)}
                 sx={{
-                  mr: 2,
-                  color: 'white',
-                  minWidth: '70px',
-                  bgcolor: '#4169e1',
-                  textAlign: 'center',
-                  borderTopLeftRadius: '16px',
-                  borderBottomLeftRadius: '16px',
-                  height: '100%',
+                  pl: '80px',
+                  pr: 2,
+                  bgcolor: '#F5F5F5',
+                  borderRadius: '6px',
+                  boxShadow: '0px 1px 3px rgba(0,0,0,0.1)',
+                  mb: 1,
+                  position: 'relative',
+                  cursor: 'pointer',
                   display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  position: 'absolute',
-                  left: 0,
-                  top: 0,
-                  bottom: 0
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
                 }}
               >
-                <Typography sx={{ fontSize: '16px', fontWeight: 500 }}>
-                  Unit: {index + 1}
-                </Typography>
-              </Box>
-              <Box>
-                <Typography
+                <Box
                   sx={{
-                    fontSize: '14px',
-                    overflow: 'hidden',
-                    WebkitLineClamp: 2,
-                    display: '-webkit-box',
-                    textOverflow: 'ellipsis',
-                    WebkitBoxOrient: 'vertical'
+                    mr: 2,
+                    color: 'white',
+                    minWidth: '70px',
+                    bgcolor: '#4169e1',
+                    textAlign: 'center',
+                    borderTopLeftRadius: '6px',
+                    borderBottomLeftRadius: '6px',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    bottom: 0
                   }}
                 >
-                  Understand the customer service environment
-                </Typography>
-                <Typography
-                  variant='body2'
-                  sx={{
-                    color: 'text.secondary',
-                    mt: 1
-                  }}
-                >
-                  (Sections: {unit.sections.length})
-                </Typography>
-              </Box>
-            </ListItem>
+                  <Typography sx={{ fontSize: '16px', fontWeight: 500 }}>
+                    Unit: {index + 1}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography
+                    sx={{
+                      fontWeight: 'bold',
+                      fontSize: '14px',
+                      overflow: 'hidden',
+                      WebkitLineClamp: 2,
+                      display: '-webkit-box',
+                      textOverflow: 'ellipsis',
+                      WebkitBoxOrient: 'vertical'
+                    }}
+                  >
+                    {unit.name}
+                  </Typography>
+                  <Typography
+                    variant='body2'
+                    sx={{
+                      color: 'text.secondary',
+                      mt: 1
+                    }}
+                  >
+                    (Sections: {unit.sections.length})
+                  </Typography>
+                </Box>
+                <ChevronRight sx={{ color: 'primary.main' }} />
+              </ListItem>
+              <Typography
+                sx={{
+                  mb: 1,
+                  fontSize: '14px',
+                  color: 'text.secondary'
+                }}
+              >
+                <Box component='span' sx={{ color: 'black' }}>
+                  Due Date:
+                </Box>{' '}
+                {unit.dueDate || '20/11/2024'}
+              </Typography>
+              <Box
+                sx={{
+                  border: '1px solid #0000001A',
+                  width: '100%',
+                  mb: 3
+                }}
+              />
+            </>
           ))}
         </Paper>
       </Grid>

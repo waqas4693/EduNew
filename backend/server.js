@@ -14,6 +14,8 @@ import unitRoutes from './routes/unit.js'
 import sectionRoutes from './routes/section.js'
 import resourceRoutes from './routes/resource.js'
 import authRoutes from './routes/auth.js'
+import assessmentRoutes from './routes/assessment.js'
+import assessmentAttemptRoutes from './routes/assessmentAttempt.js'
 
 /* CONFIGURATION */
 dotenv.config()
@@ -45,7 +47,10 @@ app.use('/courses', courseRoutes)
 app.use('/units', unitRoutes)
 app.use('/sections', sectionRoutes)
 app.use('/resources', resourceRoutes)
+app.use('/assessments', assessmentRoutes)
 app.use('/auth', authRoutes)
+app.use('/assessment-attempts', assessmentAttemptRoutes)
+
 mongoose.set('strictQuery', false)
 
 await mongoose

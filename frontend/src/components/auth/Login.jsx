@@ -51,6 +51,9 @@ const Login = () => {
         localStorage.setItem('user', JSON.stringify(user))
         login(user)
 
+        console.log('User:', user)
+        console.log('Role:', user._id)
+
         if (user.role === ADMIN_ROLE) {
           navigate('/admin/dashboard', { replace: true })
         } else if (user.role === STUDENT_ROLE) {

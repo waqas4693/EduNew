@@ -22,7 +22,9 @@ const resourceSchema = new mongoose.Schema({
       answer: String
     }],
     backgroundImage: String,
-    previewImage: String
+    previewImage: String,
+    thumbnailUrl: String,
+    externalLink: String
   },
   status: {
     type: Number,

@@ -10,16 +10,18 @@ import AddCourse from './components/forms/AddCourse'
 import AddUnit from './components/forms/AddUnit'
 import AddSection from './components/forms/AddSection'
 import AddResource from './components/forms/AddResource'
+import AddAssessment from './components/forms/AddAssessment'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import Units from './components/app-components/Units'
 import Section from './components/app-components/Section'
 import LearnerFrame from './components/app-components/LearnerFrame'
+import ViewAssessment from './components/app-components/ViewAssessment'
 
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#1976d2'
+      main: '#3366CC'
     },
     secondary: {
       main: '#dc004e'
@@ -49,6 +51,7 @@ function App() {
                         <Route path="/add-unit" element={<AddUnit />} />
                         <Route path="/add-section" element={<AddSection />} />
                         <Route path="/add-resource" element={<AddResource />} />
+                        <Route path="/add-assessment" element={<AddAssessment />} />
                       </Routes>
                     </DashboardLayout>
                   </PrivateRoute>
@@ -66,6 +69,7 @@ function App() {
                         <Route path="/units/:courseId" element={<Units />} />
                         <Route path="/units/:courseId/section/:unitId" element={<Section />} />
                         <Route path="/units/:courseId/section/:unitId/learn/:sectionId" element={<LearnerFrame />} />
+                        <Route path="/units/:courseId/section/:unitId/assessment/:sectionId" element={<ViewAssessment />} />
                       </Routes>
                     </DashboardLayout>
                   </PrivateRoute>

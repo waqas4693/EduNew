@@ -8,7 +8,7 @@ import {
 const router = express.Router()
 
 router.post('/', createResource)
-router.get('/section/:sectionId', getSectionResources)
+router.get('/:sectionId', getSectionResources)
 // router.get('/:resourceId', getResourceById)
 
 export default router 
