@@ -586,6 +586,8 @@ const AddResource = () => {
             </Select>
           </FormControl>
 
+          {renderCommonFields()}
+
           {renderResourceTypeFields()}
 
           <Button type='submit' variant='contained' fullWidth>
