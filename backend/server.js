@@ -6,14 +6,14 @@ import helmet from 'helmet'
 import morgan from 'morgan'
 import mongoose from 'mongoose'
 
-import loginRoutes from './routes/login.js'
+// import loginRoutes from './routes/login.js'
 import s3Routes from './routes/s3.js'
-import studentRoutes from './routes/student.js'
-import courseRoutes from './routes/course.js'
+import authRoutes from './routes/auth.js'
 import unitRoutes from './routes/unit.js'
+import courseRoutes from './routes/course.js'
+import studentRoutes from './routes/student.js'
 import sectionRoutes from './routes/section.js'
 import resourceRoutes from './routes/resource.js'
-import authRoutes from './routes/auth.js'
 import assessmentRoutes from './routes/assessment.js'
 import assessmentAttemptRoutes from './routes/assessmentAttempt.js'
 
@@ -42,13 +42,13 @@ app.get('/', function (req, res) {
 
 // app.use('/api/login', loginRoutes)
 app.use('/s3', s3Routes)
-app.use('/student', studentRoutes)
-app.use('/courses', courseRoutes)
+app.use('/auth', authRoutes)
 app.use('/units', unitRoutes)
+app.use('/courses', courseRoutes)
+app.use('/student', studentRoutes)
 app.use('/sections', sectionRoutes)
 app.use('/resources', resourceRoutes)
 app.use('/assessments', assessmentRoutes)
-app.use('/auth', authRoutes)
 app.use('/assessment-attempts', assessmentAttemptRoutes)
 
 mongoose.set('strictQuery', false)

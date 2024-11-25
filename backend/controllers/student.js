@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs'
 
 export const newStudent = async (req, res) => {
   try {
-    const { name, email, password, contactNo, address } = req.body
+    const { name, email, password, contactNo, address, courseId } = req.body
 
     const existingUser = await User.findOne({ email })
     if (existingUser) {
@@ -15,7 +15,8 @@ export const newStudent = async (req, res) => {
 
     const user = new User({
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      role: 2
     })
     await user.save()
 
@@ -23,7 +24,12 @@ export const newStudent = async (req, res) => {
       name,
       email,
       contactNo,
-      address
+      address,
+      courses: [{
+        courseId: courseId,
+        courseStatus: 1,
+        enrollmentDate: new Date()
+      }]
     })
     await student.save()
 
@@ -34,7 +40,8 @@ export const newStudent = async (req, res) => {
         email: student.email,
         contactNo: student.contactNo,
         address: student.address,
-        status: student.status
+        status: student.status,
+        courses: student.courses
       }
     })
   } catch (error) {

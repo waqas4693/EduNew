@@ -4,7 +4,6 @@ import {
   TextField,
   Button,
   Typography,
-  Paper,
   Autocomplete,
   MenuItem,
   Select,
@@ -128,7 +127,7 @@ const AddAssessment = () => {
       ...prev,
       content: {
         ...prev.content,
-        questions: [...prev.content.questions, { question: '', answer: '' }]
+        questions: [...prev.content.questions, { question: '' }]
       }
     }))
   }
@@ -147,13 +146,10 @@ const AddAssessment = () => {
     }))
   }
 
-  const handleQuestionChange = (index, field, value) => {
+  const handleQuestionChange = (index, value) => {
     setFormData(prev => {
       const newQuestions = [...prev.content.questions]
-      newQuestions[index] = {
-        ...newQuestions[index],
-        [field]: value
-      }
+      newQuestions[index] = { question: value }
       return {
         ...prev,
         content: {
@@ -208,19 +204,27 @@ const AddAssessment = () => {
         return (
           <Box>
             {formData.content.questions.map((q, index) => (
-              <Box key={index} sx={{ mb: 3 }}>
+              <Box key={index} sx={{ display: 'flex', gap: 2, mb: 2 }}>
                 <TextField
                   fullWidth
+                  size="small"
                   label={`Question ${index + 1}`}
                   value={q.question}
-                  onChange={e => handleQuestionChange(index, 'question', e.target.value)}
-                  sx={{ mb: 1 }}
-                />
-                <TextField
-                  fullWidth
-                  label={`Answer ${index + 1}`}
-                  value={q.answer}
-                  onChange={e => handleQuestionChange(index, 'answer', e.target.value)}
+                  onChange={e => handleQuestionChange(index, e.target.value)}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '8px',
+                      border: '1px solid #20202033',
+                      '& fieldset': {
+                        border: 'none'
+                      }
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: '#8F8F8F',
+                      backgroundColor: 'white',
+                      padding: '0 4px'
+                    }
+                  }}
                 />
                 <IconButton onClick={() => removeQuestion(index)} color="error">
                   <DeleteIcon />
@@ -237,29 +241,69 @@ const AddAssessment = () => {
         return (
           <Box>
             {formData.content.mcqs.map((mcq, index) => (
-              <Box key={index} sx={{ mb: 3 }}>
+              <Box key={index} sx={{ mb: 2 }}>
                 <TextField
                   fullWidth
+                  size="small"
                   label={`Question ${index + 1}`}
                   value={mcq.question}
                   onChange={e => handleMCQChange(index, 'question', e.target.value)}
-                  sx={{ mb: 1 }}
+                  sx={{
+                    mb: 2,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '8px',
+                      border: '1px solid #20202033',
+                      '& fieldset': {
+                        border: 'none'
+                      }
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: '#8F8F8F',
+                      backgroundColor: 'white',
+                      padding: '0 4px'
+                    }
+                  }}
                 />
-                {mcq.options.map((option, optionIndex) => (
-                  <TextField
-                    key={optionIndex}
-                    fullWidth
-                    label={`Option ${optionIndex + 1}`}
-                    value={option}
-                    onChange={e => handleMCQChange(index, 'options', e.target.value, optionIndex)}
-                    sx={{ mb: 1 }}
-                  />
-                ))}
-                <FormControl fullWidth sx={{ mb: 1 }}>
-                  <InputLabel>Correct Answer</InputLabel>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
+                  {mcq.options.map((option, optionIndex) => (
+                    <TextField
+                      key={optionIndex}
+                      size="small"
+                      label={`Option ${optionIndex + 1}`}
+                      value={option}
+                      onChange={e => handleMCQChange(index, 'options', e.target.value, optionIndex)}
+                      sx={{
+                        width: 'calc(50% - 8px)',
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '8px',
+                          border: '1px solid #20202033',
+                          '& fieldset': {
+                            border: 'none'
+                          }
+                        },
+                        '& .MuiInputLabel-root': {
+                          color: '#8F8F8F',
+                          backgroundColor: 'white',
+                          padding: '0 4px'
+                        }
+                      }}
+                    />
+                  ))}
+                </Box>
+                <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+                  <InputLabel sx={{ color: '#8F8F8F', backgroundColor: 'white', padding: '0 4px' }}>
+                    Correct Answer
+                  </InputLabel>
                   <Select
                     value={mcq.correctAnswer}
                     onChange={e => handleMCQChange(index, 'correctAnswer', e.target.value)}
+                    sx={{
+                      borderRadius: '8px',
+                      border: '1px solid #20202033',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        border: 'none'
+                      }
+                    }}
                   >
                     {mcq.options.map((option, optionIndex) => (
                       <MenuItem key={optionIndex} value={option}>
@@ -281,43 +325,63 @@ const AddAssessment = () => {
 
       case 'FILE':
         return (
-          <Box>
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" sx={{ mb: 1 }}>
-                Assessment File
-              </Typography>
-              <Button variant="outlined" component="label" fullWidth>
-                {formData.content.assessmentFile
-                  ? formData.content.assessmentFile.name
-                  : 'Choose Assessment File'}
-                <input
-                  type="file"
-                  hidden
-                  onChange={e => handleFormChange('content', {
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <Button
+              variant="outlined"
+              component="label"
+              fullWidth
+              sx={{
+                height: '36px',
+                borderRadius: '8px',
+                border: '1px solid #20202033',
+                '&:hover': {
+                  border: '1px solid #20202033',
+                  bgcolor: 'rgba(0, 0, 0, 0.04)'
+                }
+              }}
+            >
+              {formData.content.assessmentFile
+                ? formData.content.assessmentFile.name
+                : 'Choose Assessment File'}
+              <input
+                type="file"
+                hidden
+                onChange={e =>
+                  handleFormChange('content', {
                     ...formData.content,
                     assessmentFile: e.target.files[0]
-                  })}
-                />
-              </Button>
-            </Box>
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" sx={{ mb: 1 }}>
-                Supporting File (Optional)
-              </Typography>
-              <Button variant="outlined" component="label" fullWidth>
-                {formData.content.supportingFile
-                  ? formData.content.supportingFile.name
-                  : 'Choose Supporting File'}
-                <input
-                  type="file"
-                  hidden
-                  onChange={e => handleFormChange('content', {
+                  })
+                }
+              />
+            </Button>
+            <Button
+              variant="outlined"
+              component="label"
+              fullWidth
+              sx={{
+                height: '36px',
+                borderRadius: '8px',
+                border: '1px solid #20202033',
+                '&:hover': {
+                  border: '1px solid #20202033',
+                  bgcolor: 'rgba(0, 0, 0, 0.04)'
+                }
+              }}
+            >
+              {formData.content.supportingFile
+                ? formData.content.supportingFile.name
+                : 'Choose Supporting File'}
+              <input
+                type="file"
+                hidden
+                onChange={e =>
+                  handleFormChange('content', {
                     ...formData.content,
                     supportingFile: e.target.files[0]
-                  })}
-                />
-              </Button>
-            </Box>
+                  })
+                }
+              />
+            </Button>
           </Box>
         )
 
@@ -383,84 +447,208 @@ const AddAssessment = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Paper sx={{ p: 3, maxWidth: 800, mx: 'auto' }}>
-        <Typography variant="h5" sx={{ mb: 3 }}>
-          Add Assessment
-        </Typography>
-        <form onSubmit={handleSubmit}>
-          <Autocomplete
-            options={courses}
-            getOptionLabel={option => option.name}
-            onChange={(_, newValue) => setCourseId(newValue?._id)}
-            renderInput={params => (
-              <TextField {...params} label="Select Course" required sx={{ mb: 3 }} />
-            )}
-          />
-
-          <Autocomplete
-            options={units}
-            getOptionLabel={option => option.name}
-            onChange={(_, newValue) => setUnitId(newValue?._id)}
-            disabled={!courseId}
-            renderInput={params => (
-              <TextField {...params} label="Select Unit" required sx={{ mb: 3 }} />
-            )}
-          />
-
-          <Autocomplete
-            options={sections}
-            getOptionLabel={option => option.name}
-            onChange={(_, newValue) => setSectionId(newValue?._id)}
-            disabled={!unitId}
-            renderInput={params => (
-              <TextField {...params} label="Select Section" required sx={{ mb: 3 }} />
-            )}
-          />
-
-          <FormControl fullWidth sx={{ mb: 3 }}>
-            <InputLabel>Assessment Type</InputLabel>
-            <Select
-              value={formData.assessmentType}
-              onChange={e => handleFormChange('assessmentType', e.target.value)}
+    <form onSubmit={handleSubmit}>
+      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+        <Autocomplete
+          fullWidth
+          size="small"
+          options={courses}
+          getOptionLabel={option => option.name}
+          onChange={(_, newValue) => setCourseId(newValue?._id)}
+          renderInput={params => (
+            <TextField
+              {...params}
+              size="small"
+              label="Select Course"
               required
-            >
-              {ASSESSMENT_TYPES.map(type => (
-                <MenuItem key={type.value} value={type.value}>
-                  {type.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  border: '1px solid #20202033',
+                  '& fieldset': {
+                    border: 'none'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#8F8F8F',
+                  backgroundColor: 'white',
+                  padding: '0 4px'
+                }
+              }}
+            />
+          )}
+        />
+        <Autocomplete
+          fullWidth
+          size="small"
+          options={units}
+          getOptionLabel={option => option.name}
+          onChange={(_, newValue) => setUnitId(newValue?._id)}
+          disabled={!courseId}
+          renderInput={params => (
+            <TextField
+              {...params}
+              size="small"
+              label="Select Unit"
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  border: '1px solid #20202033',
+                  '& fieldset': {
+                    border: 'none'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#8F8F8F',
+                  backgroundColor: 'white',
+                  padding: '0 4px'
+                }
+              }}
+            />
+          )}
+        />
+        <Autocomplete
+          fullWidth
+          size="small"
+          options={sections}
+          getOptionLabel={option => option.name}
+          onChange={(_, newValue) => setSectionId(newValue?._id)}
+          disabled={!unitId}
+          renderInput={params => (
+            <TextField
+              {...params}
+              size="small"
+              label="Select Section"
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  border: '1px solid #20202033',
+                  '& fieldset': {
+                    border: 'none'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#8F8F8F',
+                  backgroundColor: 'white',
+                  padding: '0 4px'
+                }
+              }}
+            />
+          )}
+        />
+      </Box>
 
-          <TextField
-            fullWidth
-            type="number"
-            label="Total Marks"
-            value={formData.totalMarks}
-            onChange={e => handleFormChange('totalMarks', e.target.value)}
+      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+        <FormControl fullWidth size="small">
+          <InputLabel sx={{ color: '#8F8F8F', backgroundColor: 'white', padding: '0 4px' }}>
+            Assessment Type
+          </InputLabel>
+          <Select
+            value={formData.assessmentType}
+            onChange={e => handleFormChange('assessmentType', e.target.value)}
             required
-            sx={{ mb: 3 }}
-          />
+            sx={{
+              borderRadius: '8px',
+              border: '1px solid #20202033',
+              '& .MuiOutlinedInput-notchedOutline': {
+                border: 'none'
+              }
+            }}
+          >
+            {ASSESSMENT_TYPES.map(type => (
+              <MenuItem key={type.value} value={type.value}>
+                {type.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <TextField
+          fullWidth
+          size="small"
+          type="number"
+          label="Total Marks"
+          value={formData.totalMarks}
+          onChange={e => handleFormChange('totalMarks', e.target.value)}
+          required
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              borderRadius: '8px',
+              border: '1px solid #20202033',
+              '& fieldset': {
+                border: 'none'
+              }
+            },
+            '& .MuiInputLabel-root': {
+              color: '#8F8F8F',
+              backgroundColor: 'white',
+              padding: '0 4px'
+            }
+          }}
+        />
+        <TextField
+          fullWidth
+          size="small"
+          type="number"
+          label={`Percentage (Remaining: ${remainingPercentage}%)`}
+          value={formData.percentage}
+          onChange={e => handleFormChange('percentage', e.target.value)}
+          required
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              borderRadius: '8px',
+              border: '1px solid #20202033',
+              '& fieldset': {
+                border: 'none'
+              }
+            },
+            '& .MuiInputLabel-root': {
+              color: '#8F8F8F',
+              backgroundColor: 'white',
+              padding: '0 4px'
+            }
+          }}
+        />
+      </Box>
 
-          <TextField
-            fullWidth
-            type="number"
-            label={`Percentage (Remaining: ${remainingPercentage}%)`}
-            value={formData.percentage}
-            onChange={e => handleFormChange('percentage', e.target.value)}
-            required
-            sx={{ mb: 3 }}
-          />
+      {renderAssessmentTypeFields()}
 
-          {renderAssessmentTypeFields()}
+      <Box sx={{ display: 'flex', justifyContent: 'end', alignItems: 'center' }}>
 
-          <Button type="submit" variant="contained" fullWidth sx={{ mt: 3 }}>
+      {/* <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}> */}
+        {/* <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <IconButton
+            sx={{
+              bgcolor: 'primary.main',
+              color: 'white',
+              width: 30,
+              height: 30,
+              '&:hover': {
+                bgcolor: 'primary.dark'
+              }
+            }}
+          >
+            <AddIcon />
+          </IconButton>
+          <Typography sx={{ fontWeight: 'bold', color: 'black' }}>
             Add Assessment
-          </Button>
-        </form>
-      </Paper>
-    </Box>
+          </Typography>
+        </Box> */}
+        <Button
+          type="submit"
+          variant="contained"
+          sx={{ 
+            minWidth: '100px',
+            width: '100px',
+            borderRadius: '8px',
+            height: '36px'
+          }}
+        >
+          Save
+        </Button>
+      </Box>
+    </form>
   )
 }
 

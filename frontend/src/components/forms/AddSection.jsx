@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react'
-import { 
-  Box, 
-  TextField, 
-  Button, 
-  Typography, 
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
   Paper,
-  Autocomplete
+  Autocomplete,
+  IconButton
 } from '@mui/material'
 import { postData, getData } from '../../api/api'
+import AddIcon from '@mui/icons-material/Add'
 
 const AddSection = () => {
   const [name, setName] = useState('')
@@ -48,7 +50,7 @@ const AddSection = () => {
     }
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault()
     try {
       const response = await postData('sections', { name, unitId })
@@ -64,52 +66,129 @@ const AddSection = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Paper sx={{ p: 3, maxWidth: 500, mx: 'auto' }}>
-        <Typography variant="h5" sx={{ mb: 3 }}>Add New Section</Typography>
-        <form onSubmit={handleSubmit}>
-          <Autocomplete
-            options={courses}
-            getOptionLabel={(option) => option.name}
-            onChange={(_, newValue) => setCourseId(newValue?._id)}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Select Course"
-                required
-                sx={{ mb: 3 }}
-              />
-            )}
-          />
-          <Autocomplete
-            options={units}
-            getOptionLabel={(option) => option.name}
-            onChange={(_, newValue) => setUnitId(newValue?._id)}
-            disabled={!courseId}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Select Unit"
-                required
-                sx={{ mb: 3 }}
-              />
-            )}
-          />
-          <TextField
-            fullWidth
-            label="Section Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            sx={{ mb: 3 }}
-          />
-          <Button type="submit" variant="contained" fullWidth>
+    <form onSubmit={handleSubmit}>
+      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+        <Autocomplete
+          fullWidth
+          size='small'
+          options={courses}
+          getOptionLabel={(option) => option.name}
+          onChange={(_, newValue) => setCourseId(newValue?._id)}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              size='small'
+              label='Select Course'
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  border: '1px solid #20202033',
+                  '& fieldset': {
+                    border: 'none'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#8F8F8F',
+                  backgroundColor: 'white',
+                  padding: '0 4px'
+                }
+              }}
+            />
+          )}
+        />
+        <Autocomplete
+          fullWidth
+          size='small'
+          options={units}
+          getOptionLabel={(option) => option.name}
+          onChange={(_, newValue) => setUnitId(newValue?._id)}
+          disabled={!courseId}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              size='small'
+              label='Select Unit'
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  border: '1px solid #20202033',
+                  '& fieldset': {
+                    border: 'none'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#8F8F8F',
+                  backgroundColor: 'white',
+                  padding: '0 4px'
+                }
+              }}
+            />
+          )}
+        />
+      </Box>
+      <TextField
+        fullWidth
+        size='small'
+        label='Section Name'
+        value={name}
+        onChange={e => setName(e.target.value)}
+        required
+        sx={{
+          mb: 2,
+          '& .MuiOutlinedInput-root': {
+            borderRadius: '8px',
+            border: '1px solid #20202033',
+            '& fieldset': {
+              border: 'none'
+            }
+          },
+          '& .MuiInputLabel-root': {
+            color: '#8F8F8F'
+          }
+        }}
+      />
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <IconButton
+            sx={{
+              bgcolor: 'primary.main',
+              color: 'white',
+              width: 30,
+              height: 30,
+              '&:hover': {
+                bgcolor: 'primary.dark'
+              }
+            }}
+          >
+            <AddIcon />
+          </IconButton>
+          <Typography sx={{ fontWeight: 'bold', color: 'black' }}>
             Add Section
-          </Button>
-        </form>
-      </Paper>
-    </Box>
+          </Typography>
+        </Box>
+        <Button
+          type='submit'
+          variant='contained'
+          sx={{
+            minWidth: '100px',
+            width: '100px',
+            borderRadius: '8px',
+            height: '36px'
+          }}
+        >
+          Save
+        </Button>
+      </Box>
+    </form>
   )
 }
 
-export default AddSection 
+export default AddSection

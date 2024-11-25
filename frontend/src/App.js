@@ -7,16 +7,15 @@ import StudentDashboard from './components/dashboard/StudentDashboard'
 import PrivateRoute from './components/routes/PrivateRoute'
 import Login from './components/auth/Login'
 import AddCourse from './components/forms/AddCourse'
-import AddUnit from './components/forms/AddUnit'
-import AddSection from './components/forms/AddSection'
-import AddResource from './components/forms/AddResource'
-import AddAssessment from './components/forms/AddAssessment'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import Units from './components/app-components/Units'
 import Section from './components/app-components/Section'
 import LearnerFrame from './components/app-components/LearnerFrame'
 import ViewAssessment from './components/app-components/ViewAssessment'
+import InviteStudent from './components/forms/InviteStudent'
+// import ManageStudents from './components/forms/ManageStudents'
+// import Settings from './components/forms/Settings'
 
 const theme = createTheme({
   palette: {
@@ -48,10 +47,9 @@ function App() {
                       <Routes>
                         <Route path="/dashboard" element={<AdminDashboard />} />
                         <Route path="/add-course" element={<AddCourse />} />
-                        <Route path="/add-unit" element={<AddUnit />} />
-                        <Route path="/add-section" element={<AddSection />} />
-                        <Route path="/add-resource" element={<AddResource />} />
-                        <Route path="/add-assessment" element={<AddAssessment />} />
+                        <Route path="/invite-student" element={<InviteStudent />} />
+                        {/* <Route path="/students" element={<ManageStudents />} /> */}
+                        {/* <Route path="/settings" element={<Settings />} /> */}
                       </Routes>
                     </DashboardLayout>
                   </PrivateRoute>

@@ -162,6 +162,15 @@ const LearnerFrame = () => {
           }))
         }
 
+        // Get thumbnail URL if exists
+        if (resource.content.thumbnailUrl && !signedUrls[resource.content.thumbnailUrl]) {
+          const thumbnailSignedUrl = await getSignedUrl(resource.content.thumbnailUrl)
+          setSignedUrls(prev => ({
+            ...prev,
+            [resource.content.thumbnailUrl]: thumbnailSignedUrl
+          }))
+        }
+
         // Get background image URL for audio
         if (
           resource.resourceType === 'AUDIO' &&
