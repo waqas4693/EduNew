@@ -4,19 +4,21 @@ import Navbar from './Navbar'
 import Sidebar from './Sidebar'
 import PaletteIcon from '@mui/icons-material/Palette'
 
+const backgroundImages = [
+  '1.jpg',
+  '2.jpg',
+  '3.jpg',
+  '4.jpg'
+]
+
 const DashboardLayout = ({ children }) => {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile)
-  const [background, setBackground] = useState(null)
+  const [background, setBackground] = useState(`/background-images/${backgroundImages[0]}`)
   const [openDialog, setOpenDialog] = useState(false)
 
-  const backgroundImages = [
-    '1.jpg',
-    '2.jpg',
-    '3.jpg',
-    '4.jpg'
-  ]
+  
 
   const handleImageSelect = (image) => {
     setBackground(`/background-images/${image}`)

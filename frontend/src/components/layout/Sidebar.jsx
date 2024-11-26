@@ -29,14 +29,14 @@ const adminMenuItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/admin/dashboard' },
   { text: 'Add Course', icon: <SchoolIcon />, path: '/admin/add-course' },
   { text: 'Invite Student', icon: <PersonAddIcon />, path: '/admin/invite-student' },
-  { text: 'Manage Students', icon: <PeopleIcon />, path: '/admin/students' },
-  { text: 'Settings', icon: <SettingsIcon />, path: '/admin/settings' }
+  // { text: 'Manage Students', icon: <PeopleIcon />, path: '/admin/students' },
+  // { text: 'Settings', icon: <SettingsIcon />, path: '/admin/settings' }
 ]
 
 const studentMenuItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-  { text: 'Assessments', icon: <SchoolIcon />, path: '/assessments' },
-  { text: 'Profile', icon: <PersonIcon />, path: '/profile' },
+  // { text: 'Assessments', icon: <SchoolIcon />, path: '/assessments' },
+  // { text: 'Profile', icon: <PersonIcon />, path: '/profile' },
 ]
 
 const Sidebar = ({ open, onClose }) => {

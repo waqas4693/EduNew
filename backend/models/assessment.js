@@ -1,21 +1,38 @@
 import mongoose from 'mongoose'
 
 const assessmentSchema = new mongoose.Schema({
-  sectionId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Section',
+  assessmentType: {
+    type: String,
+    enum: ['QNA', 'MCQ', 'FILE'],
     required: true
   },
-  title: {
-    type: String,
+  totalMarks: {
+    type: Number,
     required: true
   },
   percentage: {
     type: Number,
     required: true
+  },
+  sectionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Section',
+    required: true
+  },
+  content: {
+    questions: [{
+      question: String,
+      answer: String
+    }],
+    mcqs: [{
+      question: String,
+      options: [String],
+      correctAnswer: String
+    }],
+    assessmentFile: String,
+    supportingFile: String
   }
-}, {
-  timestamps: true      
-})
+}, { timestamps: true })
 
-export default mongoose.model('Assessment', assessmentSchema) 
+const Assessment = mongoose.model('Assessment', assessmentSchema)
+export default Assessment 

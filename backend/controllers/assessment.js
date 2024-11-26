@@ -27,7 +27,8 @@ export const createAssessment = async (req, res) => {
       assessment
     })
   } catch (error) {
-    handleError(error, res)
+    console.log('Error Testing Assessment:', error)
+    // handleError(error, res)
   }
 }
 

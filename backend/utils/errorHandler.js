@@ -21,7 +21,7 @@ export const handleError = (res, error) => {
     })
   }
 
-  console.error('Error:', error)
+  // console.error('Error Testing:', error)
   
   // return res.status(500).json({
   //   success: false,

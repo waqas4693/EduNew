@@ -1,5 +1,5 @@
 import mongoose from 'mongoose'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 
 const userSchema = new mongoose.Schema(
   {
@@ -42,7 +42,13 @@ userSchema.pre('save', async function(next) {
 // Method to compare password
 userSchema.methods.comparePassword = async function(candidatePassword) {
   try {
-    return await bcrypt.compare(candidatePassword, this.password)
+    const isMatch = await bcrypt.compare(candidatePassword, this.password)
+    console.log({
+      candidatePassword,
+      hashedPassword: this.password,
+      isMatch
+    })
+    return isMatch
   } catch (error) {
     throw error
   }

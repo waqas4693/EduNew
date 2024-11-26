@@ -24,6 +24,7 @@ const Login = () => {
   })
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [activeTab, setActiveTab] = useState('student')
   const navigate = useNavigate()
   const { login } = useAuth()
 
@@ -36,6 +37,11 @@ const Login = () => {
 
   const handleClickShowPassword = () => {
     setShowPassword(!showPassword)
+  }
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab)
+    setError('')
   }
 
   const handleSubmit = async (e) => {
@@ -80,23 +86,55 @@ const Login = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        bgcolor: 'grey.100'
+        backgroundImage: 'url("/background-images/4.jpg")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center'
       }}
     >
       <Paper 
         sx={{ 
           p: 4, 
-          maxWidth: 400,
-          width: '90%'
+          maxWidth: 450,
+          width: '90%',
+          borderRadius: 2
         }}
       >
         <Typography 
-          variant="h4" 
+          variant="h5" 
           component="h1" 
-          sx={{ mb: 4, textAlign: 'center' }}
+          sx={{ mb: 3, textAlign: 'center', fontWeight: 500 }}
         >
-          Student Login
+          Login
         </Typography>
+
+        <Box sx={{ mb: 4, borderBottom: 1, borderColor: 'divider' }}>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              sx={{
+                flex: 1,
+                pb: 1.5,
+                borderBottom: 2,
+                borderColor: activeTab === 'student' ? 'primary.main' : 'transparent',
+                color: activeTab === 'student' ? 'primary.main' : 'text.secondary'
+              }}
+              onClick={() => handleTabChange('student')}
+            >
+              Student
+            </Button>
+            <Button
+              sx={{
+                flex: 1,
+                pb: 1.5,
+                borderBottom: 2,
+                borderColor: activeTab === 'admin' ? 'primary.main' : 'transparent',
+                color: activeTab === 'admin' ? 'primary.main' : 'text.secondary'
+              }}
+              onClick={() => handleTabChange('admin')}
+            >
+              Admin
+            </Button>
+          </Box>
+        </Box>
 
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
@@ -107,28 +145,29 @@ const Login = () => {
         <form onSubmit={handleSubmit}>
           <TextField
             fullWidth
-            label="Email"
+            placeholder="Email"
             type="email"
             name="email"
             value={formData.email}
             onChange={handleChange}
             required
             sx={{ mb: 3 }}
+            variant="outlined"
           />
           <TextField
             fullWidth
-            label="Password"
+            placeholder="Password"
             name="password"
             type={showPassword ? 'text' : 'password'}
             value={formData.password}
             onChange={handleChange}
             required
-            sx={{ mb: 3 }}
+            sx={{ mb: 4 }}
+            variant="outlined"
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton
-                    aria-label="toggle password visibility"
                     onClick={handleClickShowPassword}
                     edge="end"
                   >
@@ -143,6 +182,12 @@ const Login = () => {
             variant="contained" 
             fullWidth 
             size="large"
+            sx={{
+              py: 1.5,
+              borderRadius: 1,
+              textTransform: 'none',
+              fontSize: '1rem'
+            }}
           >
             Login
           </Button>
