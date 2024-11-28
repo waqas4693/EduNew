@@ -3,27 +3,53 @@ import { handleError } from '../utils/errorHandler.js'
 
 export const createResource = async (req, res) => {
   try {
-    const { name, resourceType, content, sectionId } = req.body
+    const { resources } = req.body
     
-    const resource = new Resource({
-      name,
-      resourceType,
-      sectionId,
-      content: {
-        text: content?.text || '',
-        questions: content?.questions || [],
-        backgroundImage: content?.backgroundImage || '',
-        previewImage: content?.previewImage || '',
-        thumbnailUrl: content?.thumbnailUrl || '',
-        externalLink: content?.externalLink || ''
-      }
-    })
+    if (!Array.isArray(resources)) {
+      // Handle single resource case
+      const resource = new Resource({
+        name: req.body.name,
+        resourceType: req.body.resourceType,
+        sectionId: req.body.sectionId,
+        content: {
+          text: req.body.content?.text || '',
+          questions: req.body.content?.questions || [],
+          backgroundImage: req.body.content?.backgroundImage || '',
+          previewImage: req.body.content?.previewImage || '',
+          thumbnailUrl: req.body.content?.thumbnailUrl || '',
+          externalLink: req.body.content?.externalLink || ''
+        }
+      })
+      const savedResource = await resource.save()
+      return res.status(201).json({
+        success: true,
+        data: savedResource
+      })
+    }
 
-    const savedResource = await resource.save()
+    // Handle multiple resources
+    const savedResources = await Promise.all(
+      resources.map(async resourceData => {
+        const resource = new Resource({
+          name: resourceData.name,
+          resourceType: resourceData.resourceType,
+          sectionId: resourceData.sectionId,
+          content: {
+            text: resourceData.content?.text || '',
+            questions: resourceData.content?.questions || [],
+            backgroundImage: resourceData.content?.backgroundImage || '',
+            previewImage: resourceData.content?.previewImage || '',
+            thumbnailUrl: resourceData.content?.thumbnailUrl || '',
+            externalLink: resourceData.content?.externalLink || ''
+          }
+        })
+        return resource.save()
+      })
+    )
     
     res.status(201).json({
       success: true,
-      data: savedResource
+      data: savedResources
     })
 
   } catch (error) {

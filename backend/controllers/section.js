@@ -4,20 +4,37 @@ import { handleError } from '../utils/errorHandler.js'
 
 export const createSection = async (req, res) => {
   try {
-    const { name, unitId } = req.body
+    const { sections } = req.body
     
-    const section = new Section({
-      name,
-      unitId,
-      resources: [],
-      status: 1
-    })
-    
-    const savedSection = await section.save()
+    if (!Array.isArray(sections)) {
+      const section = new Section({
+        name: req.body.name,
+        unitId: req.body.unitId,
+        resources: [],
+        status: 1
+      })
+      const savedSection = await section.save()
+      return res.status(201).json({
+        success: true,
+        data: savedSection
+      })
+    }
+
+    const savedSections = await Promise.all(
+      sections.map(async sectionData => {
+        const section = new Section({
+          name: sectionData.name,
+          unitId: sectionData.unitId,
+          resources: [],
+          status: 1
+        })
+        return section.save()
+      })
+    )
     
     res.status(201).json({
       success: true,
-      data: savedSection
+      data: savedSections
     })
   } catch (error) {
     handleError(res, error)

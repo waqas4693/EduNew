@@ -18,13 +18,15 @@ import { getData } from '../../api/api'
 import axios from 'axios'
 import url from '../config/server-url'
 import Grid from '@mui/material/Grid2'
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
 
 const AssessmentRenderer = ({
   assessment,
   signedUrl,
   attemptData,
   onAnswerChange,
-  onSubmit
+  onSubmit,
+  onPlayAudio
 }) => {
   switch (assessment.assessmentType) {
     case 'QNA':
@@ -65,12 +67,22 @@ const AssessmentRenderer = ({
           <form onSubmit={onSubmit}>
             {assessment.content.mcqs.map((mcq, index) => (
               <Box key={index} sx={{ mb: 4 }}>
-                <Typography
-                  variant='subtitle1'
-                  sx={{ fontWeight: 'bold', mb: 2 }}
-                >
-                  Question {index + 1}: {mcq.question}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                  <Typography variant='subtitle1' sx={{ fontWeight: 'bold' }}>
+                    Question {index + 1}: {mcq.question}
+                  </Typography>
+                  {mcq.audioFile && (
+                    <IconButton
+                      onClick={() => onPlayAudio(mcq.audioFile)}
+                      sx={{ 
+                        color: 'primary.main',
+                        '&:hover': { bgcolor: 'primary.light' }
+                      }}
+                    >
+                      <PlayCircleOutlineIcon />
+                    </IconButton>
+                  )}
+                </Box>
                 <RadioGroup
                   value={attemptData?.mcqAnswers?.[index]?.selectedOption || ''}
                   onChange={e =>
@@ -173,6 +185,8 @@ const ViewAssessment = () => {
   const navigate = useNavigate()
   const { courseId, unitId, sectionId } = useParams()
   const { user } = useAuth()
+  const [audioPlayer, setAudioPlayer] = useState(null)
+  const [audioUrls, setAudioUrls] = useState({})
 
   const getSignedUrl = async fileName => {
     try {
@@ -185,6 +199,66 @@ const ViewAssessment = () => {
       return null
     }
   }
+
+  const getAudioUrl = async (fileName) => {
+    try {
+      // Check if URL already exists
+      if (audioUrls[fileName]) {
+        return audioUrls[fileName]
+      }
+
+      // Fetch new URL
+      const response = await axios.post(`${url}s3/get`, {
+        fileName
+      })
+
+      // Store and return URL
+      const signedUrl = response.data.signedUrl
+      setAudioUrls(prev => ({
+        ...prev,
+        [fileName]: signedUrl
+      }))
+      return signedUrl
+    } catch (error) {
+      console.error('Error fetching audio URL:', error)
+      return null
+    }
+  }
+
+  const handlePlayAudio = async (audioFileName) => {
+    try {
+      // Stop current audio if playing
+      if (audioPlayer) {
+        audioPlayer.pause()
+        audioPlayer.currentTime = 0
+      }
+
+      // Get audio URL
+      const audioUrl = await getAudioUrl(audioFileName)
+      if (!audioUrl) {
+        alert('Error loading audio file')
+        return
+      }
+
+      // Create and play new audio
+      const newPlayer = new Audio(audioUrl)
+      newPlayer.play()
+      setAudioPlayer(newPlayer)
+    } catch (error) {
+      console.error('Error playing audio:', error)
+      alert('Error playing audio file')
+    }
+  }
+
+  // Clean up audio player on unmount
+  useEffect(() => {
+    return () => {
+      if (audioPlayer) {
+        audioPlayer.pause()
+        audioPlayer.currentTime = 0
+      }
+    }
+  }, [audioPlayer])
 
   useEffect(() => {
     fetchAssessments()
@@ -386,6 +460,7 @@ const ViewAssessment = () => {
                 attemptData={attemptData}
                 onAnswerChange={handleAnswerChange}
                 onSubmit={handleSubmit}
+                onPlayAudio={handlePlayAudio}
               />
             )}
           </Box>

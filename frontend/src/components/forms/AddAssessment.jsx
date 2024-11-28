@@ -14,6 +14,8 @@ import {
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import { postData, getData } from '../../api/api'
+import axios from 'axios'
+import url from '../config/server-url'
 
 const ASSESSMENT_TYPES = [
   { value: 'QNA', label: 'Questions and Answers' },
@@ -140,7 +142,8 @@ const AddAssessment = () => {
         mcqs: [...prev.content.mcqs, {
           question: '',
           options: ['', '', '', ''],
-          correctAnswer: ''
+          correctAnswer: '',
+          audioFile: null
         }]
       }
     }))
@@ -198,6 +201,47 @@ const AddAssessment = () => {
     }))
   }
 
+  const handleMCQAudioChange = async (index, file) => {
+    try {
+      if (file) {
+        const fileExtension = file.name.split('.').pop()
+        const fileName = `mcq_audio_${Date.now()}_${index}.${fileExtension}`
+
+        // Get signed URL from S3
+        const { data: { signedUrl } } = await axios.post(url + 's3', {
+          fileName,
+          fileType: file.type
+        })
+
+        // Upload to S3
+        await axios.put(signedUrl, file, {
+          headers: {
+            'Content-Type': file.type
+          }
+        })
+
+        // Update form state with the filename
+        setFormData(prev => {
+          const newMCQs = [...prev.content.mcqs]
+          newMCQs[index] = {
+            ...newMCQs[index],
+            audioFile: fileName
+          }
+          return {
+            ...prev,
+            content: {
+              ...prev.content,
+              mcqs: newMCQs
+            }
+          }
+        })
+      }
+    } catch (error) {
+      console.error('Error uploading audio:', error)
+      alert('Error uploading audio file')
+    }
+  }
+
   const renderAssessmentTypeFields = () => {
     switch (formData.assessmentType) {
       case 'QNA':
@@ -242,28 +286,53 @@ const AddAssessment = () => {
           <Box>
             {formData.content.mcqs.map((mcq, index) => (
               <Box key={index} sx={{ mb: 2 }}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label={`Question ${index + 1}`}
-                  value={mcq.question}
-                  onChange={e => handleMCQChange(index, 'question', e.target.value)}
-                  sx={{
-                    mb: 2,
-                    '& .MuiOutlinedInput-root': {
+                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label={`Question ${index + 1}`}
+                    value={mcq.question}
+                    onChange={e => handleMCQChange(index, 'question', e.target.value)}
+                    sx={{
+                      mb: 2,
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '8px',
+                        border: '1px solid #20202033',
+                        '& fieldset': {
+                          border: 'none'
+                        }
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: '#8F8F8F',
+                        backgroundColor: 'white',
+                        padding: '0 4px'
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="outlined"
+                    component="label"
+                    sx={{
+                      height: '36px',
                       borderRadius: '8px',
                       border: '1px solid #20202033',
-                      '& fieldset': {
-                        border: 'none'
+                      minWidth: '150px',
+                      '&:hover': {
+                        border: '1px solid #20202033',
+                        bgcolor: 'rgba(0, 0, 0, 0.04)'
                       }
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: '#8F8F8F',
-                      backgroundColor: 'white',
-                      padding: '0 4px'
-                    }
-                  }}
-                />
+                    }}
+                  >
+                    {mcq.audioFile ? 'Change Audio' : 'Add Audio'}
+                    <input
+                      type="file"
+                      hidden
+                      accept="audio/*"
+                      onChange={e => handleMCQAudioChange(index, e.target.files[0])}
+                    />
+                  </Button>
+                </Box>
+
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
                   {mcq.options.map((option, optionIndex) => (
                     <TextField
@@ -312,6 +381,13 @@ const AddAssessment = () => {
                     ))}
                   </Select>
                 </FormControl>
+
+                {mcq.audioFile && (
+                  <Typography variant="caption" sx={{ display: 'block', mb: 1, color: 'success.main' }}>
+                    Audio file uploaded: {mcq.audioFile}
+                  </Typography>
+                )}
+
                 <IconButton onClick={() => removeMCQ(index)} color="error">
                   <DeleteIcon />
                 </IconButton>

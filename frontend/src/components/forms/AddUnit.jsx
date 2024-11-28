@@ -6,42 +6,51 @@ import {
   Typography,
   Paper,
   Autocomplete,
+  Divider,
+  IconButton,
 } from '@mui/material'
-import { Add as AddIcon } from '@mui/icons-material'
+import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material'
 import { postData, getData } from '../../api/api'
-import { IconButton } from '@mui/material'
 
 const AddUnit = () => {
-  const [name, setName] = useState('')
-  const [courseId, setCourseId] = useState(null)
+  const [units, setUnits] = useState([{
+    name: '',
+    courseId: null
+  }])
   const [courses, setCourses] = useState([])
 
-  useEffect(() => {
-    fetchCourses()
-  }, [])
+  const addNewUnit = () => {
+    setUnits(prev => [...prev, { name: '', courseId: prev[0].courseId }])
+  }
 
-  const fetchCourses = async () => {
-    try {
-      const response = await getData('courses')
-      if (response.status === 200) {
-        setCourses(response.data.data)
+  const removeUnit = (indexToRemove) => {
+    setUnits(prev => prev.filter((_, index) => index !== indexToRemove))
+  }
+
+  const handleUnitChange = (index, field, value) => {
+    setUnits(prev => {
+      const newUnits = [...prev]
+      newUnits[index] = {
+        ...newUnits[index],
+        [field]: value
       }
-    } catch (error) {
-      console.error('Error fetching courses:', error)
-    }
+      if (field === 'courseId') {
+        newUnits.forEach(unit => unit.courseId = value)
+      }
+      return newUnits
+    })
   }
 
   const handleSubmit = async e => {
     e.preventDefault()
     try {
-      const response = await postData('units', { name, courseId })
+      const response = await postData('units', { units })
       if (response.status === 201) {
-        setName('')
-        setCourseId(null)
-        alert('Unit added successfully')
+        setUnits([{ name: '', courseId: null }])
+        alert('Units added successfully')
       }
     } catch (error) {
-      console.error('Error adding unit:', error)
+      console.error('Error adding units:', error)
     }
   }
 
@@ -52,82 +61,55 @@ const AddUnit = () => {
         size='small'
         options={courses}
         getOptionLabel={option => option.name}
-        onChange={(_, newValue) => setCourseId(newValue?._id)}
+        onChange={(_, newValue) => handleUnitChange(0, 'courseId', newValue?._id)}
         renderInput={params => (
-          <TextField
-            {...params}
-            size='small'
-            label='Select Course'
-            required
-            sx={{
-              mb: 2,
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '8px',
-                border: '1px solid #20202033',
-                '& fieldset': {
-                  border: 'none'
-                }
-              },
-              '& .MuiInputLabel-root': {
-                color: '#8F8F8F',
-                backgroundColor: 'white',
-                padding: '0 4px'
-              }
-            }}
-          />
+          <TextField {...params} label='Select Course' required />
         )}
+        sx={{ mb: 2 }}
       />
-      <TextField
-        fullWidth
-        size='small'
-        label='Unit Name'
-        value={name}
-        onChange={e => setName(e.target.value)}
-        required
-        sx={{
-          mb: 2,
-          '& .MuiOutlinedInput-root': {
-            borderRadius: '8px',
-            border: '1px solid #20202033',
-            '& fieldset': {
-              border: 'none'
-            }
-          },
-          '& .MuiInputLabel-root': {
-            color: '#8F8F8F'
-          }
-        }}
-      />
+
+      {units.map((unit, index) => (
+        <Box key={index}>
+          {index > 0 && (
+            <>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                <IconButton
+                  onClick={() => removeUnit(index)}
+                  sx={{
+                    color: 'error.main',
+                    '&:hover': { bgcolor: 'error.light', color: 'white' }
+                  }}
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </Box>
+              <Divider sx={{ my: 4 }} />
+            </>
+          )}
+          
+          <TextField
+            fullWidth
+            size='small'
+            label='Unit Name'
+            value={unit.name}
+            onChange={e => handleUnitChange(index, 'name', e.target.value)}
+            required
+            sx={{ mb: 2 }}
+          />
+        </Box>
+      ))}
+
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <IconButton
-            sx={{
-              bgcolor: 'primary.main',
-              color: 'white',
-              width: 30,
-              height: 30,
-              '&:hover': {
-                bgcolor: 'primary.dark'
-              }
-            }}
-          >
+          <IconButton onClick={addNewUnit} sx={{ /* existing styles */ }}>
             <AddIcon />
           </IconButton>
           <Typography sx={{ fontWeight: 'bold', color: 'black' }}>
-            Add Unit
+            Add Another Unit
           </Typography>
         </Box>
-        <Button
-          type='submit'
-          variant='contained'
-          sx={{ 
-            minWidth: '100px',
-            width: '100px',
-            borderRadius: '8px',
-            height: '36px'
-          }}
-        >
-          Save
+        <Button type='submit' variant='contained' sx={{ /* existing styles */ }}>
+          Save All
         </Button>
       </Box>
     </form>

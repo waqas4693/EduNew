@@ -12,12 +12,14 @@ import {
   InputLabel,
   Backdrop,
   LinearProgress,
-  IconButton
+  IconButton,
+  Divider
 } from '@mui/material'
 import { postData, getData } from '../../api/api'
 import axios from 'axios'
 import url from '../config/server-url'
 import AddIcon from '@mui/icons-material/Add'
+import DeleteIcon from '@mui/icons-material/Delete'
 
 const RESOURCE_TYPES = [
   { value: 'VIDEO', label: 'Video' },
@@ -45,7 +47,7 @@ const UploadButton = ({ label, onChange, value, accept }) => (
 )
 
 const AddResource = () => {
-  const [formData, setFormData] = useState({
+  const [resources, setResources] = useState([{
     name: '',
     resourceType: '',
     content: {
@@ -61,7 +63,7 @@ const AddResource = () => {
       thumbnail: null,
       externalLink: ''
     }
-  })
+  }])
   const [courseId, setCourseId] = useState(null)
   const [unitId, setUnitId] = useState(null)
   const [sectionId, setSectionId] = useState(null)
@@ -120,364 +122,49 @@ const AddResource = () => {
     }
   }
 
-  const handleFormChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
+  const addNewResource = () => {
+    setResources(prev => [...prev, {
+      name: '',
+      resourceType: '',
+      content: {
+        text: '',
+        questions: [
+          { question: '', answer: '' },
+          { question: '', answer: '' },
+          { question: '', answer: '' }
+        ],
+        backgroundImage: '',
+        previewImage: '',
+        file: null,
+        thumbnail: null,
+        externalLink: ''
+      }
+    }])
   }
 
-  const handleQuestionChange = (index, field, value) => {
-    setFormData(prev => {
-      const newQuestions = [...prev.content.questions]
-      newQuestions[index] = {
-        ...newQuestions[index],
+  const handleFormChange = (index, field, value) => {
+    setResources(prev => {
+      const newResources = [...prev]
+      newResources[index] = {
+        ...newResources[index],
         [field]: value
       }
-      return {
-        ...prev,
-        content: {
-          ...prev.content,
-          questions: newQuestions
-        }
-      }
+      return newResources
     })
   }
 
-  const renderCommonFields = () => (
-    <>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant='subtitle1' sx={{ mb: 1 }}>
-          Upload Thumbnail
-        </Typography>
-        <Button variant='outlined' component='label' fullWidth>
-          {formData.content.thumbnail
-            ? formData.content.thumbnail.name
-            : 'Choose Thumbnail Image'}
-          <input
-            type='file'
-            hidden
-            accept='image/*'
-            onChange={e =>
-              handleFormChange('content', {
-                ...formData.content,
-                thumbnail: e.target.files[0]
-              })
-            }
-          />
-        </Button>
-      </Box>
-      <TextField
-        fullWidth
-        label='External Link (Optional)'
-        value={formData.content.externalLink}
-        onChange={e =>
-          handleFormChange('content', {
-            ...formData.content,
-            externalLink: e.target.value
-          })
+  const handleContentChange = (index, field, value) => {
+    setResources(prev => {
+      const newResources = [...prev]
+      newResources[index] = {
+        ...newResources[index],
+        content: {
+          ...newResources[index].content,
+          [field]: value
         }
-        sx={{ mb: 3 }}
-      />
-    </>
-  )
-
-  const renderResourceTypeFields = () => {
-    switch (formData.resourceType) {
-      case 'AUDIO':
-        return (
-          <>
-            <Box sx={{ mb: 3 }}>
-              <Typography variant='subtitle1' sx={{ mb: 1 }}>
-                Upload Audio File
-              </Typography>
-              <Button variant='outlined' component='label' fullWidth>
-                {formData.content.file
-                  ? formData.content.file.name
-                  : 'Choose Audio File'}
-                <input
-                  type='file'
-                  hidden
-                  accept='audio/*'
-                  onChange={e =>
-                    handleFormChange('content', {
-                      ...formData.content,
-                      file: e.target.files[0]
-                    })
-                  }
-                />
-              </Button>
-            </Box>
-            <Box sx={{ mb: 3 }}>
-              <Typography variant='subtitle1' sx={{ mb: 1 }}>
-                Upload Background Image
-              </Typography>
-              <Button variant='outlined' component='label' fullWidth>
-                {formData.content.backgroundImage
-                  ? formData.content.backgroundImage.name
-                  : 'Choose Background Image'}
-                <input
-                  type='file'
-                  hidden
-                  accept='image/*'
-                  onChange={e =>
-                    handleFormChange('content', {
-                      ...formData.content,
-                      backgroundImage: e.target.files[0]
-                    })
-                  }
-                />
-              </Button>
-            </Box>
-          </>
-        )
-
-      case 'PPT':
-        return (
-          <>
-            <Box sx={{ mb: 3 }}>
-              <Typography variant='subtitle1' sx={{ mb: 1 }}>
-                Upload PPT File
-              </Typography>
-              <Button variant='outlined' component='label' fullWidth>
-                {formData.content.file
-                  ? formData.content.file.name
-                  : 'Choose PPT File'}
-                <input
-                  type='file'
-                  hidden
-                  accept='.ppt,.pptx'
-                  onChange={e =>
-                    handleFormChange('content', {
-                      ...formData.content,
-                      file: e.target.files[0]
-                    })
-                  }
-                />
-              </Button>
-            </Box>
-            <Box sx={{ mb: 3 }}>
-              <Typography variant='subtitle1' sx={{ mb: 1 }}>
-                Upload Preview Image
-              </Typography>
-              <Button variant='outlined' component='label' fullWidth>
-                {formData.content.previewImage
-                  ? formData.content.previewImage.name
-                  : 'Choose Preview Image'}
-                <input
-                  type='file'
-                  hidden
-                  accept='image/*'
-                  onChange={e =>
-                    handleFormChange('content', {
-                      ...formData.content,
-                      previewImage: e.target.files[0]
-                    })
-                  }
-                />
-              </Button>
-            </Box>
-          </>
-        )
-
-      case 'VIDEO':
-        return (
-          <Box sx={{ mb: 3 }}>
-            <Typography variant='subtitle1' sx={{ mb: 1 }}>
-              Upload Video File
-            </Typography>
-            <Button variant='outlined' component='label' fullWidth>
-              {formData.content.file
-                ? formData.content.file.name
-                : 'Choose Video File'}
-              <input
-                type='file'
-                hidden
-                accept='video/*'
-                onChange={e =>
-                  handleFormChange('content', {
-                    ...formData.content,
-                    file: e.target.files[0]
-                  })
-                }
-              />
-            </Button>
-          </Box>
-        )
-
-      case 'IMAGE':
-        return (
-          <Box sx={{ mb: 3 }}>
-            <Typography variant='subtitle1' sx={{ mb: 1 }}>
-              Upload Image File
-            </Typography>
-            <Button variant='outlined' component='label' fullWidth>
-              {formData.content.file
-                ? formData.content.file.name
-                : 'Choose Image File'}
-              <input
-                type='file'
-                hidden
-                accept='image/*'
-                onChange={e =>
-                  handleFormChange('content', {
-                    ...formData.content,
-                    file: e.target.files[0]
-                  })
-                }
-              />
-            </Button>
-          </Box>
-        )
-
-      case 'PDF':
-        return (
-          <Box sx={{ mb: 3 }}>
-            <Typography variant='subtitle1' sx={{ mb: 1 }}>
-              Upload PDF File
-            </Typography>
-            <Button variant='outlined' component='label' fullWidth>
-              {formData.content.file
-                ? formData.content.file.name
-                : 'Choose PDF File'}
-              <input
-                type='file'
-                hidden
-                accept='.pdf'
-                onChange={e =>
-                  handleFormChange('content', {
-                    ...formData.content,
-                    file: e.target.files[0]
-                  })
-                }
-              />
-            </Button>
-          </Box>
-        )
-
-      case 'TEXT':
-        return (
-          <>
-            <TextField
-              fullWidth
-              multiline
-              rows={4}
-              label='Main Text'
-              value={formData.content.text}
-              onChange={e =>
-                handleFormChange('content', {
-                  ...formData.content,
-                  text: e.target.value
-                })
-              }
-              sx={{ mb: 3 }}
-            />
-            <Box sx={{ mb: 3 }}>
-              <Typography variant='subtitle1' sx={{ mb: 1 }}>
-                Upload Image
-              </Typography>
-              <Button variant='outlined' component='label' fullWidth>
-                {formData.content.file
-                  ? formData.content.file.name
-                  : 'Choose Image File'}
-                <input
-                  type='file'
-                  hidden
-                  accept='image/*'
-                  onChange={e =>
-                    handleFormChange('content', {
-                      ...formData.content,
-                      file: e.target.files[0]
-                    })
-                  }
-                />
-              </Button>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-              <UploadButton
-                label='Choose Thumbnail'
-                value={formData.content.thumbnail}
-                accept='image/*'
-                onChange={e =>
-                  handleFormChange('content', {
-                    ...formData.content,
-                    thumbnail: e.target.files[0]
-                  })
-                }
-              />
-
-              {formData.resourceType === 'TEXT' && (
-                <UploadButton
-                  label='Choose Background'
-                  value={formData.content.backgroundImage}
-                  accept='image/*'
-                  onChange={e =>
-                    handleFormChange('content', {
-                      ...formData.content,
-                      backgroundImage: e.target.files[0]
-                    })
-                  }
-                />
-              )}
-            </Box>
-            {formData.content.questions.map((q, index) => (
-              <Box key={index} sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                <TextField
-                  fullWidth
-                  size='small'
-                  label={`Question ${index + 1}`}
-                  value={q.question}
-                  onChange={e =>
-                    handleQuestionChange(index, 'question', e.target.value)
-                  }
-                  required
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '8px',
-                      border: '1px solid #20202033',
-                      '& fieldset': {
-                        border: 'none'
-                      }
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: '#8F8F8F',
-                      backgroundColor: 'white',
-                      padding: '0 4px'
-                    }
-                  }}
-                />
-                <TextField
-                  fullWidth
-                  size='small'
-                  label={`Answer ${index + 1}`}
-                  value={q.answer}
-                  onChange={e =>
-                    handleQuestionChange(index, 'answer', e.target.value)
-                  }
-                  required
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '8px',
-                      border: '1px solid #20202033',
-                      '& fieldset': {
-                        border: 'none'
-                      }
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: '#8F8F8F',
-                      backgroundColor: 'white',
-                      padding: '0 4px'
-                    }
-                  }}
-                />
-              </Box>
-            ))}
-          </>
-        )
-
-      default:
-        return null
-    }
+      }
+      return newResources
+    })
   }
 
   const uploadFileToS3 = async (file, resourceName) => {
@@ -516,94 +203,105 @@ const AddResource = () => {
     setIsUploading(true)
 
     try {
-      if (!formData.name || !formData.resourceType || !sectionId) {
-        alert('Please fill all required fields')
+      if (!sectionId) {
+        alert('Please select a section')
         return
       }
 
-      const resourceData = {
-        resourceType: formData.resourceType,
-        sectionId: sectionId
-      }
+      const resourcePromises = resources.map(async (resource) => {
+        if (!resource.name || !resource.resourceType) {
+          throw new Error('Please fill all required fields')
+        }
 
-      const contentData = {}
+        const resourceData = {
+          name: resource.name,
+          resourceType: resource.resourceType,
+          sectionId: sectionId
+        }
 
-      if (formData.content.file) {
-        const fileName = await uploadFileToS3(
-          formData.content.file,
-          formData.name
-        )
-        resourceData.name = fileName
-      }
+        const contentData = {}
 
-      if (
-        formData.resourceType === 'AUDIO' &&
-        formData.content.backgroundImage
-      ) {
-        const bgFileName = await uploadFileToS3(
-          formData.content.backgroundImage,
-          `${formData.name}_bg`
-        )
-        contentData.backgroundImageUrl = bgFileName
-      }
+        if (resource.content.file) {
+          const fileName = await uploadFileToS3(
+            resource.content.file,
+            resource.name
+          )
+          resourceData.name = fileName
+        }
 
-      if (formData.resourceType === 'PPT' && formData.content.previewImage) {
-        const previewFileName = await uploadFileToS3(
-          formData.content.previewImage,
-          `${formData.name}_preview`
-        )
-        contentData.previewImageUrl = previewFileName
-      }
+        if (
+          resource.resourceType === 'AUDIO' &&
+          resource.content.backgroundImage
+        ) {
+          const bgFileName = await uploadFileToS3(
+            resource.content.backgroundImage,
+            `${resource.name}_bg`
+          )
+          contentData.backgroundImageUrl = bgFileName
+        }
 
-      if (formData.content.thumbnail) {
-        const thumbnailFileName = await uploadFileToS3(
-          formData.content.thumbnail,
-          `${formData.name}_thumb`
-        )
-        contentData.thumbnailUrl = thumbnailFileName
-      }
+        if (resource.resourceType === 'PPT' && resource.content.previewImage) {
+          const previewFileName = await uploadFileToS3(
+            resource.content.previewImage,
+            `${resource.name}_preview`
+          )
+          contentData.previewImageUrl = previewFileName
+        }
 
-      if (formData.content.externalLink) {
-        contentData.externalLink = formData.content.externalLink
-      }
+        if (resource.content.thumbnail) {
+          const thumbnailFileName = await uploadFileToS3(
+            resource.content.thumbnail,
+            `${resource.name}_thumb`
+          )
+          contentData.thumbnailUrl = thumbnailFileName
+        }
 
-      resourceData.content = {
-        ...resourceData.content,
-        ...contentData
-      }
+        if (resource.content.externalLink) {
+          contentData.externalLink = resource.content.externalLink
+        }
 
-      const response = await postData('resources', resourceData)
+        resourceData.content = {
+          ...resourceData.content,
+          ...contentData
+        }
 
-      if (response.status === 201) {
-        setFormData({
-          name: '',
-          resourceType: '',
-          content: {
-            text: '',
-            questions: [
-              { question: '', answer: '' },
-              { question: '', answer: '' },
-              { question: '', answer: '' }
-            ],
-            backgroundImage: '',
-            previewImage: '',
-            file: null,
-            thumbnail: null,
-            externalLink: ''
-          }
-        })
-        setSectionId(null)
-        setUnitId(null)
-        setCourseId(null)
-        alert('Resource added successfully')
-      }
+        return postData('resources', resourceData)
+      })
+
+      await Promise.all(resourcePromises)
+
+      setResources([{
+        name: '',
+        resourceType: '',
+        content: {
+          text: '',
+          questions: [
+            { question: '', answer: '' },
+            { question: '', answer: '' },
+            { question: '', answer: '' }
+          ],
+          backgroundImage: '',
+          previewImage: '',
+          file: null,
+          thumbnail: null,
+          externalLink: ''
+        }
+      }])
+      setSectionId(null)
+      setUnitId(null)
+      setCourseId(null)
+      alert('Resources added successfully')
     } catch (error) {
-      console.error('Error adding resource:', error)
-      alert('Error uploading resource. Please try again.')
+      console.error('Error adding resources:', error)
+      alert('Error uploading resources. Please try again.')
     } finally {
       setIsUploading(false)
       setUploadProgress(0)
     }
+  }
+
+  const removeResource = (indexToRemove) => {
+    setResources(prev => prev.filter((_, index) => index !== indexToRemove))
   }
 
   return (
@@ -701,278 +399,280 @@ const AddResource = () => {
           />
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-          <TextField
-            fullWidth
-            size='small'
-            label='Resource Name'
-            value={formData.name}
-            onChange={e => handleFormChange('name', e.target.value)}
-            required
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '8px',
-                border: '1px solid #20202033',
-                '& fieldset': {
-                  border: 'none'
-                }
-              },
-              '& .MuiInputLabel-root': {
-                color: '#8F8F8F',
-                backgroundColor: 'white',
-                padding: '0 4px'
-              }
-            }}
-          />
-          <FormControl fullWidth size='small'>
-            <InputLabel
-              sx={{
-                color: '#8F8F8F',
-                backgroundColor: 'white',
-                padding: '0 4px'
-              }}
-            >
-              Resource Type
-            </InputLabel>
-            <Select
-              value={formData.resourceType}
-              onChange={e => handleFormChange('resourceType', e.target.value)}
-              required
-              sx={{
-                borderRadius: '8px',
-                border: '1px solid #20202033',
-                '& .MuiOutlinedInput-notchedOutline': {
-                  border: 'none'
-                }
-              }}
-            >
-              {RESOURCE_TYPES.map(type => (
-                <MenuItem key={type.value} value={type.value}>
-                  {type.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-
-        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-          <UploadButton
-            label='Choose Thumbnail'
-            value={formData.content.thumbnail}
-            accept='image/*'
-            onChange={e =>
-              handleFormChange('content', {
-                ...formData.content,
-                thumbnail: e.target.files[0]
-              })
-            }
-          />
-
-          {formData.resourceType === 'VIDEO' && (
-            <UploadButton
-              label='Choose Video'
-              value={formData.content.file}
-              accept='video/*'
-              onChange={e =>
-                handleFormChange('content', {
-                  ...formData.content,
-                  file: e.target.files[0]
-                })
-              }
-            />
-          )}
-
-          {formData.resourceType === 'AUDIO' && (
-            <>
-              <UploadButton
-                label='Choose Audio'
-                value={formData.content.file}
-                accept='audio/*'
-                onChange={e =>
-                  handleFormChange('content', {
-                    ...formData.content,
-                    file: e.target.files[0]
-                  })
-                }
-              />
-              <UploadButton
-                label='Choose Background'
-                value={formData.content.backgroundImage}
-                accept='image/*'
-                onChange={e =>
-                  handleFormChange('content', {
-                    ...formData.content,
-                    backgroundImage: e.target.files[0]
-                  })
-                }
-              />
-            </>
-          )}
-
-          {formData.resourceType === 'PPT' && (
-            <>
-              <UploadButton
-                label='Choose PPT'
-                value={formData.content.file}
-                accept='.ppt,.pptx'
-                onChange={e =>
-                  handleFormChange('content', {
-                    ...formData.content,
-                    file: e.target.files[0]
-                  })
-                }
-              />
-              <UploadButton
-                label='Choose Preview'
-                value={formData.content.previewImage}
-                accept='image/*'
-                onChange={e =>
-                  handleFormChange('content', {
-                    ...formData.content,
-                    previewImage: e.target.files[0]
-                  })
-                }
-              />
-            </>
-          )}
-
-          {formData.resourceType === 'PDF' && (
-            <UploadButton
-              label='Choose PDF'
-              value={formData.content.file}
-              accept='.pdf'
-              onChange={e =>
-                handleFormChange('content', {
-                  ...formData.content,
-                  file: e.target.files[0]
-                })
-              }
-            />
-          )}
-
-          {formData.resourceType === 'IMAGE' && (
-            <UploadButton
-              label='Choose Image'
-              value={formData.content.file}
-              accept='image/*'
-              onChange={e =>
-                handleFormChange('content', {
-                  ...formData.content,
-                  file: e.target.files[0]
-                })
-              }
-            />
-          )}
-
-          {formData.resourceType === 'TEXT' && (
-            <UploadButton
-              label='Choose Background'
-              value={formData.content.backgroundImage}
-              accept='image/*'
-              onChange={e =>
-                handleFormChange('content', {
-                  ...formData.content,
-                  backgroundImage: e.target.files[0]
-                })
-              }
-            />
-          )}
-        </Box>
-
-        {formData.resourceType === 'TEXT' && (
-          <>
-            {formData.content.questions.map((q, index) => (
-              <Box key={index} sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                <TextField
-                  fullWidth
-                  size='small'
-                  label={`Question ${index + 1}`}
-                  value={q.question}
-                  onChange={e =>
-                    handleQuestionChange(index, 'question', e.target.value)
+        {resources.map((resource, index) => (
+          <Box key={index}>
+            {index > 0 && (
+              <>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                  <IconButton
+                    onClick={() => removeResource(index)}
+                    sx={{
+                      color: 'error.main',
+                      '&:hover': {
+                        bgcolor: 'error.light',
+                        color: 'white'
+                      }
+                    }}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+                <Divider sx={{ my: 4 }} />
+              </>
+            )}
+            
+            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <TextField
+                fullWidth
+                size='small'
+                label='Resource Name'
+                value={resource.name}
+                onChange={e => handleFormChange(index, 'name', e.target.value)}
+                required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '8px',
+                    border: '1px solid #20202033',
+                    '& fieldset': {
+                      border: 'none'
+                    }
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: '#8F8F8F',
+                    backgroundColor: 'white',
+                    padding: '0 4px'
                   }
+                }}
+              />
+              <FormControl fullWidth size='small'>
+                <InputLabel
+                  sx={{
+                    color: '#8F8F8F',
+                    backgroundColor: 'white',
+                    padding: '0 4px'
+                  }}
+                >
+                  Resource Type
+                </InputLabel>
+                <Select
+                  value={resource.resourceType}
+                  onChange={e => handleFormChange(index, 'resourceType', e.target.value)}
                   required
                   sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '8px',
-                      border: '1px solid #20202033',
-                      '& fieldset': {
-                        border: 'none'
-                      }
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: '#8F8F8F',
-                      backgroundColor: 'white',
-                      padding: '0 4px'
+                    borderRadius: '8px',
+                    border: '1px solid #20202033',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      border: 'none'
                     }
                   }}
-                />
-                <TextField
-                  fullWidth
-                  size='small'
-                  label={`Answer ${index + 1}`}
-                  value={q.answer}
-                  onChange={e =>
-                    handleQuestionChange(index, 'answer', e.target.value)
-                  }
-                  required
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '8px',
-                      border: '1px solid #20202033',
-                      '& fieldset': {
-                        border: 'none'
-                      }
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: '#8F8F8F',
-                      backgroundColor: 'white',
-                      padding: '0 4px'
-                    }
-                  }}
-                />
-              </Box>
-            ))}
-          </>
-        )}
+                >
+                  {RESOURCE_TYPES.map(type => (
+                    <MenuItem key={type.value} value={type.value}>
+                      {type.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
 
-        <TextField
-          fullWidth
-          size='small'
-          label='External Link (Optional)'
-          value={formData.content.externalLink}
-          onChange={e =>
-            handleFormChange('content', {
-              ...formData.content,
-              externalLink: e.target.value
-            })
-          }
-          sx={{
-            mb: 2,
-            '& .MuiOutlinedInput-root': {
-              borderRadius: '8px',
-              border: '1px solid #20202033',
-              '& fieldset': {
-                border: 'none'
+            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <UploadButton
+                label='Choose Thumbnail'
+                value={resource.content.thumbnail}
+                accept='image/*'
+                onChange={e =>
+                  handleContentChange(index, 'thumbnail', e.target.files[0])
+                }
+              />
+
+              {resource.resourceType === 'VIDEO' && (
+                <UploadButton
+                  label='Choose Video'
+                  value={resource.content.file}
+                  accept='video/*'
+                  onChange={e =>
+                    handleContentChange(index, 'file', e.target.files[0])
+                  }
+                />
+              )}
+
+              {resource.resourceType === 'AUDIO' && (
+                <>
+                  <UploadButton
+                    label='Choose Audio'
+                    value={resource.content.file}
+                    accept='audio/*'
+                    onChange={e =>
+                      handleContentChange(index, 'file', e.target.files[0])
+                    }
+                  />
+                  <UploadButton
+                    label='Choose Background'
+                    value={resource.content.backgroundImage}
+                    accept='image/*'
+                    onChange={e =>
+                      handleContentChange(index, 'backgroundImage', e.target.files[0])
+                    }
+                  />
+                </>
+              )}
+
+              {resource.resourceType === 'PPT' && (
+                <>
+                  <UploadButton
+                    label='Choose PPT'
+                    value={resource.content.file}
+                    accept='.ppt,.pptx'
+                    onChange={e =>
+                      handleContentChange(index, 'file', e.target.files[0])
+                    }
+                  />
+                  <UploadButton
+                    label='Choose Preview'
+                    value={resource.content.previewImage}
+                    accept='image/*'
+                    onChange={e =>
+                      handleContentChange(index, 'previewImage', e.target.files[0])
+                    }
+                  />
+                </>
+              )}
+
+              {resource.resourceType === 'PDF' && (
+                <UploadButton
+                  label='Choose PDF'
+                  value={resource.content.file}
+                  accept='.pdf'
+                  onChange={e =>
+                    handleContentChange(index, 'file', e.target.files[0])
+                  }
+                />
+              )}
+
+              {resource.resourceType === 'IMAGE' && (
+                <UploadButton
+                  label='Choose Image'
+                  value={resource.content.file}
+                  accept='image/*'
+                  onChange={e =>
+                    handleContentChange(index, 'file', e.target.files[0])
+                  }
+                />
+              )}
+
+              {resource.resourceType === 'TEXT' && (
+                <UploadButton
+                  label='Choose Background'
+                  value={resource.content.backgroundImage}
+                  accept='image/*'
+                  onChange={e =>
+                    handleContentChange(index, 'backgroundImage', e.target.files[0])
+                  }
+                />
+              )}
+            </Box>
+
+            {resource.resourceType === 'TEXT' && (
+              <>
+                {resource.content.questions.map((q, index) => (
+                  <Box key={index} sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                    <TextField
+                      fullWidth
+                      size='small'
+                      label={`Question ${index + 1}`}
+                      value={q.question}
+                      onChange={e =>
+                        handleContentChange(index, 'questions', {
+                          ...q,
+                          question: e.target.value
+                        })
+                      }
+                      required
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '8px',
+                          border: '1px solid #20202033',
+                          '& fieldset': {
+                            border: 'none'
+                          }
+                        },
+                        '& .MuiInputLabel-root': {
+                          color: '#8F8F8F',
+                          backgroundColor: 'white',
+                          padding: '0 4px'
+                        }
+                      }}
+                    />
+                    <TextField
+                      fullWidth
+                      size='small'
+                      label={`Answer ${index + 1}`}
+                      value={q.answer}
+                      onChange={e =>
+                        handleContentChange(index, 'questions', {
+                          ...q,
+                          answer: e.target.value
+                        })
+                      }
+                      required
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '8px',
+                          border: '1px solid #20202033',
+                          '& fieldset': {
+                            border: 'none'
+                          }
+                        },
+                        '& .MuiInputLabel-root': {
+                          color: '#8F8F8F',
+                          backgroundColor: 'white',
+                          padding: '0 4px'
+                        }
+                      }}
+                    />
+                  </Box>
+                ))}
+              </>
+            )}
+
+            <TextField
+              fullWidth
+              size='small'
+              label='External Link (Optional)'
+              value={resource.content.externalLink}
+              onChange={e =>
+                handleContentChange(index, 'externalLink', e.target.value)
               }
-            },
-            '& .MuiInputLabel-root': {
-              color: '#8F8F8F',
-              backgroundColor: 'white',
-              padding: '0 4px'
-            }
-          }}
-        />
+              sx={{
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  border: '1px solid #20202033',
+                  '& fieldset': {
+                    border: 'none'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#8F8F8F',
+                  backgroundColor: 'white',
+                  padding: '0 4px'
+                }
+              }}
+            />
+          </Box>
+        ))}
 
         <Box
           sx={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center'
+            alignItems: 'center',
+            mt: 4
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <IconButton
+              onClick={addNewResource}
               sx={{
                 bgcolor: 'primary.main',
                 color: 'white',
@@ -999,7 +699,7 @@ const AddResource = () => {
               height: '36px'
             }}
           >
-            Save
+            Save All
           </Button>
         </Box>
       </form>

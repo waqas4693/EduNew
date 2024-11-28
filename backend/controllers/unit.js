@@ -3,12 +3,33 @@ import { handleError } from '../utils/errorHandler.js'
 
 export const createUnit = async (req, res) => {
   try {
-    const { name, courseId } = req.body
-    const unit = new Unit({ name, courseId })
-    const savedUnit = await unit.save()
+    const { units } = req.body
+    
+    if (!Array.isArray(units)) {
+      const unit = new Unit({ 
+        name: req.body.name, 
+        courseId: req.body.courseId 
+      })
+      const savedUnit = await unit.save()
+      return res.status(201).json({
+        success: true,
+        data: savedUnit
+      })
+    }
+
+    const savedUnits = await Promise.all(
+      units.map(async unitData => {
+        const unit = new Unit({
+          name: unitData.name,
+          courseId: unitData.courseId
+        })
+        return unit.save()
+      })
+    )
+    
     res.status(201).json({
       success: true,
-      data: savedUnit
+      data: savedUnits
     })
   } catch (error) {
     handleError(res, error)

@@ -27,7 +27,8 @@ const assessmentSchema = new mongoose.Schema({
     mcqs: [{
       question: String,
       options: [String],
-      correctAnswer: String
+      correctAnswer: String,
+      audioFile: String
     }],
     assessmentFile: String,
     supportingFile: String
