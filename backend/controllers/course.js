@@ -3,10 +3,11 @@ import { handleError } from '../utils/errorHandler.js'
 
 export const createCourse = async (req, res) => {
   try {
-    const { name } = req.body
+    const { name, thumbnail } = req.body
     
     const course = new Course({
-      name
+      name,
+      thumbnail
     })
 
     const savedCourse = await course.save()

@@ -18,8 +18,6 @@ const DashboardLayout = ({ children }) => {
   const [background, setBackground] = useState(`/background-images/${backgroundImages[0]}`)
   const [openDialog, setOpenDialog] = useState(false)
 
-  
-
   const handleImageSelect = (image) => {
     setBackground(`/background-images/${image}`)
     setOpenDialog(false)
