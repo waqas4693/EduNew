@@ -1,19 +1,18 @@
-import { useState, useEffect } from 'react'
-import { Box, Typography, IconButton, Paper } from '@mui/material'
-import { useNavigate, useParams } from 'react-router-dom'
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
-import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import { getData } from '../../api/api'
 import axios from 'axios'
 import url from '../config/server-url'
 import Grid from '@mui/material/Grid2'
+
+import { getData } from '../../api/api'
+import { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { Box, Typography, IconButton, Paper } from '@mui/material'
 import { ChevronLeft, ChevronRight, Launch } from '@mui/icons-material'
 
 const ResourceRenderer = ({ resource, signedUrl }) => {
   switch (resource.resourceType) {
     case 'VIDEO':
       return (
-        <Box sx={{ position: 'relative', width: '100%', pt: '56.25%' }}>
+        <Box sx={{ position: 'relative', width: '100%', height: '80vh' }}>
           <video
             controls
             style={{
@@ -30,93 +29,57 @@ const ResourceRenderer = ({ resource, signedUrl }) => {
 
     case 'IMAGE':
       return (
-        <Box sx={{ width: '100%', textAlign: 'center' }}>
-          <img
-            src={signedUrl}
-            alt={resource.name}
-            style={{ maxWidth: '100%', maxHeight: '70vh' }}
-          />
-        </Box>
-      )
-
-    case 'AUDIO':
-      return (
         <Box
           sx={{
             width: '100%',
-            backgroundImage: resource.content.backgroundImage
-              ? `url(${resource.content.backgroundImageUrl})`
-              : 'none',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            p: 3
+            height: '70vh',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
           }}
         >
-          <audio controls style={{ width: '100%' }}>
-            <source src={signedUrl} type='audio/mpeg' />
-          </audio>
-        </Box>
-      )
-
-    case 'PDF':
-      return (
-        <Box sx={{ width: '100%', height: '70vh' }}>
-          <iframe
-            src={signedUrl}
-            width='100%'
-            height='100%'
-            title={resource.name}
-          />
-        </Box>
-      )
-
-    case 'PPT':
-      return (
-        <Box sx={{ width: '100%', textAlign: 'center' }}>
           <img
-            src={resource.content.previewImageUrl}
+            src={signedUrl}
             alt={resource.name}
-            style={{ maxWidth: '100%', maxHeight: '70vh' }}
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain'
+            }}
           />
-          <Typography sx={{ mt: 2 }}>
-            <a href={signedUrl} target='_blank' rel='noopener noreferrer'>
-              Download Presentation
-            </a>
-          </Typography>
         </Box>
       )
 
     case 'TEXT':
       return (
-        <Box sx={{ p: 3 }}>
-          <Typography variant='body1' sx={{ mb: 3 }}>
-            {resource.content.text}
-          </Typography>
-          {resource.content.questions.map((q, index) => (
-            <Box key={index} sx={{ mb: 3 }}>
-              <Typography
-                variant='subtitle1'
-                sx={{ fontWeight: 'bold', mb: 1 }}
-              >
-                Question {index + 1}: {q.question}
-              </Typography>
-              <Typography variant='body1'>Answer: {q.answer}</Typography>
-            </Box>
-          ))}
-          {resource.content.imageUrl && (
-            <Box sx={{ mt: 3, textAlign: 'center' }}>
-              <img
-                src={signedUrl}
-                alt='Supporting Image'
-                style={{ maxWidth: '100%', maxHeight: '50vh' }}
-              />
-            </Box>
-          )}
+        <Box
+          sx={{
+            width: '100%',
+            minHeight: '70vh',
+            p: 3,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'flex-start'
+          }}
+        >
+          <Typography variant='body1'>{resource.content.text}</Typography>
         </Box>
       )
 
     default:
-      return <Typography>Unsupported resource type</Typography>
+      return (
+        <Box
+          sx={{
+            width: '100%',
+            height: '70vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <Typography>Unsupported resource type</Typography>
+        </Box>
+      )
   }
 }
 
@@ -139,21 +102,70 @@ const LearnerFrame = () => {
     }
   }
 
+  // Fetch all thumbnails on mount
   useEffect(() => {
-    fetchResources()
+    const fetchAllThumbnails = async () => {
+      try {
+        const response = await getData(`resources/${sectionId}`)
+        if (response.status === 200) {
+          setResources(response.data.resources)
+          
+          // Fetch thumbnails for all resources
+          const thumbnailPromises = response.data.resources.map(async resource => {
+            if (resource.content.thumbnailUrl) {
+              // Get thumbnail URL
+              const thumbnailUrl = await getSignedUrl(resource.content.thumbnailUrl)
+              return { 
+                fileName: resource.content.thumbnailUrl, 
+                url: thumbnailUrl 
+              }
+            }
+            // Get default thumbnail based on resource type
+            if (resource.resourceType !== 'TEXT') {
+              const defaultThumbnail = await getSignedUrl(resource.name)
+              return { 
+                fileName: resource.name, 
+                url: defaultThumbnail 
+              }
+            }
+            return null
+          })
+
+          const thumbnailUrls = await Promise.all(thumbnailPromises)
+          
+          // Update signedUrls state with all thumbnail URLs
+          const newSignedUrls = {}
+          thumbnailUrls.forEach(item => {
+            if (item) {
+              newSignedUrls[item.fileName] = item.url
+            }
+          })
+          
+          setSignedUrls(prev => ({
+            ...prev,
+            ...newSignedUrls
+          }))
+        }
+      } catch (error) {
+        console.error('Error fetching resources and thumbnails:', error)
+      }
+    }
+
+    fetchAllThumbnails()
   }, [sectionId])
 
+  // Load main resource content only when clicked
   useEffect(() => {
-    const fetchSignedUrl = async () => {
+    const fetchResourceContent = async () => {
       if (resources[currentIndex]) {
         const resource = resources[currentIndex]
 
-        // Don't fetch URL for TEXT type unless it has an image
+        // Skip if it's TEXT type without image
         if (resource.resourceType === 'TEXT' && !resource.content.imageUrl) {
           return
         }
 
-        // Get main resource URL
+        // Load main resource content if not already loaded
         if (!signedUrls[resource.name]) {
           const signedUrl = await getSignedUrl(resource.name)
           setSignedUrls(prev => ({
@@ -162,61 +174,31 @@ const LearnerFrame = () => {
           }))
         }
 
-        // Get thumbnail URL if exists
-        if (resource.content.thumbnailUrl && !signedUrls[resource.content.thumbnailUrl]) {
-          const thumbnailSignedUrl = await getSignedUrl(resource.content.thumbnailUrl)
+        // Load additional resource-specific content
+        if (resource.resourceType === 'AUDIO' && 
+            resource.content.backgroundImageUrl && 
+            !signedUrls[resource.content.backgroundImageUrl]) {
+          const bgUrl = await getSignedUrl(resource.content.backgroundImageUrl)
           setSignedUrls(prev => ({
             ...prev,
-            [resource.content.thumbnailUrl]: thumbnailSignedUrl
+            [resource.content.backgroundImageUrl]: bgUrl
           }))
         }
 
-        // Get background image URL for audio
-        if (
-          resource.resourceType === 'AUDIO' &&
-          resource.content.backgroundImageUrl
-        ) {
-          if (!signedUrls[resource.content.backgroundImageUrl]) {
-            const bgSignedUrl = await getSignedUrl(
-              resource.content.backgroundImageUrl
-            )
-            setSignedUrls(prev => ({
-              ...prev,
-              [resource.content.backgroundImageUrl]: bgSignedUrl
-            }))
-          }
-        }
-
-        // Get preview image URL for PPT
-        if (
-          resource.resourceType === 'PPT' &&
-          resource.content.previewImageUrl
-        ) {
-          if (!signedUrls[resource.content.previewImageUrl]) {
-            const previewSignedUrl = await getSignedUrl(
-              resource.content.previewImageUrl
-            )
-            setSignedUrls(prev => ({
-              ...prev,
-              [resource.content.previewImageUrl]: previewSignedUrl
-            }))
-          }
+        if (resource.resourceType === 'PPT' && 
+            resource.content.previewImageUrl && 
+            !signedUrls[resource.content.previewImageUrl]) {
+          const previewUrl = await getSignedUrl(resource.content.previewImageUrl)
+          setSignedUrls(prev => ({
+            ...prev,
+            [resource.content.previewImageUrl]: previewUrl
+          }))
         }
       }
     }
-    fetchSignedUrl()
+
+    fetchResourceContent()
   }, [currentIndex, resources])
-
-  const fetchResources = async () => {
-    try {
-      const response = await getData(`resources/${sectionId}`)
-      if (response.status === 200) {
-        setResources(response.data.resources)
-      }
-    } catch (error) {
-      console.error('Error fetching resources:', error)
-    }
-  }
 
   const handleNext = () => {
     if (currentIndex < resources.length - 1) {
@@ -326,7 +308,7 @@ const LearnerFrame = () => {
     <Grid container>
       <Grid size={12}>
         <Paper elevation={5} sx={{ borderRadius: '16px', overflow: 'hidden' }}>
-          <Box sx={{ mb: 2, p: 2 }}>
+          <Box sx={{ p: 1 }}>
             <Typography
               variant='body2'
               sx={{
@@ -341,41 +323,69 @@ const LearnerFrame = () => {
             </Typography>
           </Box>
 
-          <Box sx={{ 
-            bgcolor: 'primary.main', 
-            color: 'white',
-            borderRadius: '8px',
-            overflow: 'hidden'
-          }}>
-            <Box sx={{ 
-              p: 2, 
-              display: 'flex', 
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
+          <Box
+            sx={{
+              bgcolor: 'primary.main',
+              color: 'white',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            {/* Resource Title Bar */}
+            {/* <Box
+              sx={{
+                p: 1,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+              }}
+            >
               <Typography variant='h6'>
                 {resources[currentIndex]?.name}
               </Typography>
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                 {resources[currentIndex]?.content?.externalLink && (
-                  <IconButton
-                    href={resources[currentIndex].content.externalLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    sx={{ 
-                      color: 'white',
-                      '&:hover': { 
-                        bgcolor: 'rgba(255, 255, 255, 0.1)' 
-                      }
+                  <Box
+                    component='span'
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
                     }}
                   >
-                    <Launch />
-                  </IconButton>
+                    <IconButton
+                      href={resources[currentIndex].content.externalLink}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      sx={{
+                        color: 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        '&:hover': {
+                          bgcolor: 'rgba(255, 255, 255, 0.1)'
+                        }
+                      }}
+                    >
+                      <Launch />
+                      <Typography
+                        variant='body2'
+                        sx={{
+                          fontSize: '14px',
+                          display: { xs: 'none', sm: 'block' } // Hide text on mobile
+                        }}
+                      >
+                        External Link
+                      </Typography>
+                    </IconButton>
+                  </Box>
                 )}
-                <IconButton 
+                <IconButton
                   onClick={handlePrevious}
                   disabled={currentIndex === 0}
-                  sx={{ 
+                  sx={{
                     color: 'white',
                     '&.Mui-disabled': {
                       color: 'rgba(255, 255, 255, 0.3)'
@@ -384,10 +394,10 @@ const LearnerFrame = () => {
                 >
                   <ChevronLeft />
                 </IconButton>
-                <IconButton 
+                <IconButton
                   onClick={handleNext}
                   disabled={currentIndex === resources.length - 1}
-                  sx={{ 
+                  sx={{
                     color: 'white',
                     '&.Mui-disabled': {
                       color: 'rgba(255, 255, 255, 0.3)'
@@ -397,50 +407,62 @@ const LearnerFrame = () => {
                   <ChevronRight />
                 </IconButton>
               </Box>
-            </Box>
+            </Box> */}
 
             {/* Main Content */}
-            <Box sx={{ bgcolor: 'white', p: 2 }}>
+            <Box sx={{ bgcolor: 'white' }}>
               {resources[currentIndex] && (
-                <ResourceRenderer 
-                  resource={resources[currentIndex]} 
+                <ResourceRenderer
+                  resource={resources[currentIndex]}
                   signedUrl={signedUrls[resources[currentIndex].name]}
                 />
               )}
             </Box>
 
             {/* Thumbnails Carousel */}
-            <Box sx={{ 
-              bgcolor: '#f5f5f5',
-              p: 2,
-              position: 'relative'
-            }}>
-              <IconButton 
-                sx={{ 
+            <Box
+              sx={{
+                bgcolor: '#f5f5f5',
+                p: 2,
+                position: 'relative'
+              }}
+            >
+              {/* Left Arrow */}
+              <IconButton
+                sx={{
                   position: 'absolute',
-                  left: 0,
+                  left: 10,
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  bgcolor: 'white',
-                  boxShadow: 2,
-                  '&:hover': { bgcolor: 'white' }
+                  bgcolor: 'primary.main',
+                  color: 'white',
+                  height: '100px',
+                  width: '24px',
+                  borderRadius: '6px',
+                  '&:hover': {
+                    bgcolor: 'primary.dark'
+                  },
+                  '&.Mui-disabled': {
+                    bgcolor: 'primary.light',
+                    color: 'rgba(255, 255, 255, 0.5)'
+                  }
                 }}
                 onClick={() => {
-                  const carousel = document.getElementById('thumbnail-carousel');
-                  carousel.scrollBy({ left: -200, behavior: 'smooth' });
+                  const carousel = document.getElementById('thumbnail-carousel')
+                  carousel.scrollBy({ left: -200, behavior: 'smooth' })
                 }}
               >
                 <ChevronLeft />
               </IconButton>
 
               <Box
-                id="thumbnail-carousel"
+                id='thumbnail-carousel'
                 sx={{
                   display: 'flex',
                   gap: 2,
                   overflowX: 'auto',
                   scrollBehavior: 'smooth',
-                  px: 6,
+                  px: 4,
                   '&::-webkit-scrollbar': { display: 'none' },
                   msOverflowStyle: 'none',
                   scrollbarWidth: 'none'
@@ -456,7 +478,10 @@ const LearnerFrame = () => {
                       bgcolor: 'white',
                       borderRadius: '4px',
                       cursor: 'pointer',
-                      border: currentIndex === index ? '2px solid primary.main' : '1px solid #ddd',
+                      border:
+                        currentIndex === index
+                          ? '2px solid primary.main'
+                          : '1px solid #ddd',
                       overflow: 'hidden',
                       position: 'relative'
                     }}
@@ -466,12 +491,16 @@ const LearnerFrame = () => {
                       <img
                         src={signedUrls[resource.content.thumbnailUrl]}
                         alt={resource.name}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
                       />
                     ) : (
                       getThumbnailContent(resource, signedUrls[resource.name])
                     )}
-                    
+
                     {/* Resource Type Label */}
                     <Typography
                       sx={{
@@ -492,19 +521,30 @@ const LearnerFrame = () => {
                 ))}
               </Box>
 
-              <IconButton 
-                sx={{ 
+              {/* Right Arrow */}
+              <IconButton
+                sx={{
                   position: 'absolute',
-                  right: 0,
+                  right: 10,
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  bgcolor: 'white',
-                  boxShadow: 2,
-                  '&:hover': { bgcolor: 'white' }
+                  bgcolor: 'primary.main',
+                  color: 'white',
+                  height: '100px',
+                  width: '24px',
+                  borderRadius: '6px',
+
+                  '&:hover': {
+                    bgcolor: 'primary.dark'
+                  },
+                  '&.Mui-disabled': {
+                    bgcolor: 'primary.light',
+                    color: 'rgba(255, 255, 255, 0.5)'
+                  }
                 }}
                 onClick={() => {
-                  const carousel = document.getElementById('thumbnail-carousel');
-                  carousel.scrollBy({ left: 200, behavior: 'smooth' });
+                  const carousel = document.getElementById('thumbnail-carousel')
+                  carousel.scrollBy({ left: 200, behavior: 'smooth' })
                 }}
               >
                 <ChevronRight />

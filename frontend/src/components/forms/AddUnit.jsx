@@ -19,6 +19,21 @@ const AddUnit = () => {
   }])
   const [courses, setCourses] = useState([])
 
+  const fetchCourses = async () => {
+    try {
+      const response = await getData('courses')
+      if (response.status === 200) {
+        setCourses(response.data.data)
+      }
+    } catch (error) {
+      console.error('Error fetching courses:', error)
+    }
+  }
+
+  useEffect(() => {
+    fetchCourses()
+  }, [])
+
   const addNewUnit = () => {
     setUnits(prev => [...prev, { name: '', courseId: prev[0].courseId }])
   }

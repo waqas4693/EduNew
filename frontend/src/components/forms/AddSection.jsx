@@ -59,7 +59,11 @@ const AddSection = () => {
   }
 
   const removeSection = (indexToRemove) => {
-    setSections(prev => prev.filter((_, index) => index !== indexToRemove))
+    setSections(prev => {
+      const newSections = [...prev]
+      newSections.splice(indexToRemove, 1)
+      return newSections
+    })
   }
 
   const handleSectionChange = (index, field, value) => {
@@ -79,7 +83,8 @@ const AddSection = () => {
   const handleSubmit = async e => {
     e.preventDefault()
     try {
-      const response = await postData('sections', { sections })
+      const sectionsToSubmit = [...sections]
+      const response = await postData('sections', { sections: sectionsToSubmit })
       if (response.status === 201) {
         setSections([{ name: '', unitId: null }])
         setCourseId(null)

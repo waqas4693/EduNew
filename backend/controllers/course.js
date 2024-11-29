@@ -36,20 +36,34 @@ export const getCourses = async (req, res) => {
 
 export const getEnrolledCourses = async (req, res) => {
   try {
-    const courses = await Course.find({ status: 1 })
-      .select('name units')
-      .lean()
+    const { courseIds } = req.query
     
-    const coursesWithCount = await Promise.all(courses.map(async course => ({
+    if (!courseIds) {
+      return res.status(400).json({
+        success: false,
+        message: 'Course IDs are required'
+      })
+    }
+
+    const courseIdArray = courseIds.split(',')
+    
+    const courses = await Course.find({ 
+      _id: { $in: courseIdArray },
+      status: 1 
+    })
+    .select('name thumbnail units')
+    .lean()
+    
+    const coursesWithDetails = courses.map(course => ({
       id: course._id,
       name: course.name,
-      units: course.units.length,
-      image: `/background-images/${Math.floor(Math.random() * 5) + 1}.jpg`
-    })))
+      image: course.thumbnail,
+      units: course.units?.length || 0
+    }))
 
     res.status(200).json({
       success: true,
-      data: coursesWithCount
+      data: coursesWithDetails
     })
   } catch (error) {
     handleError(res, error)
