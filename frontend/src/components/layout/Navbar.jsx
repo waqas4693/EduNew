@@ -4,9 +4,8 @@ import MenuIcon from '@mui/icons-material/Menu'
 const Navbar = ({ onMenuClick, children }) => {
   return (
     <AppBar 
-      position="fixed" 
+      position="static" 
       sx={{ 
-        zIndex: 2000,
         backgroundColor: 'white',
         boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
       }}

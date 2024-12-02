@@ -1,6 +1,7 @@
 import Section from '../models/section.js'
 import Resource from '../models/resource.js'
 import { handleError } from '../utils/errorHandler.js'
+import Unit from '../models/unit.js'
 
 export const createSection = async (req, res) => {
   try {
@@ -14,6 +15,13 @@ export const createSection = async (req, res) => {
         status: 1
       })
       const savedSection = await section.save()
+      
+      // Update unit with the new section ID
+      await Unit.findByIdAndUpdate(
+        req.body.unitId,
+        { $push: { sections: savedSection._id } }
+      )
+
       return res.status(201).json({
         success: true,
         data: savedSection
@@ -28,7 +36,15 @@ export const createSection = async (req, res) => {
           resources: [],
           status: 1
         })
-        return section.save()
+        const savedSection = await section.save()
+        
+        // Update unit with each new section ID
+        await Unit.findByIdAndUpdate(
+          sectionData.unitId,
+          { $push: { sections: savedSection._id } }
+        )
+        
+        return savedSection
       })
     )
     

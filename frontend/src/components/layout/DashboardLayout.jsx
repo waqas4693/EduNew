@@ -29,35 +29,36 @@ const DashboardLayout = ({ children }) => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <Navbar onMenuClick={toggleSidebar}>
-        <IconButton
-          onClick={() => setOpenDialog(true)}
-          sx={{ 
-            color: 'primary.main',
-            right: 16
+      <Sidebar open={sidebarOpen} onClose={toggleSidebar} />
+      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+        <Navbar onMenuClick={toggleSidebar}>
+          <IconButton
+            onClick={() => setOpenDialog(true)}
+            sx={{ 
+              color: 'primary.main',
+              right: 16
+            }}
+          >
+            <PaletteIcon />
+          </IconButton>
+        </Navbar>
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            p: 3,
+            width: '100%',
+            transition: theme.transitions.create(['width', 'margin-left']),
+            backgroundImage: background ? `url(${background})` : 'none',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            minHeight: 'calc(100vh - 64px)',
+            bgcolor: 'transparent'
           }}
         >
-          <PaletteIcon />
-        </IconButton>
-      </Navbar>
-      <Sidebar open={sidebarOpen} onClose={toggleSidebar} />
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          mt: 8,
-          width: `calc(100% - ${sidebarOpen ? 240 : 65}px)`,
-          transition: theme.transitions.create(['width', 'margin-left']),
-          backgroundImage: background ? `url(${background})` : 'none',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          minHeight: 'calc(100vh - 64px)',
-          bgcolor: 'transparent'
-        }}
-      >
-        {children}
+          {children}
+        </Box>
       </Box>
 
       <Dialog 

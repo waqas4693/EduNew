@@ -9,6 +9,58 @@ import { Box, Typography, IconButton, Paper } from '@mui/material'
 import { ChevronLeft, ChevronRight, Launch } from '@mui/icons-material'
 
 const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
+  const [selectedAnswer, setSelectedAnswer] = useState(null)
+  const [hasAnswered, setHasAnswered] = useState(false)
+
+  const handleAnswerSelect = (option) => {
+    if (!hasAnswered) {
+      setSelectedAnswer(option)
+      setHasAnswered(true)
+    }
+  }
+
+  const getOptionStyle = (option) => {
+    if (!hasAnswered) {
+      return {
+        mb: 1,
+        color: 'black',
+        cursor: 'pointer',
+        p: 1,
+        borderRadius: '4px',
+        '&:hover': {
+          bgcolor: 'rgba(0, 0, 0, 0.04)'
+        }
+      }
+    }
+
+    if (option === resource.content.mcq.correctAnswer) {
+      return {
+        mb: 1,
+        color: 'white',
+        bgcolor: 'success.main',
+        p: 1,
+        borderRadius: '4px'
+      }
+    }
+
+    if (option === selectedAnswer && option !== resource.content.mcq.correctAnswer) {
+      return {
+        mb: 1,
+        color: 'white',
+        bgcolor: 'error.main',
+        p: 1,
+        borderRadius: '4px'
+      }
+    }
+
+    return {
+      mb: 1,
+      color: 'black',
+      p: 1,
+      borderRadius: '4px'
+    }
+  }
+
   switch (resource.resourceType) {
     case 'VIDEO':
       return (
@@ -69,11 +121,13 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
     case 'MCQ':
       return (
         <Box sx={{ width: '100%', minHeight: '70vh', p: 3 }}>
-          <Typography variant='h6'>{resource.content.mcq.question}</Typography>
+          <Typography variant='h6' sx={{ color: 'black' }}>
+            {resource.content.mcq.question}
+          </Typography>
           {resource.content.mcq.imageUrl && (
             <Box sx={{ mt: 2, mb: 2, display: 'flex', justifyContent: 'center' }}>
               <img
-                src={signedUrls[resource.content.mcq.imageUrl]}
+                src={signedUrls[resource.name]}
                 alt="Question"
                 style={{ 
                   maxWidth: '100%', 
@@ -86,11 +140,55 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
           )}
           <Box sx={{ mt: 2 }}>
             {resource.content.mcq.options.map((option, index) => (
-              <Typography key={index} variant='body1' sx={{ mb: 1 }}>
+              <Typography
+                key={index}
+                variant='body1'
+                onClick={() => handleAnswerSelect(option)}
+                sx={getOptionStyle(option)}
+              >
                 {index + 1}. {option}
               </Typography>
             ))}
           </Box>
+          {hasAnswered && (
+            <Box sx={{ mt: 2 }}>
+              <Typography
+                variant='body1'
+                sx={{
+                  color: selectedAnswer === resource.content.mcq.correctAnswer
+                    ? 'success.main'
+                    : 'error.main',
+                  fontWeight: 'bold'
+                }}
+              >
+                {selectedAnswer === resource.content.mcq.correctAnswer
+                  ? 'Correct Answer! ✓'
+                  : 'Incorrect Answer! ✗'}
+              </Typography>
+            </Box>
+          )}
+        </Box>
+      )
+
+    case 'AUDIO':
+      return (
+        <Box
+          sx={{
+            width: '100%',
+            height: '100%',
+            backgroundImage: resource.content.backgroundImage
+              ? `url(${signedUrls[resource.content.backgroundImageUrl]})`
+              : 'none',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            bgcolor: '#000'
+          }}
+        >
+          <audio
+            src={signedUrl}
+            style={{ width: '100%', height: '50px', backgroundColor: '#000' }}
+            controls
+          />
         </Box>
       )
 
@@ -137,30 +235,34 @@ const LearnerFrame = () => {
         const response = await getData(`resources/${sectionId}`)
         if (response.status === 200) {
           setResources(response.data.resources)
-          
+
           // Fetch thumbnails for all resources
-          const thumbnailPromises = response.data.resources.map(async resource => {
-            if (resource.content.thumbnailUrl) {
-              // Get thumbnail URL
-              const thumbnailUrl = await getSignedUrl(resource.content.thumbnailUrl)
-              return { 
-                fileName: resource.content.thumbnailUrl, 
-                url: thumbnailUrl 
+          const thumbnailPromises = response.data.resources.map(
+            async resource => {
+              if (resource.content.thumbnailUrl) {
+                // Get thumbnail URL
+                const thumbnailUrl = await getSignedUrl(
+                  resource.content.thumbnailUrl
+                )
+                return {
+                  fileName: resource.content.thumbnailUrl,
+                  url: thumbnailUrl
+                }
               }
-            }
-            // Get default thumbnail based on resource type
-            if (resource.resourceType !== 'TEXT') {
-              const defaultThumbnail = await getSignedUrl(resource.name)
-              return { 
-                fileName: resource.name, 
-                url: defaultThumbnail 
+              // Get default thumbnail based on resource type
+              if (resource.resourceType !== 'TEXT') {
+                const defaultThumbnail = await getSignedUrl(resource.name)
+                return {
+                  fileName: resource.name,
+                  url: defaultThumbnail
+                }
               }
+              return null
             }
-            return null
-          })
+          )
 
           const thumbnailUrls = await Promise.all(thumbnailPromises)
-          
+
           // Update signedUrls state with all thumbnail URLs
           const newSignedUrls = {}
           thumbnailUrls.forEach(item => {
@@ -168,7 +270,7 @@ const LearnerFrame = () => {
               newSignedUrls[item.fileName] = item.url
             }
           })
-          
+
           setSignedUrls(prev => ({
             ...prev,
             ...newSignedUrls
@@ -189,13 +291,15 @@ const LearnerFrame = () => {
         const resource = resources[currentIndex]
 
         // For MCQ type, fetch the question image if it exists
-        if (resource.resourceType === 'MCQ' && 
-            resource.content.mcq?.imageUrl && 
-            !signedUrls[resource.content.mcq.imageUrl]) {
-          const mcqImageUrl = await getSignedUrl(resource.content.mcq.imageUrl)
+        if (
+          resource.resourceType === 'MCQ' &&
+          resource.content.mcq?.imageUrl &&
+          !signedUrls[resource.name]
+        ) {
+          const mcqImageUrl = await getSignedUrl(resource.name)
           setSignedUrls(prev => ({
             ...prev,
-            [resource.content.mcq.imageUrl]: mcqImageUrl
+            [resource.name]: mcqImageUrl
           }))
         }
 
@@ -214,9 +318,11 @@ const LearnerFrame = () => {
         }
 
         // Load additional resource-specific content
-        if (resource.resourceType === 'AUDIO' && 
-            resource.content.backgroundImageUrl && 
-            !signedUrls[resource.content.backgroundImageUrl]) {
+        if (
+          resource.resourceType === 'AUDIO' &&
+          resource.content.backgroundImageUrl &&
+          !signedUrls[resource.content.backgroundImageUrl]
+        ) {
           const bgUrl = await getSignedUrl(resource.content.backgroundImageUrl)
           setSignedUrls(prev => ({
             ...prev,
@@ -224,10 +330,14 @@ const LearnerFrame = () => {
           }))
         }
 
-        if (resource.resourceType === 'PPT' && 
-            resource.content.previewImageUrl && 
-            !signedUrls[resource.content.previewImageUrl]) {
-          const previewUrl = await getSignedUrl(resource.content.previewImageUrl)
+        if (
+          resource.resourceType === 'PPT' &&
+          resource.content.previewImageUrl &&
+          !signedUrls[resource.content.previewImageUrl]
+        ) {
+          const previewUrl = await getSignedUrl(
+            resource.content.previewImageUrl
+          )
           setSignedUrls(prev => ({
             ...prev,
             [resource.content.previewImageUrl]: previewUrl
@@ -280,8 +390,8 @@ const LearnerFrame = () => {
             sx={{
               width: '100%',
               height: '100%',
-              backgroundImage: resource.content.backgroundImage
-                ? `url(${resource.content.backgroundImageUrl})`
+              backgroundImage: resource.content.thumbnailUrl
+                ? `url(${signedUrls[resource.content.thumbnailUrl]})`
                 : 'none',
               backgroundSize: 'cover',
               backgroundPosition: 'center'
@@ -353,8 +463,9 @@ const LearnerFrame = () => {
               sx={{
                 color: 'primary.main',
                 cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center'
+                display: 'inline-flex',
+                alignItems: 'center',
+                width: 'fit-content'
               }}
               onClick={() => navigate(`/units/${courseId}/section/${unitId}`)}
             >

@@ -1,5 +1,6 @@
 import { handleError } from '../utils/errorHandler.js'
 import Assessment from '../models/assessment.js'
+import Section from '../models/section.js'
 
 export const createAssessment = async (req, res) => {
   try {
@@ -19,16 +20,21 @@ export const createAssessment = async (req, res) => {
     }
 
     const assessment = new Assessment(req.body)
-    await assessment.save()
+    const savedAssessment = await assessment.save()
+
+    await Section.findByIdAndUpdate(
+      sectionId,
+      { $push: { assessments: savedAssessment._id } }
+    )
 
     res.status(201).json({
       success: true,
       message: 'Assessment created successfully',
-      assessment
+      assessment: savedAssessment
     })
   } catch (error) {
     console.log('Error Testing Assessment:', error)
-    // handleError(error, res)
+    handleError(error, res)
   }
 }
 

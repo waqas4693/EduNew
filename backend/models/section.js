@@ -14,6 +14,10 @@ const sectionSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Resource'
   }],
+  assessments: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Assessment'
+  }],
   status: {
     type: Number,
     enum: [1, 2],

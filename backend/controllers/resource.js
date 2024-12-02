@@ -1,5 +1,6 @@
 import Resource from '../models/resource.js'
 import { handleError } from '../utils/errorHandler.js'
+import Section from '../models/section.js'
 
 export const createResource = async (req, res) => {
   try {
@@ -25,7 +26,15 @@ export const createResource = async (req, res) => {
           } : undefined
         }
       })
-      return resource.save()
+      const savedResource = await resource.save()
+      
+      // Update section with the new resource ID
+      await Section.findByIdAndUpdate(
+        resourceData.sectionId,
+        { $push: { resources: savedResource._id } }
+      )
+      
+      return savedResource
     }
 
     if (!Array.isArray(resources)) {

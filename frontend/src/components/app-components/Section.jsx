@@ -1,29 +1,30 @@
-import { useState, useEffect } from 'react'
 import {
   Box,
   Typography,
   Paper,
   Button,
   CardMedia,
-  ListItem
+  ListItem,
+  Skeleton
 } from '@mui/material'
-import AssignmentIcon from '@mui/icons-material/Assignment'
-import MenuBookIcon from '@mui/icons-material/MenuBook'
-import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import Calendar from '../calendar/Calendar'
-import Grid from '@mui/material/Grid2'
 import { getData } from '../../api/api'
+import { useState, useEffect } from 'react'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
+
+import Grid from '@mui/material/Grid2'
+import Calendar from '../calendar/Calendar'
+import MenuBook from '@mui/icons-material/MenuBook'
 import ChevronLeft from '@mui/icons-material/ChevronLeft'
 import AssignmentOutlined from '@mui/icons-material/AssignmentOutlined'
-import MenuBook from '@mui/icons-material/MenuBook'
 
 const Section = () => {
   const navigate = useNavigate()
-  const [sections, setSections] = useState([])
   const location = useLocation()
-  const { unitName, courseName, courseImage } = location.state || {}
+  const [sections, setSections] = useState([])
+  const [loading, setLoading] = useState(true)
 
   const { courseId, unitId } = useParams()
+  const { unitName, courseName, courseImage } = location.state || {}
 
   const handleBackToUnit = () => {
     navigate(`/units/${courseId}`)
@@ -41,6 +42,8 @@ const Section = () => {
       }
     } catch (error) {
       console.error('Error fetching unit details:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -49,20 +52,26 @@ const Section = () => {
       <Grid size={7.5}>
         <Paper
           elevation={5}
-          sx={{ p: 3, borderRadius: '16px', backgroundColor: 'white' }}
+          sx={{ 
+            p: '24px 24px', 
+            borderRadius: '16px', 
+            backgroundColor: 'white' 
+          }}
         >
-          <Box sx={{ mb: 2 }}>
+          <Box sx={{ mb: 1 }}>
             <Typography
               variant='body2'
               sx={{
                 color: 'primary.main',
                 cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center'
+                display: 'inline-flex',
+                alignItems: 'center',
+                width: 'fit-content',
+                gap: 0
               }}
               onClick={handleBackToUnit}
             >
-              <ChevronLeft /> Back To Unit
+              <ChevronLeft sx={{ ml: -1 }} /> Back To Unit
             </Typography>
           </Box>
 
@@ -100,99 +109,20 @@ const Section = () => {
             Unit: {unitName || 'Unit Name Not Available'}
           </Typography>
 
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              bgcolor: '#e0e0e0',
-              borderRadius: '16px',
-              p: 2,
-              mb: 3
-            }}
-          >
-            <Box
-              sx={{
-                position: 'relative',
-                width: 150,
-                height: 150,
-                mr: 3
-              }}
-            >
-              <svg
-                viewBox='0 0 40 40'
-                style={{ position: 'absolute', top: 0, left: 0 }}
-              >
-                <circle
-                  cx='18'
-                  cy='18'
-                  r='18'
-                  fill='none'
-                  stroke='#f44336'
-                  strokeWidth='2'
-                  strokeDasharray='50, 100'
-                />
-                <circle
-                  cx='18'
-                  cy='18'
-                  r='15'
-                  fill='none'
-                  stroke='#673ab7'
-                  strokeWidth='2'
-                  strokeDasharray='50, 100'
-                />
-                <circle
-                  cx='18'
-                  cy='18'
-                  r='12'
-                  fill='none'
-                  stroke='#8bc34a'
-                  strokeWidth='2'
-                  strokeDasharray='50, 100'
-                />
-              </svg>
-            </Box>
-            <Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Box
-                  sx={{
-                    width: 10,
-                    height: 10,
-                    bgcolor: '#f44336',
-                    borderRadius: '50%',
-                    mr: 1
-                  }}
-                />
-                <Typography variant='body2'>Total Sections: 4</Typography>
+          {loading ? (
+            [...Array(3)].map((_, index) => (
+              <Box key={index} sx={{ mb: 3 }}>
+                <Skeleton variant="rectangular" height={80} sx={{ borderRadius: '6px', mb: 1 }} />
+                <Skeleton width="30%" height={20} sx={{ mb: 1 }} />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                  <Skeleton width="40%" height={20} />
+                  <Skeleton width="40%" height={20} />
+                </Box>
+                <Skeleton variant="rectangular" height={1} sx={{ mb: 3 }} />
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Box
-                  sx={{
-                    width: 10,
-                    height: 10,
-                    bgcolor: '#673ab7',
-                    borderRadius: '50%',
-                    mr: 1
-                  }}
-                />
-                <Typography variant='body2'>Completed Sections: 2</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Box
-                  sx={{
-                    width: 10,
-                    height: 10,
-                    bgcolor: '#8bc34a',
-                    borderRadius: '50%',
-                    mr: 1
-                  }}
-                />
-                <Typography variant='body2'>Total Assignments: 10</Typography>
-              </Box>
-            </Box>
-          </Box>
-
-          {sections.map((section, index) => (
-            <>
+            ))
+          ) : (
+            sections.map((section, index) => (
               <ListItem
                 key={section._id}
                 sx={{
@@ -209,7 +139,6 @@ const Section = () => {
                   alignItems: 'center'
                 }}
               >
-                {/* Section Number Box */}
                 <Box
                   sx={{
                     mr: 2,
@@ -235,7 +164,6 @@ const Section = () => {
                   </Typography>
                 </Box>
 
-                {/* Section Title */}
                 <Box sx={{ flex: 1 }}>
                   <Typography
                     sx={{
@@ -252,86 +180,60 @@ const Section = () => {
                       'Understand the customer service environment'}
                   </Typography>
                 </Box>
-              </ListItem>
-
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  mb: 3
-                }}
-              >
-                <Typography
-                  sx={{
-                    fontSize: '14px',
-                    color: 'text.secondary'
-                  }}
-                >
-                  <Box component='span' sx={{ color: 'black' }}>
-                    Due Date:
-                  </Box>{' '}
-                  {section.dueDate || '20/11/2024'}
-                </Typography>
 
                 <Box sx={{ display: 'flex', gap: 2 }}>
-                  <Button
-                    variant='outlined'
-                    startIcon={<AssignmentOutlined />}
-                    onClick={() =>
-                      navigate(
-                        `/units/${courseId}/section/${unitId}/assessment/${section._id}`
-                      )
-                    }
-                    sx={{
-                      color: '#4169e1',
-                      borderColor: '#4169e1',
-                      borderRadius: '8px',
-                      textTransform: 'none',
-                      '&:hover': {
+                  {section.resources.length > 0 && (
+                    <Button
+                      variant='contained'
+                      startIcon={<MenuBook />}
+                      onClick={() =>
+                        navigate(
+                          `/units/${courseId}/section/${unitId}/learn/${section._id}`
+                        )
+                      }
+                      sx={{
+                        bgcolor: '#4169e1',
+                        color: 'white',
+                        borderRadius: '8px',
+                        textTransform: 'none',
+                        '&:hover': {
+                          bgcolor: '#3557c5'
+                        }
+                      }}
+                    >
+                      Learning
+                    </Button>
+                  )}
+                  {section.assessments && section.assessments.length > 0 && (
+                    <Button
+                      variant='outlined'
+                      startIcon={<AssignmentOutlined />}
+                      onClick={() =>
+                        navigate(
+                          `/units/${courseId}/section/${unitId}/assessment/${section._id}`
+                        )
+                      }
+                      sx={{
+                        color: '#4169e1',
                         borderColor: '#4169e1',
-                        backgroundColor: 'rgba(65, 105, 225, 0.04)'
-                      }
-                    }}
-                  >
-                    Assessment
-                  </Button>
-                  <Button
-                    variant='contained'
-                    startIcon={<MenuBook />}
-                    onClick={() =>
-                      navigate(
-                        `/units/${courseId}/section/${unitId}/learn/${section._id}`
-                      )
-                    }
-                    sx={{
-                      bgcolor: '#4169e1',
-                      color: 'white',
-                      borderRadius: '8px',
-                      textTransform: 'none',
-                      '&:hover': {
-                        bgcolor: '#3557c5'
-                      }
-                    }}
-                  >
-                    Learning
-                  </Button>
+                        borderRadius: '8px',
+                        textTransform: 'none',
+                        '&:hover': {
+                          borderColor: '#4169e1',
+                          backgroundColor: 'rgba(65, 105, 225, 0.04)'
+                        }
+                      }}
+                    >
+                      Assessment
+                    </Button>
+                  )}
                 </Box>
-              </Box>
-
-              <Box
-                sx={{
-                  border: '1px solid #0000001A',
-                  width: '100%',
-                  mb: 3
-                }}
-              />
-            </>
-          ))}
+              </ListItem>
+            ))
+          )}
         </Paper>
       </Grid>
 
-      {/* Calendar Section */}
       <Grid size={4.5}>
         <Paper
           elevation={5}

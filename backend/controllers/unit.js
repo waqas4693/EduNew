@@ -1,5 +1,6 @@
 import Unit from '../models/unit.js'
 import { handleError } from '../utils/errorHandler.js'
+import Course from '../models/course.js'
 
 export const createUnit = async (req, res) => {
   try {
@@ -11,6 +12,13 @@ export const createUnit = async (req, res) => {
         courseId: req.body.courseId 
       })
       const savedUnit = await unit.save()
+      
+      // Update course with the new unit ID
+      await Course.findByIdAndUpdate(
+        req.body.courseId,
+        { $push: { units: savedUnit._id } }
+      )
+
       return res.status(201).json({
         success: true,
         data: savedUnit
@@ -23,7 +31,15 @@ export const createUnit = async (req, res) => {
           name: unitData.name,
           courseId: unitData.courseId
         })
-        return unit.save()
+        const savedUnit = await unit.save()
+        
+        // Update course with each new unit ID
+        await Course.findByIdAndUpdate(
+          unitData.courseId,
+          { $push: { units: savedUnit._id } }
+        )
+        
+        return savedUnit
       })
     )
     

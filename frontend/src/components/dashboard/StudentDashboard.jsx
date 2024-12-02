@@ -1,23 +1,26 @@
-import { useState, useEffect } from 'react'
 import {
   Box,
   Card,
-  CardContent,
+  Paper,
   CardMedia,
   Typography,
-  Paper
+  CardContent,
+  CircularProgress
 } from '@mui/material'
-import Grid from '@mui/material/Grid2'
 import { getData } from '../../api/api'
-import { useAuth } from '../../context/AuthContext'
-import Calendar from '../calendar/Calendar'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
+
 import axios from 'axios'
+import Grid from '@mui/material/Grid2'
 import url from '../config/server-url'
+import Calendar from '../calendar/Calendar'
 
 const StudentDashboard = () => {
   const [courses, setCourses] = useState([])
   const [thumbnailUrls, setThumbnailUrls] = useState({})
+  const [loadingImages, setLoadingImages] = useState({})
   const navigate = useNavigate()
   const { user } = useAuth()
 
@@ -25,15 +28,20 @@ const StudentDashboard = () => {
     const fetchEnrolledCourses = async () => {
       try {
         if (user?.courseIds?.length > 0) {
-          const response = await getData(`courses/enrolled?courseIds=${user.courseIds.join(',')}`)
+          const response = await getData(
+            `courses/enrolled?courseIds=${user.courseIds.join(',')}`
+          )
           if (response.status === 200) {
             setCourses(response.data.data)
-            // Fetch thumbnail URLs for each course
+            // Initialize loading state for each course image
+            const initialLoadingState = {}
             response.data.data.forEach(course => {
               if (course.image) {
+                initialLoadingState[course.image] = true
                 fetchThumbnailUrl(course.image)
               }
             })
+            setLoadingImages(initialLoadingState)
           }
         }
       } catch (error) {
@@ -44,7 +52,7 @@ const StudentDashboard = () => {
     fetchEnrolledCourses()
   }, [user])
 
-  const fetchThumbnailUrl = async (fileName) => {
+  const fetchThumbnailUrl = async fileName => {
     try {
       const response = await axios.post(`${url}s3/get`, {
         fileName
@@ -56,6 +64,13 @@ const StudentDashboard = () => {
     } catch (error) {
       console.error('Error fetching thumbnail URL:', error)
     }
+  }
+
+  const handleImageLoad = imageKey => {
+    setLoadingImages(prev => ({
+      ...prev,
+      [imageKey]: false
+    }))
   }
 
   const handleCourseClick = course => {
@@ -80,7 +95,7 @@ const StudentDashboard = () => {
               fontWeight: 'bold'
             }}
           >
-            My Enrolled Courses
+            Current Courses
           </Typography>
           <Grid container spacing={2}>
             {courses.length > 0 ? (
@@ -104,17 +119,42 @@ const StudentDashboard = () => {
                       }
                     }}
                   >
-                    <CardMedia
-                      height='140'
-                      component='img'
-                      image={thumbnailUrls[course.image] || ''}  // Use S3 URL if available
-                      alt={course.name}
-                      sx={{ 
-                        borderRadius: '12px',
-                        objectFit: 'cover',
-                        bgcolor: 'grey.200' // Placeholder background while loading
-                      }}
-                    />
+                    <Box sx={{ position: 'relative' }}>
+                      <CardMedia
+                        height='140'
+                        component='img'
+                        image={thumbnailUrls[course.image] || ''}
+                        alt={course.name}
+                        onLoad={() => handleImageLoad(course.image)}
+                        sx={{
+                          borderRadius: '12px',
+                          objectFit: 'cover',
+                          bgcolor: 'grey.200',
+                          visibility: loadingImages[course.image]
+                            ? 'hidden'
+                            : 'visible'
+                        }}
+                      />
+                      {loadingImages[course.image] && (
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            height: '140px',
+                            bgcolor: 'grey.200',
+                            borderRadius: '12px'
+                          }}
+                        >
+                          <CircularProgress size={40} />
+                        </Box>
+                      )}
+                    </Box>
                     <CardContent>
                       <Typography sx={{ fontSize: '14px' }}>
                         {course.name}
@@ -130,7 +170,9 @@ const StudentDashboard = () => {
               ))
             ) : (
               <Grid item xs={12}>
-                <Typography sx={{ textAlign: 'center', color: 'text.secondary' }}>
+                <Typography
+                  sx={{ textAlign: 'center', color: 'text.secondary' }}
+                >
                   No courses enrolled yet
                 </Typography>
               </Grid>
@@ -139,7 +181,10 @@ const StudentDashboard = () => {
         </Paper>
       </Grid>
       <Grid size={4.5}>
-        <Paper elevation={5} sx={{ backgroundColor: 'transparent', borderRadius: 2 }}>
+        <Paper
+          elevation={5}
+          sx={{ backgroundColor: 'transparent', borderRadius: 2 }}
+        >
           <Calendar />
         </Paper>
       </Grid>

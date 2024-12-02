@@ -64,8 +64,7 @@ const Sidebar = ({ open, onClose }) => {
         '& .MuiDrawer-paper': {
           width: drawerWidth,
           boxSizing: 'border-box',
-          top: 64,
-          height: 'calc(100% - 64px)',
+          height: '100%',
           transition: theme.transitions.create('width', {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.enteringScreen
