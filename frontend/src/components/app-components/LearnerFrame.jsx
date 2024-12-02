@@ -8,7 +8,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Box, Typography, IconButton, Paper } from '@mui/material'
 import { ChevronLeft, ChevronRight, Launch } from '@mui/icons-material'
 
-const ResourceRenderer = ({ resource, signedUrl }) => {
+const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
   switch (resource.resourceType) {
     case 'VIDEO':
       return (
@@ -63,6 +63,27 @@ const ResourceRenderer = ({ resource, signedUrl }) => {
           }}
         >
           <Typography variant='body1'>{resource.content.text}</Typography>
+        </Box>
+      )
+
+    case 'MCQ':
+      return (
+        <Box sx={{ width: '100%', minHeight: '70vh', p: 3 }}>
+          <Typography variant='h6'>{resource.content.mcq.question}</Typography>
+          {resource.content.mcq.imageUrl && (
+            <img
+              src={signedUrls[resource.content.mcq.imageUrl]}
+              alt="MCQ"
+              style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain' }}
+            />
+          )}
+          <Box sx={{ mt: 2 }}>
+            {resource.content.mcq.options.map((option, index) => (
+              <Typography key={index} variant='body1'>
+                {index + 1}. {option}
+              </Typography>
+            ))}
+          </Box>
         </Box>
       )
 
@@ -415,6 +436,7 @@ const LearnerFrame = () => {
                 <ResourceRenderer
                   resource={resources[currentIndex]}
                   signedUrl={signedUrls[resources[currentIndex].name]}
+                  signedUrls={signedUrls}
                 />
               )}
             </Box>

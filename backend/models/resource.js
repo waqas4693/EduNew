@@ -12,7 +12,7 @@ const resourceSchema = new mongoose.Schema({
   },
   resourceType: {
     type: String,
-    enum: ['VIDEO', 'IMAGE', 'AUDIO', 'PDF', 'PPT', 'TEXT'],
+    enum: ['VIDEO', 'IMAGE', 'AUDIO', 'PDF', 'PPT', 'TEXT', 'MCQ'],
     required: true
   },
   content: {
@@ -24,7 +24,13 @@ const resourceSchema = new mongoose.Schema({
     backgroundImage: String,
     previewImage: String,
     thumbnailUrl: String,
-    externalLink: String
+    externalLink: String,
+    mcq: {
+      question: String,
+      options: [String],
+      correctAnswer: String,
+      imageUrl: String
+    }
   },
   status: {
     type: Number,
