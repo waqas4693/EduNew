@@ -1,6 +1,7 @@
 import axios from 'axios'
 import url from '../config/server-url'
 import Grid from '@mui/material/Grid2'
+import { Skeleton } from '@mui/material'
 
 import { getData } from '../../api/api'
 import { useState, useEffect } from 'react'
@@ -11,6 +12,30 @@ import { ChevronLeft, ChevronRight, Launch } from '@mui/icons-material'
 const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
   const [selectedAnswer, setSelectedAnswer] = useState(null)
   const [hasAnswered, setHasAnswered] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    if (signedUrl || resource?.resourceType === 'TEXT' || resource?.resourceType === 'MCQ') {
+      setLoading(false)
+    }
+  }, [resource, signedUrl])
+
+  if (loading && resource?.resourceType !== 'TEXT' && resource?.resourceType !== 'MCQ') {
+    return (
+      <Box sx={{ width: '100%', height: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Skeleton 
+          variant="rectangular" 
+          width="100%" 
+          height="100%" 
+          sx={{ 
+            borderRadius: '8px',
+            bgcolor: 'grey.200'
+          }} 
+        />
+      </Box>
+    )
+  }
 
   const handleAnswerSelect = (option) => {
     if (!hasAnswered) {
@@ -127,7 +152,7 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
           {resource.content.mcq.imageUrl && (
             <Box sx={{ mt: 2, mb: 2, display: 'flex', justifyContent: 'center' }}>
               <img
-                src={signedUrls[resource.name]}
+                src={signedUrls[resource.content.mcq.imageUrl]}
                 alt="Question"
                 style={{ 
                   maxWidth: '100%', 

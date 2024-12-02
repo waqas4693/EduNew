@@ -9,15 +9,8 @@ import {
   Button
 } from '@mui/material'
 import DashboardIcon from '@mui/icons-material/Dashboard'
-import PersonIcon from '@mui/icons-material/Person'
-import SettingsIcon from '@mui/icons-material/Settings'
 import SchoolIcon from '@mui/icons-material/School'
-import LibraryBooksIcon from '@mui/icons-material/LibraryBooks'
-import BookmarkIcon from '@mui/icons-material/Bookmark'
-import DescriptionIcon from '@mui/icons-material/Description'
-import PeopleIcon from '@mui/icons-material/People'
 import LogoutIcon from '@mui/icons-material/Logout'
-import AssignmentIcon from '@mui/icons-material/Assignment'
 import PersonAddIcon from '@mui/icons-material/PersonAdd'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -27,8 +20,10 @@ const STUDENT_ROLE = 2
 
 const adminMenuItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/admin/dashboard' },
-  { text: 'Add Course', icon: <SchoolIcon />, path: '/admin/add-course' },
+  { text: 'Course', icon: <SchoolIcon />, path: '/admin/add-course' },
   { text: 'Invite Student', icon: <PersonAddIcon />, path: '/admin/invite-student' },
+  { text: 'Active Students', icon: <PersonAddIcon />, path: '' },
+  { text: 'In-Active Students', icon: <PersonAddIcon />, path: '' },
   // { text: 'Manage Students', icon: <PeopleIcon />, path: '/admin/students' },
   // { text: 'Settings', icon: <SettingsIcon />, path: '/admin/settings' }
 ]

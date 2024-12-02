@@ -281,7 +281,7 @@ const AddResource = () => {
         if (resource.resourceType === 'MCQ' && resource.content.mcq?.imageFile) {
           const imageFileName = await uploadFileToS3(
             resource.content.mcq.imageFile,
-            `${resource.name}_mcq_${Date.now()}`
+            `${resource.name}_mcqfile`
           )
           contentData.mcq = {
             ...resource.content.mcq,
