@@ -216,124 +216,31 @@ const AddResource = () => {
     }
   }
 
-  const handleSubmit = async e => {
-    e.preventDefault()
-    setIsUploading(true)
+  const handleSubmit = async (event) => {
+    event.preventDefault()
 
-    try {
-      if (!sectionId) {
-        alert('Please select a section')
-        return
+    const updatedResources = await Promise.all(resources.map(async (resource) => {
+      const contentData = { ...resource.content }
+
+      if (resource.resourceType === 'MCQ' && resource.content.mcq?.imageFile) {
+        const imageFileName = await uploadFileToS3(
+          resource.content.mcq.imageFile,
+          resource.name
+        )
+        contentData.mcq = {
+          ...resource.content.mcq,
+          imageUrl: imageFileName
+        }
+        delete contentData.mcq.imageFile
       }
 
-      const resourcePromises = resources.map(async (resource) => {
-        if (!resource.name || !resource.resourceType) {
-          throw new Error('Please fill all required fields')
-        }
+      return {
+        ...resource,
+        content: contentData
+      }
+    }))
 
-        const resourceData = {
-          name: resource.name,
-          resourceType: resource.resourceType,
-          sectionId: sectionId
-        }
-
-        const contentData = {}
-
-        if (resource.content.file) {
-          const fileName = await uploadFileToS3(
-            resource.content.file,
-            resource.name
-          )
-          resourceData.name = fileName
-        }
-
-        if (
-          resource.resourceType === 'AUDIO' &&
-          resource.content.backgroundImage
-        ) {
-          const bgFileName = await uploadFileToS3(
-            resource.content.backgroundImage,
-            `${resource.name}_bg`
-          )
-          contentData.backgroundImageUrl = bgFileName
-        }
-
-        if (resource.resourceType === 'PPT' && resource.content.previewImage) {
-          const previewFileName = await uploadFileToS3(
-            resource.content.previewImage,
-            `${resource.name}_preview`
-          )
-          contentData.previewImageUrl = previewFileName
-        }
-
-        if (resource.content.thumbnail) {
-          const thumbnailFileName = await uploadFileToS3(
-            resource.content.thumbnail,
-            `${resource.name}_thumb`
-          )
-          contentData.thumbnailUrl = thumbnailFileName
-        }
-
-        if (resource.content.externalLink) {
-          contentData.externalLink = resource.content.externalLink
-        }
-
-        if (resource.resourceType === 'MCQ' && resource.content.mcq?.imageFile) {
-          const imageFileName = await uploadFileToS3(
-            resource.content.mcq.imageFile,
-            `${resource.name}_mcq_${Date.now()}`
-          )
-          contentData.mcq = {
-            ...resource.content.mcq,
-            imageUrl: imageFileName
-          }
-          delete contentData.mcq.imageFile
-        }
-
-        resourceData.content = {
-          ...resourceData.content,
-          ...contentData
-        }
-
-        return postData('resources', resourceData)
-      })
-
-      await Promise.all(resourcePromises)
-
-      setResources([{
-        name: '',
-        resourceType: '',
-        content: {
-          text: '',
-          questions: [
-            { question: '', answer: '' },
-            { question: '', answer: '' },
-            { question: '', answer: '' }
-          ],
-          backgroundImage: '',
-          previewImage: '',
-          file: null,
-          thumbnail: null,
-          externalLink: '',
-          mcq: {
-            question: '',
-            options: ['', '', '', ''],
-            correctAnswer: '',
-            imageFile: null
-          }
-        }
-      }])
-      setSectionId(null)
-      setUnitId(null)
-      setCourseId(null)
-      alert('Resources added successfully')
-    } catch (error) {
-      console.error('Error adding resources:', error)
-      alert('Error uploading resources. Please try again.')
-    } finally {
-      setIsUploading(false)
-      setUploadProgress(0)
-    }
+    // Submit updatedResources to the backend
   }
 
   const removeResource = (indexToRemove) => {

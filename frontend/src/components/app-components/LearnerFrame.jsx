@@ -71,15 +71,22 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
         <Box sx={{ width: '100%', minHeight: '70vh', p: 3 }}>
           <Typography variant='h6'>{resource.content.mcq.question}</Typography>
           {resource.content.mcq.imageUrl && (
-            <img
-              src={signedUrls[resource.content.mcq.imageUrl]}
-              alt="MCQ"
-              style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain' }}
-            />
+            <Box sx={{ mt: 2, mb: 2, display: 'flex', justifyContent: 'center' }}>
+              <img
+                src={signedUrls[resource.content.mcq.imageUrl]}
+                alt="Question"
+                style={{ 
+                  maxWidth: '100%', 
+                  maxHeight: '300px', 
+                  objectFit: 'contain',
+                  borderRadius: '8px'
+                }}
+              />
+            </Box>
           )}
           <Box sx={{ mt: 2 }}>
             {resource.content.mcq.options.map((option, index) => (
-              <Typography key={index} variant='body1'>
+              <Typography key={index} variant='body1' sx={{ mb: 1 }}>
                 {index + 1}. {option}
               </Typography>
             ))}
@@ -180,6 +187,17 @@ const LearnerFrame = () => {
     const fetchResourceContent = async () => {
       if (resources[currentIndex]) {
         const resource = resources[currentIndex]
+
+        // For MCQ type, fetch the question image if it exists
+        if (resource.resourceType === 'MCQ' && 
+            resource.content.mcq?.imageUrl && 
+            !signedUrls[resource.content.mcq.imageUrl]) {
+          const mcqImageUrl = await getSignedUrl(resource.content.mcq.imageUrl)
+          setSignedUrls(prev => ({
+            ...prev,
+            [resource.content.mcq.imageUrl]: mcqImageUrl
+          }))
+        }
 
         // Skip if it's TEXT type without image
         if (resource.resourceType === 'TEXT' && !resource.content.imageUrl) {
