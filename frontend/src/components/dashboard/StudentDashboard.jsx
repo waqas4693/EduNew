@@ -16,6 +16,8 @@ import axios from 'axios'
 import Grid from '@mui/material/Grid2'
 import url from '../config/server-url'
 import Calendar from '../calendar/Calendar'
+import { useDispatch } from 'react-redux'
+import { setCurrentCourse } from '../../redux/slices/courseSlice'
 
 const StudentDashboard = () => {
   const [courses, setCourses] = useState([])
@@ -23,6 +25,7 @@ const StudentDashboard = () => {
   const [loadingImages, setLoadingImages] = useState({})
   const navigate = useNavigate()
   const { user } = useAuth()
+  const dispatch = useDispatch()
 
   useEffect(() => {
     const fetchEnrolledCourses = async () => {
@@ -74,12 +77,12 @@ const StudentDashboard = () => {
   }
 
   const handleCourseClick = course => {
-    navigate(`/units/${course.id}`, {
-      state: {
-        courseName: course.name,
-        courseImage: thumbnailUrls[course.image] || course.image
-      }
-    })
+    dispatch(setCurrentCourse({
+      id: course.id,
+      name: course.name,
+      image: thumbnailUrls[course.image] || course.image
+    }))
+    navigate(`/units/${course.id}`)
   }
 
   return (

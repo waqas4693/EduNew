@@ -10,6 +10,8 @@ import {
 import { getData } from '../../api/api'
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
+import { setCurrentUnit } from '../../redux/slices/courseSlice'
 
 import Grid from '@mui/material/Grid2'
 import Calendar from '../calendar/Calendar'
@@ -24,7 +26,32 @@ const Section = () => {
   const [loading, setLoading] = useState(true)
 
   const { courseId, unitId } = useParams()
-  const { unitName, courseName, courseImage } = location.state || {}
+  const dispatch = useDispatch()
+  const { currentCourse, currentUnit } = useSelector((state) => state.course)
+
+  useEffect(() => {
+    const fetchUnitDetails = async () => {
+      try {
+        const response = await getData(`units/${unitId}`)
+        if (response.status === 200) {
+          dispatch(setCurrentUnit({
+            id: unitId,
+            name: response.data.unit.name
+          }))
+        }
+      } catch (error) {
+        console.error('Error fetching unit details:', error)
+      }
+    }
+
+    if (!currentUnit || currentUnit.id !== unitId) {
+      fetchUnitDetails()
+    }
+  }, [unitId, dispatch])
+
+  const courseName = currentCourse?.name
+  const courseImage = currentCourse?.image
+  const unitName = currentUnit?.name
 
   const handleBackToUnit = () => {
     navigate(`/units/${courseId}`)

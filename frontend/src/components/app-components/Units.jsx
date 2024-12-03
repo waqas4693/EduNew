@@ -16,6 +16,8 @@ import { getData } from '../../api/api'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
+import { setCurrentCourse, setCurrentUnit } from '../../redux/slices/courseSlice'
 
 import Grid from '@mui/material/Grid2'
 import Calendar from '../calendar/Calendar'
@@ -23,13 +25,39 @@ import Calendar from '../calendar/Calendar'
 const Units = () => {
   const navigate = useNavigate()
   const location = useLocation()
+  const dispatch = useDispatch()
+  const { currentCourse } = useSelector((state) => state.course)
 
   const { user } = useAuth()
   const { courseId } = useParams()
-  const { courseName, courseImage } = location.state || {}
 
   const [units, setUnits] = useState([])
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    console.log(currentCourse)
+  }, [currentCourse])
+
+  useEffect(() => {
+    const fetchCourseDetails = async () => {
+      try {
+        const response = await getData(`courses/${courseId}`)
+        if (response.status === 200) {
+          dispatch(setCurrentCourse({
+            id: courseId,
+            name: response.data.course.name,
+            image: response.data.course.thumbnail
+          }))
+        }
+      } catch (error) {
+        console.error('Error fetching course details:', error)
+      }
+    }
+
+    if (!currentCourse || currentCourse.id !== courseId) {
+      fetchCourseDetails()
+    }
+  }, [courseId, dispatch])
 
   useEffect(() => {
     fetchUnits()
@@ -49,13 +77,11 @@ const Units = () => {
   }
 
   const handleUnitClick = (unitId, unitName) => {
-    navigate(`/units/${courseId}/section/${unitId}`, {
-      state: {
-        unitName: unitName,
-        courseName: courseName,
-        courseImage: courseImage
-      }
-    })
+    dispatch(setCurrentUnit({
+      id: unitId,
+      name: unitName
+    }))
+    navigate(`/units/${courseId}/section/${unitId}`)
   }
 
   const handleBackToDashboard = () => {
@@ -93,7 +119,7 @@ const Units = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
             <CardMedia
               component='img'
-              image={courseImage || '/background-images/1.jpg'}
+              image={currentCourse?.image || '/background-images/1.jpg'}
               alt='Course Image'
               sx={{
                 width: 100,
@@ -109,7 +135,7 @@ const Units = () => {
                 fontWeight: 'bold'
               }}
             >
-              {courseName || 'Course Name Not Available'}
+              {currentCourse?.name || 'Course Name Not Available'}
             </Typography>
           </Box>
 

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState } from 'react'
 
-const ThemeContext = createContext(null)
+const ThemeContext = createContext()
 
 export const ThemeProvider = ({ children }) => {
   const [background, setBackground] = useState(null)
@@ -12,4 +12,10 @@ export const ThemeProvider = ({ children }) => {
   )
 }
 
-export const useTheme = () => useContext(ThemeContext) 
+export const useTheme = () => {
+  const context = useContext(ThemeContext)
+  if (!context) {
+    throw new Error('useTheme must be used within a ThemeProvider')
+  }
+  return context
+} 
