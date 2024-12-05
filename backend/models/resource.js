@@ -37,12 +37,6 @@ const resourceSchema = new mongoose.Schema({
       },
       correctAnswers: {
         type: [String],
-        validate: {
-          validator: function(answers) {
-            return answers.length === this.numberOfCorrectAnswers
-          },
-          message: 'Number of correct answers must match specified amount'
-        },
         required: function() {
           return this.resourceType === 'MCQ'
         }
