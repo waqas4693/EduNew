@@ -139,7 +139,7 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
             </Box>
           )}
 
-          <Typography variant="h6" sx={{ mb: 2 }}>
+          <Typography variant="h6" sx={{ mb: 2, color: '#000' }}>
             {resource.content.mcq.question}
           </Typography>
 
@@ -181,7 +181,7 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
                   disabled={hasSubmitted}
                   sx={{ mr: 1 }}
                 />
-                <Typography>{option}</Typography>
+                <Typography sx={{ color: '#000' }}>{option}</Typography>
               </Box>
             ))}
           </Box>
