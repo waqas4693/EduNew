@@ -13,7 +13,8 @@ import {
   Backdrop,
   LinearProgress,
   IconButton,
-  Divider
+  Divider,
+  Checkbox
 } from '@mui/material'
 import { postData, getData } from '../../api/api'
 import axios from 'axios'
@@ -71,7 +72,8 @@ const AddResource = () => {
       mcq: {
         question: '',
         options: ['', '', '', ''],
-        correctAnswer: '',
+        numberOfCorrectAnswers: 1,
+        correctAnswers: [],
         imageFile: null
       }
     }
@@ -153,7 +155,8 @@ const AddResource = () => {
         mcq: {
           question: '',
           options: ['', '', '', ''],
-          correctAnswer: '',
+          numberOfCorrectAnswers: 1,
+          correctAnswers: [],
           imageFile: null
         }
       }
@@ -318,7 +321,8 @@ const AddResource = () => {
           mcq: {
             question: '',
             options: ['', '', '', ''],
-            correctAnswer: '',
+            numberOfCorrectAnswers: 1,
+            correctAnswers: [],
             imageFile: null
           }
         }
@@ -757,9 +761,42 @@ const AddResource = () => {
                         }
                       }}
                     >
-                      <MenuItem value={4}>4 Options</MenuItem>
-                      <MenuItem value={5}>5 Options</MenuItem>
-                      <MenuItem value={6}>6 Options</MenuItem>
+                      {[2, 3, 4, 5, 6].map(num => (
+                        <MenuItem key={num} value={num}>{num} Options</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <FormControl fullWidth size='small'>
+                    <InputLabel
+                      sx={{
+                        color: '#8F8F8F',
+                        backgroundColor: 'white',
+                        padding: '0 4px'
+                      }}
+                    >
+                      Number of Correct Answers
+                    </InputLabel>
+                    <Select
+                      value={resource.content.mcq?.numberOfCorrectAnswers || 1}
+                      onChange={e =>
+                        handleContentChange(index, 'mcq', {
+                          ...resource.content.mcq,
+                          numberOfCorrectAnswers: e.target.value,
+                          correctAnswers: [] // Reset correct answers when number changes
+                        })
+                      }
+                      sx={{
+                        borderRadius: '8px',
+                        border: '1px solid #20202033',
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          border: 'none'
+                        }
+                      }}
+                    >
+                      {[1, 2, 3, 4, 5, 6].map(num => (
+                        <MenuItem key={num} value={num}>{num} Correct Answers</MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
                 </Box>
@@ -811,14 +848,15 @@ const AddResource = () => {
                       padding: '0 4px'
                     }}
                   >
-                    Correct Answer
+                    Correct Answers
                   </InputLabel>
                   <Select
-                    value={resource.content.mcq?.correctAnswer || ''}
+                    multiple
+                    value={resource.content.mcq?.correctAnswers || []}
                     onChange={e =>
                       handleContentChange(index, 'mcq', {
                         ...resource.content.mcq,
-                        correctAnswer: e.target.value
+                        correctAnswers: e.target.value
                       })
                     }
                     required
@@ -829,9 +867,11 @@ const AddResource = () => {
                         border: 'none'
                       }
                     }}
+                    renderValue={(selected) => selected.join(', ')}
                   >
                     {resource.content.mcq?.options?.map((option, optIndex) => (
                       <MenuItem key={optIndex} value={option}>
+                        <Checkbox checked={resource.content.mcq?.correctAnswers.includes(option)} />
                         Option {optIndex + 1}: {option}
                       </MenuItem>
                     ))}

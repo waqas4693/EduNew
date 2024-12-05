@@ -21,7 +21,8 @@ export const createResource = async (req, res) => {
           mcq: resourceData.resourceType === 'MCQ' ? {
             question: resourceData.content?.mcq?.question || '',
             options: resourceData.content?.mcq?.options || [],
-            correctAnswer: resourceData.content?.mcq?.correctAnswer || '',
+            numberOfCorrectAnswers: resourceData.content?.mcq?.numberOfCorrectAnswers || 1,
+            correctAnswers: resourceData.content?.mcq?.correctAnswers || [],
             imageUrl: resourceData.content?.mcq?.imageUrl || ''
           } : undefined
         }

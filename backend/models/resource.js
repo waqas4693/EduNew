@@ -28,7 +28,25 @@ const resourceSchema = new mongoose.Schema({
     mcq: {
       question: String,
       options: [String],
-      correctAnswer: String,
+      numberOfCorrectAnswers: {
+        type: Number,
+        min: 1,
+        required: function() {
+          return this.resourceType === 'MCQ'
+        }
+      },
+      correctAnswers: {
+        type: [String],
+        validate: {
+          validator: function(answers) {
+            return answers.length === this.numberOfCorrectAnswers
+          },
+          message: 'Number of correct answers must match specified amount'
+        },
+        required: function() {
+          return this.resourceType === 'MCQ'
+        }
+      },
       imageUrl: String
     }
   },

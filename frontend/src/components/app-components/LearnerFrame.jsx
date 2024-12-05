@@ -5,60 +5,68 @@ import Grid from '@mui/material/Grid2'
 import { getData } from '../../api/api'
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Box, Typography, IconButton, Paper } from '@mui/material'
+import { Box, Typography, IconButton, Paper, Checkbox, Button, Alert } from '@mui/material'
 import { ChevronLeft, ChevronRight, Launch } from '@mui/icons-material'
 
 const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
-  const [selectedAnswer, setSelectedAnswer] = useState(null)
-  const [hasAnswered, setHasAnswered] = useState(false)
+  const [selectedAnswers, setSelectedAnswers] = useState([])
+  const [hasSubmitted, setHasSubmitted] = useState(false)
+  const [isCorrect, setIsCorrect] = useState(false)
 
   const handleAnswerSelect = (option) => {
-    if (!hasAnswered) {
-      setSelectedAnswer(option)
-      setHasAnswered(true)
+    if (hasSubmitted) return
+
+    setSelectedAnswers(prev => {
+      const currentAnswers = [...prev]
+      const index = currentAnswers.indexOf(option)
+
+      if (index === -1 && currentAnswers.length < resource.content.mcq.numberOfCorrectAnswers) {
+        return [...currentAnswers, option]
+      } else if (index !== -1) {
+        return currentAnswers.filter(ans => ans !== option)
+      }
+      return currentAnswers
+    })
+  }
+
+  const handleSubmit = () => {
+    if (selectedAnswers.length !== resource.content.mcq.numberOfCorrectAnswers) {
+      alert(`Please select ${resource.content.mcq.numberOfCorrectAnswers} answer(s)`)
+      return
     }
+
+    const isAnswerCorrect = 
+      selectedAnswers.length === resource.content.mcq.correctAnswers.length &&
+      selectedAnswers.every(answer => resource.content.mcq.correctAnswers.includes(answer))
+
+    setIsCorrect(isAnswerCorrect)
+    setHasSubmitted(true)
+  }
+
+  const handleReset = () => {
+    setSelectedAnswers([])
+    setHasSubmitted(false)
+    setIsCorrect(false)
   }
 
   const getOptionStyle = (option) => {
-    if (!hasAnswered) {
+    if (!hasSubmitted) {
       return {
-        mb: 1,
-        color: 'black',
-        cursor: 'pointer',
-        p: 1,
-        borderRadius: '4px',
-        '&:hover': {
-          bgcolor: 'rgba(0, 0, 0, 0.04)'
-        }
+        border: selectedAnswers.includes(option) ? '2px solid #3366CC' : '1px solid #ddd'
       }
     }
 
-    if (option === resource.content.mcq.correctAnswer) {
-      return {
-        mb: 1,
-        color: 'white',
-        bgcolor: 'success.main',
-        p: 1,
-        borderRadius: '4px'
-      }
-    }
+    const isSelected = selectedAnswers.includes(option)
+    const isCorrect = resource.content.mcq.correctAnswers.includes(option)
 
-    if (option === selectedAnswer && option !== resource.content.mcq.correctAnswer) {
-      return {
-        mb: 1,
-        color: 'white',
-        bgcolor: 'error.main',
-        p: 1,
-        borderRadius: '4px'
-      }
+    if (isSelected && isCorrect) {
+      return { bgcolor: '#4CAF50', color: 'white' }
+    } else if (isSelected && !isCorrect) {
+      return { bgcolor: '#f44336', color: 'white' }
+    } else if (!isSelected && isCorrect) {
+      return { bgcolor: '#4CAF50', color: 'white' }
     }
-
-    return {
-      mb: 1,
-      color: 'black',
-      p: 1,
-      borderRadius: '4px'
-    }
+    return { border: '1px solid #ddd' }
   }
 
   switch (resource.resourceType) {
@@ -120,53 +128,82 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
 
     case 'MCQ':
       return (
-        <Box sx={{ width: '100%', minHeight: '70vh', p: 3 }}>
-          <Typography variant='h6' sx={{ color: 'black' }}>
-            {resource.content.mcq.question}
-          </Typography>
+        <Box sx={{ p: 3, maxWidth: '800px', mx: 'auto' }}>
           {resource.content.mcq.imageUrl && (
-            <Box sx={{ mt: 2, mb: 2, display: 'flex', justifyContent: 'center' }}>
-              <img
-                src={signedUrls[resource.content.mcq.imageUrl]}
+            <Box sx={{ mb: 3, textAlign: 'center' }}>
+              <img 
+                src={signedUrls[resource.content.mcq.imageUrl]} 
                 alt="Question"
-                style={{ 
-                  maxWidth: '100%', 
-                  maxHeight: '300px', 
-                  objectFit: 'contain',
-                  borderRadius: '8px'
-                }}
+                style={{ maxWidth: '100%', maxHeight: '300px' }}
               />
             </Box>
           )}
-          <Box sx={{ mt: 2 }}>
+
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            {resource.content.mcq.question}
+          </Typography>
+
+          {hasSubmitted && (
+            <Alert 
+              severity={isCorrect ? "success" : "error"} 
+              sx={{ mb: 2 }}
+            >
+              {isCorrect 
+                ? "Correct! Well done!" 
+                : `Incorrect. Expected ${resource.content.mcq.numberOfCorrectAnswers} correct answer(s).`}
+            </Alert>
+          )}
+
+          <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+            Select {resource.content.mcq.numberOfCorrectAnswers} answer{resource.content.mcq.numberOfCorrectAnswers > 1 ? 's' : ''}.
+          </Typography>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {resource.content.mcq.options.map((option, index) => (
-              <Typography
+              <Box
                 key={index}
-                variant='body1'
                 onClick={() => handleAnswerSelect(option)}
-                sx={getOptionStyle(option)}
-              >
-                {index + 1}. {option}
-              </Typography>
-            ))}
-          </Box>
-          {hasAnswered && (
-            <Box sx={{ mt: 2 }}>
-              <Typography
-                variant='body1'
                 sx={{
-                  color: selectedAnswer === resource.content.mcq.correctAnswer
-                    ? 'success.main'
-                    : 'error.main',
-                  fontWeight: 'bold'
+                  p: 2,
+                  borderRadius: '8px',
+                  cursor: hasSubmitted ? 'default' : 'pointer',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  ...getOptionStyle(option),
+                  '&:hover': {
+                    bgcolor: hasSubmitted ? undefined : 'rgba(0,0,0,0.04)'
+                  }
                 }}
               >
-                {selectedAnswer === resource.content.mcq.correctAnswer
-                  ? 'Correct Answer! ✓'
-                  : 'Incorrect Answer! ✗'}
-              </Typography>
-            </Box>
-          )}
+                <Checkbox
+                  checked={selectedAnswers.includes(option)}
+                  disabled={hasSubmitted}
+                  sx={{ mr: 1 }}
+                />
+                <Typography>{option}</Typography>
+              </Box>
+            ))}
+          </Box>
+
+          <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'center' }}>
+            {!hasSubmitted ? (
+              <Button 
+                variant="contained" 
+                onClick={handleSubmit}
+                disabled={selectedAnswers.length !== resource.content.mcq.numberOfCorrectAnswers}
+              >
+                Submit Answer
+              </Button>
+            ) : (
+              <Button 
+                variant="outlined" 
+                onClick={handleReset}
+              >
+                Try Again
+              </Button>
+            )}
+          </Box>
         </Box>
       )
 
