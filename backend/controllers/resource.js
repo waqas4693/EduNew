@@ -7,6 +7,14 @@ export const createResource = async (req, res) => {
     const { resources } = req.body
     
     const saveResource = async (resourceData) => {
+      if (resourceData.resourceType === 'MCQ') {
+        console.log('MCQ Data:', {
+          numberOfCorrectAnswers: resourceData.content?.mcq?.numberOfCorrectAnswers,
+          correctAnswers: resourceData.content?.mcq?.correctAnswers,
+          correctAnswersLength: resourceData.content?.mcq?.correctAnswers?.length
+        })
+      }
+
       const resource = new Resource({
         name: resourceData.name,
         resourceType: resourceData.resourceType,
@@ -21,15 +29,23 @@ export const createResource = async (req, res) => {
           mcq: resourceData.resourceType === 'MCQ' ? {
             question: resourceData.content?.mcq?.question || '',
             options: resourceData.content?.mcq?.options || [],
-            numberOfCorrectAnswers: resourceData.content?.mcq?.numberOfCorrectAnswers || 1,
+            numberOfCorrectAnswers: parseInt(resourceData.content?.mcq?.numberOfCorrectAnswers) || 1,
             correctAnswers: resourceData.content?.mcq?.correctAnswers || [],
             imageUrl: resourceData.content?.mcq?.imageUrl || ''
           } : undefined
         }
       })
+
+      if (resourceData.resourceType === 'MCQ') {
+        console.log('Constructed Resource MCQ:', {
+          numberOfCorrectAnswers: resource.content.mcq.numberOfCorrectAnswers,
+          correctAnswers: resource.content.mcq.correctAnswers,
+          correctAnswersLength: resource.content.mcq.correctAnswers.length
+        })
+      }
+
       const savedResource = await resource.save()
       
-      // Update section with the new resource ID
       await Section.findByIdAndUpdate(
         resourceData.sectionId,
         { $push: { resources: savedResource._id } }
@@ -47,6 +63,11 @@ export const createResource = async (req, res) => {
     res.status(201).json({ success: true, data: savedResources })
 
   } catch (error) {
+    console.error('Resource Creation Error:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    })
     handleError(res, error)
   }
 }
