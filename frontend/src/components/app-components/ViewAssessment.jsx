@@ -33,6 +33,82 @@ const AssessmentRenderer = ({
 }) => {
   const [currentMcqIndex, setCurrentMcqIndex] = useState(0)
   const [flaggedQuestions, setFlaggedQuestions] = useState(new Set())
+  const [timeRemaining, setTimeRemaining] = useState(null)
+  const [isAssessmentStarted, setIsAssessmentStarted] = useState(false)
+  const [isAssessmentEnded, setIsAssessmentEnded] = useState(false)
+
+  useEffect(() => {
+    let timer
+    if (isAssessmentStarted && timeRemaining > 0) {
+      timer = setInterval(() => {
+        setTimeRemaining(prev => {
+          if (prev <= 1) {
+            clearInterval(timer)
+            handleTimeUp()
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    }
+    return () => clearInterval(timer)
+  }, [isAssessmentStarted, timeRemaining])
+
+  const handleStartAssessment = () => {
+    setIsAssessmentStarted(true)
+    setTimeRemaining(assessment.timeAllowed * 60) // Convert minutes to seconds
+  }
+
+  const handleTimeUp = () => {
+    setIsAssessmentEnded(true)
+    onSubmit() // Automatically submit the assessment
+  }
+
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+  }
+
+  const renderTimerOrStartButton = () => {
+    if (!assessment.isTimeBound) return null
+
+    if (!isAssessmentStarted) {
+      return (
+        <Box sx={{ textAlign: 'center', mb: 3 }}>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            Time Allowed: {assessment.timeAllowed} minutes
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleStartAssessment}
+            sx={{ minWidth: 200 }}
+          >
+            Start Assessment
+          </Button>
+        </Box>
+      )
+    }
+
+    return (
+      <Box sx={{ 
+        position: 'fixed', 
+        top: 20, 
+        right: 20, 
+        zIndex: 1000,
+        bgcolor: timeRemaining <= 300 ? '#f44336' : 'primary.main', // Red when ≤ 5 minutes
+        color: 'white',
+        padding: '10px 20px',
+        borderRadius: '4px',
+        boxShadow: 3
+      }}>
+        <Typography variant="h6">
+          Time Remaining: {formatTime(timeRemaining)}
+        </Typography>
+      </Box>
+    )
+  }
 
   const handleNextMcq = () => {
     if (currentMcqIndex < assessment.content.mcqs.length - 1) {
@@ -137,9 +213,35 @@ const AssessmentRenderer = ({
       )
 
     case 'MCQ':
+      if (assessment.isTimeBound && !isAssessmentStarted) {
+        return renderTimerOrStartButton()
+      }
+
+      if (isAssessmentEnded) {
+        return (
+          <Box sx={{ 
+            textAlign: 'center', 
+            mt: 4,
+            p: 3,
+            bgcolor: '#f44336',
+            color: 'white',
+            borderRadius: '4px'
+          }}>
+            <Typography variant="h4" sx={{ mb: 2 }}>
+              Time's Up!
+            </Typography>
+            <Typography variant="body1">
+              Your assessment has been submitted automatically.
+            </Typography>
+          </Box>
+        )
+      }
+
       const currentMcq = assessment.content.mcqs[currentMcqIndex]
       return (
-        <Grid container>
+        <Grid container spacing={2}>
+          {renderTimerOrStartButton()}
+          
           {/* MCQ Content Area */}
           <Grid size={10} sx={{ pl: '20px' }}>
             <Box

@@ -527,6 +527,8 @@ const AddAssessment = () => {
         totalMarks: formData.totalMarks,
         percentage: formData.percentage,
         sectionId: sectionId,
+        isTimeBound: formData.isTimeBound,
+        timeAllowed: formData.timeAllowed,
         content: formData.content
       }
 
@@ -552,7 +554,13 @@ const AddAssessment = () => {
       return false
     }
 
-    // Add more validation based on assessment type
+    if (formData.assessmentType === 'MCQ' && formData.isTimeBound) {
+      if (!formData.timeAllowed || formData.timeAllowed <= 0) {
+        alert('Please enter a valid time duration for time-bound assessment')
+        return false
+      }
+    }
+
     return true
   }
 
