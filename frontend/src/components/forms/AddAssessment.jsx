@@ -9,7 +9,9 @@ import {
   Select,
   FormControl,
   InputLabel,
-  IconButton
+  IconButton,
+  FormControlLabel,
+  Switch
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -28,6 +30,8 @@ const AddAssessment = () => {
     assessmentType: '',
     totalMarks: '',
     percentage: '',
+    isTimeBound: false,
+    timeAllowed: '',
     content: {
       questions: [],
       mcqs: [],
@@ -466,6 +470,51 @@ const AddAssessment = () => {
     }
   }
 
+  const renderTimeOptions = () => {
+    if (formData.assessmentType !== 'MCQ') return null;
+
+    return (
+      <Box sx={{ mb: 3 }}>
+        <FormControl fullWidth sx={{ mb: 2 }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={formData.isTimeBound}
+                onChange={(e) => handleFormChange('isTimeBound', e.target.checked)}
+              />
+            }
+            label="Time Bound Assessment"
+          />
+        </FormControl>
+
+        {formData.isTimeBound && (
+          <TextField
+            fullWidth
+            type="number"
+            size="small"
+            label="Time Allowed (minutes)"
+            value={formData.timeAllowed}
+            onChange={(e) => handleFormChange('timeAllowed', e.target.value)}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px',
+                border: '1px solid #20202033',
+                '& fieldset': {
+                  border: 'none'
+                }
+              },
+              '& .MuiInputLabel-root': {
+                color: '#8F8F8F',
+                backgroundColor: 'white',
+                padding: '0 4px'
+              }
+            }}
+          />
+        )}
+      </Box>
+    )
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
@@ -512,6 +561,8 @@ const AddAssessment = () => {
       assessmentType: '',
       totalMarks: '',
       percentage: '',
+      isTimeBound: false,
+      timeAllowed: '',
       content: {
         questions: [],
         mcqs: [],
@@ -689,6 +740,8 @@ const AddAssessment = () => {
       </Box>
 
       {renderAssessmentTypeFields()}
+
+      {renderTimeOptions()}
 
       <Box sx={{ display: 'flex', justifyContent: 'end', alignItems: 'center' }}>
 

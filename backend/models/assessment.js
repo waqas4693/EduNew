@@ -19,6 +19,16 @@ const assessmentSchema = new mongoose.Schema({
     ref: 'Section',
     required: true
   },
+  isTimeBound: {
+    type: Boolean,
+    default: false
+  },
+  timeAllowed: {
+    type: Number, // Time in minutes
+    required: function() {
+      return this.isTimeBound
+    }
+  },
   content: {
     questions: [{
       question: String,

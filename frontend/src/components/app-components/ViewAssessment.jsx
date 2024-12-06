@@ -14,11 +14,14 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import { ChevronLeft } from '@mui/icons-material'
+
 import { getData } from '../../api/api'
 import axios from 'axios'
 import url from '../config/server-url'
 import Grid from '@mui/material/Grid2'
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
+import FlagIcon from '@mui/icons-material/Flag'
 
 const AssessmentRenderer = ({
   assessment,
@@ -28,6 +31,78 @@ const AssessmentRenderer = ({
   onSubmit,
   onPlayAudio
 }) => {
+  const [currentMcqIndex, setCurrentMcqIndex] = useState(0)
+  const [flaggedQuestions, setFlaggedQuestions] = useState(new Set())
+
+  const handleNextMcq = () => {
+    if (currentMcqIndex < assessment.content.mcqs.length - 1) {
+      setCurrentMcqIndex(prev => prev + 1)
+    }
+  }
+
+  const handlePreviousMcq = () => {
+    if (currentMcqIndex > 0) {
+      setCurrentMcqIndex(prev => prev - 1)
+    }
+  }
+
+  const handleSelectMcq = index => {
+    setCurrentMcqIndex(index)
+  }
+
+  const isQuestionAttempted = index => {
+    return attemptData?.mcqAnswers?.[index]?.selectedOption !== undefined
+  }
+
+  const getQuestionButtonStyle = index => {
+    if (flaggedQuestions.has(index)) {
+      return {
+        bgcolor: '#f44336',
+        color: 'white',
+        '&:hover': {
+          bgcolor: '#d32f2f'
+        }
+      }
+    }
+    if (index === currentMcqIndex) {
+      return {
+        bgcolor: '#333333',
+        color: 'white',
+        '&:hover': {
+          bgcolor: '#222222'
+        }
+      }
+    }
+    if (isQuestionAttempted(index)) {
+      return {
+        bgcolor: '#4CAF50',
+        color: 'white',
+        '&:hover': {
+          bgcolor: '#45a049'
+        }
+      }
+    }
+    return {
+      bgcolor: '#1976d2',
+      color: 'white',
+      '&:hover': {
+        bgcolor: '#1565c0'
+      }
+    }
+  }
+
+  const toggleFlagQuestion = index => {
+    setFlaggedQuestions(prev => {
+      const newFlagged = new Set(prev)
+      if (newFlagged.has(index)) {
+        newFlagged.delete(index)
+      } else {
+        newFlagged.add(index)
+      }
+      return newFlagged
+    })
+  }
+
   switch (assessment.assessmentType) {
     case 'QNA':
       return (
@@ -62,49 +137,188 @@ const AssessmentRenderer = ({
       )
 
     case 'MCQ':
+      const currentMcq = assessment.content.mcqs[currentMcqIndex]
       return (
-        <Box sx={{ p: 3 }}>
-          <form onSubmit={onSubmit}>
-            {assessment.content.mcqs.map((mcq, index) => (
-              <Box key={index} sx={{ mb: 4 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <Typography variant='subtitle1' sx={{ fontWeight: 'bold' }}>
-                    Question {index + 1}: {mcq.question}
-                  </Typography>
-                  {mcq.audioFile && (
-                    <IconButton
-                      onClick={() => onPlayAudio(mcq.audioFile)}
-                      sx={{ 
-                        color: 'primary.main',
-                        '&:hover': { bgcolor: 'primary.light' }
-                      }}
-                    >
-                      <PlayCircleOutlineIcon />
-                    </IconButton>
-                  )}
-                </Box>
-                <RadioGroup
-                  value={attemptData?.mcqAnswers?.[index]?.selectedOption || ''}
-                  onChange={e =>
-                    onAnswerChange('mcqAnswers', index, e.target.value)
-                  }
+        <Grid container>
+          {/* MCQ Content Area */}
+          <Grid size={10} sx={{ pl: '20px' }}>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                mb: 3
+              }}
+            >
+              <Typography variant='h6'>
+                Question {currentMcqIndex + 1} of{' '}
+                {assessment.content.mcqs.length}
+              </Typography>
+            </Box>
+
+            <Box>
+              <Box sx={{ mb: 4 }}>
+                <Typography
+                  variant='subtitle1'
+                  sx={{ fontWeight: 'bold', mb: 2 }}
                 >
-                  {mcq.options.map((option, optIndex) => (
-                    <FormControlLabel
+                  {currentMcq.question}
+                </Typography>
+
+                {currentMcq.audioFile && (
+                  <IconButton
+                    onClick={() => onPlayAudio(currentMcq.audioFile)}
+                    sx={{
+                      color: 'primary.main',
+                      '&:hover': { bgcolor: 'primary.light' }
+                    }}
+                  >
+                    <PlayCircleOutlineIcon />
+                  </IconButton>
+                )}
+
+                <Box sx={{ mt: 3 }}>
+                  {currentMcq.options.map((option, optIndex) => (
+                    <Box
                       key={optIndex}
-                      value={option}
-                      control={<Radio />}
-                      label={`${String.fromCharCode(65 + optIndex)}. ${option}`}
-                    />
+                      sx={{
+                        mb: 2,
+                        p: 2,
+                        border: '1px solid #ddd',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          bgcolor: 'rgba(0, 0, 0, 0.04)'
+                        }
+                      }}
+                      onClick={() =>
+                        onAnswerChange('mcqAnswers', currentMcqIndex, option)
+                      }
+                    >
+                      <FormControlLabel
+                        value={option}
+                        control={
+                          <Radio
+                            checked={
+                              attemptData?.mcqAnswers?.[currentMcqIndex]
+                                ?.selectedOption === option
+                            }
+                          />
+                        }
+                        label={`${String.fromCharCode(
+                          65 + optIndex
+                        )}. ${option}`}
+                      />
+                    </Box>
                   ))}
-                </RadioGroup>
+                </Box>
+
+                {/* Navigation Arrows - Moved inside MCQ area */}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    mt: 4,
+                    px: 2
+                  }}
+                >
+                  <IconButton
+                    onClick={handlePreviousMcq}
+                    disabled={currentMcqIndex === 0}
+                    sx={{
+                      bgcolor: 'primary.main',
+                      color: 'white',
+                      '&:hover': { bgcolor: 'primary.dark' },
+                      '&.Mui-disabled': { bgcolor: 'grey.300' }
+                    }}
+                  >
+                    <ChevronLeftIcon />
+                  </IconButton>
+                  <IconButton
+                    onClick={handleNextMcq}
+                    disabled={
+                      currentMcqIndex === assessment.content.mcqs.length - 1
+                    }
+                    sx={{
+                      bgcolor: 'primary.main',
+                      color: 'white',
+                      '&:hover': { bgcolor: 'primary.dark' },
+                      '&.Mui-disabled': { bgcolor: 'grey.300' }
+                    }}
+                  >
+                    <ChevronRightIcon />
+                  </IconButton>
+                </Box>
+
+                {/* Submit Button - only show on last question */}
+                {currentMcqIndex === assessment.content.mcqs.length - 1 && (
+                  <Box sx={{ mt: 4, textAlign: 'center' }}>
+                    <Button
+                      variant='contained'
+                      onClick={onSubmit}
+                      sx={{ minWidth: 200 }}
+                    >
+                      Submit Assessment
+                    </Button>
+                  </Box>
+                )}
               </Box>
-            ))}
-            <Button variant='contained' type='submit' sx={{ mt: 2 }} fullWidth>
-              Submit Assessment
-            </Button>
-          </form>
-        </Box>
+            </Box>
+          </Grid>
+
+          {/* Question List Area */}
+          <Grid size={2}>
+            <Box sx={{ p: 2 }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                  mb: 3
+                }}
+              >
+                <Button
+                  color='error'
+                  onClick={() => toggleFlagQuestion(currentMcqIndex)}
+                  variant={
+                    flaggedQuestions.has(currentMcqIndex)
+                      ? 'contained'
+                      : 'outlined'
+                  }
+                  startIcon={<FlagIcon />}
+                  sx={{
+                    borderRadius: '4px',
+                    '&.MuiButton-contained': {
+                      bgcolor: '#f44336',
+                      '&:hover': {
+                        bgcolor: '#d32f2f'
+                      }
+                    }
+                  }}
+                >
+                  {flaggedQuestions.has(currentMcqIndex) ? 'Flagged' : 'Flag'}
+                </Button>
+                {/* <Typography variant='h6'>Questions</Typography> */}
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {assessment.content.mcqs.map((_, index) => (
+                  <Button
+                    key={index}
+                    onClick={() => handleSelectMcq(index)}
+                    sx={{
+                      minWidth: '40px',
+                      minHeight: '40px',
+                      borderRadius: '4px',
+                      ...getQuestionButtonStyle(index)
+                    }}
+                  >
+                    {index + 1}
+                  </Button>
+                ))}
+              </Box>
+            </Box>
+          </Grid>
+        </Grid>
       )
 
     case 'FILE':
@@ -200,7 +414,7 @@ const ViewAssessment = () => {
     }
   }
 
-  const getAudioUrl = async (fileName) => {
+  const getAudioUrl = async fileName => {
     try {
       // Check if URL already exists
       if (audioUrls[fileName]) {
@@ -225,7 +439,7 @@ const ViewAssessment = () => {
     }
   }
 
-  const handlePlayAudio = async (audioFileName) => {
+  const handlePlayAudio = async audioFileName => {
     try {
       // Stop current audio if playing
       if (audioPlayer) {
@@ -385,109 +599,98 @@ const ViewAssessment = () => {
   }
 
   return (
-    <Grid
+    <Paper
+      elevation={5}
       sx={{
+        borderRadius: '16px',
+        overflow: 'hidden',
         height: '100%',
-        width: '100%',
-        p: 3
+        display: 'flex',
+        flexDirection: 'column'
       }}
     >
-      <Grid
-        item
-        xs={12}
+      <Box sx={{ p: 1 }}>
+        <Typography
+          variant='body2'
+          sx={{
+            color: 'primary.main',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            width: 'fit-content'
+          }}
+          onClick={() => navigate(`/units/${courseId}/section/${unitId}`)}
+        >
+          <ChevronLeft sx={{ color: 'primary.main' }} /> Back To Section
+        </Typography>
+      </Box>
+
+      <Box
         sx={{
-          height: '100%',
-          minHeight: 'calc(100vh - 100px)'
+          bgcolor: 'primary.main',
+          color: 'white',
+          p: 2,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
         }}
       >
-        <Paper
-          elevation={5}
-          sx={{
-            borderRadius: '16px',
-            overflow: 'hidden',
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column'
-          }}
+        <Box>
+          <Typography variant='h6'>
+            {assessments[currentIndex]?.assessmentType} Assessment
+          </Typography>
+          <Typography variant='body2'>
+            Total Marks: {assessments[currentIndex]?.totalMarks} | Percentage:{' '}
+            {assessments[currentIndex]?.percentage}%
+          </Typography>
+        </Box>
+        <Typography>
+          {currentIndex + 1}/{assessments.length}
+        </Typography>
+      </Box>
+
+      <Box
+        sx={{
+          flex: 1,
+          overflow: 'auto',
+          position: 'relative'
+        }}
+      >
+        {assessments[currentIndex] && (
+          <AssessmentRenderer
+            assessment={assessments[currentIndex]}
+            signedUrl={
+              signedUrls[assessments[currentIndex].content.assessmentFile]
+            }
+            attemptData={attemptData}
+            onAnswerChange={handleAnswerChange}
+            onSubmit={handleSubmit}
+            onPlayAudio={handlePlayAudio}
+          />
+        )}
+      </Box>
+
+      <Box
+        sx={{
+          p: 2,
+          bgcolor: '#f5f5f5',
+          display: 'flex',
+          justifyContent: 'center',
+          gap: 2,
+          borderTop: '1px solid rgba(0, 0, 0, 0.12)'
+        }}
+      >
+        <IconButton onClick={handlePrevious} disabled={currentIndex === 0}>
+          <ChevronLeftIcon />
+        </IconButton>
+        <IconButton
+          onClick={handleNext}
+          disabled={currentIndex === assessments.length - 1}
         >
-          <Box sx={{ mb: 2, p: 2 }}>
-            <Typography
-              variant='body2'
-              sx={{ color: 'primary.main', cursor: 'pointer' }}
-              onClick={() => navigate(`/units/${courseId}/section/${unitId}`)}
-            >
-              &lt; Back To Section
-            </Typography>
-          </Box>
-
-          <Box
-            sx={{
-              bgcolor: 'primary.main',
-              color: 'white',
-              p: 2,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}
-          >
-            <Box>
-              <Typography variant='h6'>
-                {assessments[currentIndex]?.assessmentType} Assessment
-              </Typography>
-              <Typography variant='body2'>
-                Total Marks: {assessments[currentIndex]?.totalMarks} |
-                Percentage: {assessments[currentIndex]?.percentage}%
-              </Typography>
-            </Box>
-            <Typography>
-              {currentIndex + 1}/{assessments.length}
-            </Typography>
-          </Box>
-
-          <Box
-            sx={{
-              flex: 1,
-              overflow: 'auto',
-              position: 'relative'
-            }}
-          >
-            {assessments[currentIndex] && (
-              <AssessmentRenderer
-                assessment={assessments[currentIndex]}
-                signedUrl={
-                  signedUrls[assessments[currentIndex].content.assessmentFile]
-                }
-                attemptData={attemptData}
-                onAnswerChange={handleAnswerChange}
-                onSubmit={handleSubmit}
-                onPlayAudio={handlePlayAudio}
-              />
-            )}
-          </Box>
-
-          <Box
-            sx={{
-              p: 2,
-              bgcolor: '#f5f5f5',
-              display: 'flex',
-              justifyContent: 'center',
-              gap: 2,
-              borderTop: '1px solid rgba(0, 0, 0, 0.12)'
-            }}
-          >
-            <IconButton onClick={handlePrevious} disabled={currentIndex === 0}>
-              <ChevronLeftIcon />
-            </IconButton>
-            <IconButton
-              onClick={handleNext}
-              disabled={currentIndex === assessments.length - 1}
-            >
-              <ChevronRightIcon />
-            </IconButton>
-          </Box>
-        </Paper>
-      </Grid>
-    </Grid>
+          <ChevronRightIcon />
+        </IconButton>
+      </Box>
+    </Paper>
   )
 }
 

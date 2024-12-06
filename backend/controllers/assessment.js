@@ -4,7 +4,16 @@ import Section from '../models/section.js'
 
 export const createAssessment = async (req, res) => {
   try {
-    const { sectionId } = req.body
+    const { sectionId, isTimeBound, timeAllowed } = req.body
+
+    if (req.body.assessmentType === 'MCQ' && isTimeBound) {
+      if (!timeAllowed || timeAllowed <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Time allowed must be a positive number for time-bound assessments'
+        })
+      }
+    }
 
     const existingAssessments = await Assessment.find({ sectionId })
     const totalPercentage = existingAssessments.reduce(
