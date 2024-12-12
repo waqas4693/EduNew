@@ -67,4 +67,34 @@ export const getCourseUnits = async (req, res) => {
   } catch (error) {
     handleError(res, error)
   }
+}
+
+export const updateUnit = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { name } = req.body
+
+    const unit = await Unit.findByIdAndUpdate(
+      id,
+      { 
+        name,
+        updatedAt: Date.now()
+      },
+      { new: true }
+    )
+
+    if (!unit) {
+      return res.status(404).json({
+        success: false,
+        message: 'Unit not found'
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      data: unit
+    })
+  } catch (error) {
+    handleError(res, error)
+  }
 } 

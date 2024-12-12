@@ -9,9 +9,9 @@ import { verifyToken } from '../middleware/auth.js'
 
 const router = express.Router()
 
-router.post('/', createAssessment)
-router.get('/:sectionId', getAssessments)
-router.put('/:id', updateAssessment)
-router.delete('/:id', deleteAssessment)
+router.post('/', verifyToken, createAssessment)
+router.get('/:sectionId', verifyToken, getAssessments)
+router.put('/:id', verifyToken, updateAssessment)
+router.delete('/:id', verifyToken, deleteAssessment)
 
 export default router 

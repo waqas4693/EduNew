@@ -5,34 +5,24 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
+  Collapse,
   useTheme,
   Button
 } from '@mui/material'
-import DashboardIcon from '@mui/icons-material/Dashboard'
-import SchoolIcon from '@mui/icons-material/School'
-import LogoutIcon from '@mui/icons-material/Logout'
-import PersonAddIcon from '@mui/icons-material/PersonAdd'
+import {
+  ExpandLess,
+  ExpandMore,
+  Dashboard as DashboardIcon,
+  School as SchoolIcon,
+  Logout as LogoutIcon,
+  PersonAdd as PersonAddIcon
+} from '@mui/icons-material'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { useState } from 'react'
 
 const ADMIN_ROLE = 1
 const STUDENT_ROLE = 2
-
-const adminMenuItems = [
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/admin/dashboard' },
-  { text: 'Course', icon: <SchoolIcon />, path: '/admin/add-course' },
-  { text: 'Invite Student', icon: <PersonAddIcon />, path: '/admin/invite-student' },
-  { text: 'Active Students', icon: <PersonAddIcon />, path: '' },
-  { text: 'In-Active Students', icon: <PersonAddIcon />, path: '' },
-  // { text: 'Manage Students', icon: <PeopleIcon />, path: '/admin/students' },
-  // { text: 'Settings', icon: <SettingsIcon />, path: '/admin/settings' }
-]
-
-const studentMenuItems = [
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-  // { text: 'Assessments', icon: <SchoolIcon />, path: '/assessments' },
-  // { text: 'Profile', icon: <PersonIcon />, path: '/profile' },
-]
 
 const Sidebar = ({ open, onClose }) => {
   const theme = useTheme()
@@ -40,81 +30,186 @@ const Sidebar = ({ open, onClose }) => {
   const { user, logout } = useAuth()
   const drawerWidth = open ? 240 : 65
 
-  const menuItems = user?.role === ADMIN_ROLE ? adminMenuItems : studentMenuItems
+  const [openCourses, setOpenCourses] = useState(false)
+  const [openStudents, setOpenStudents] = useState(false)
 
   const handleLogout = () => {
     logout()
     navigate('/login')
   }
 
+  const adminMenuItems = [
+    {
+      text: 'Dashboard',
+      icon: <DashboardIcon />,
+      path: '/admin/dashboard'
+    },
+    {
+      text: 'Courses',
+      icon: <SchoolIcon />,
+      subItems: [
+        { text: 'Course Management', path: '/admin/add-course' },
+        { text: 'Active Courses', path: '' },
+        { text: 'InActive Courses', path: '' }
+      ]
+    },
+    {
+      text: 'Students',
+      icon: <PersonAddIcon />,
+      subItems: [
+        { text: 'Invite Student', path: '/admin/invite-student' }
+      ]
+    }
+  ]
+
+  const studentMenuItems = [
+    {
+      text: 'Dashboard',
+      icon: <DashboardIcon />,
+      path: '/student/dashboard'
+    },
+    {
+      text: 'Profile',
+      icon: <DashboardIcon />,
+      path: '/profile'
+    },
+    {
+      text: 'Assessment',
+      icon: <SchoolIcon />,
+      path: '/assessment'
+    }
+  ]
+
+  const menuItems = user?.role === ADMIN_ROLE ? adminMenuItems : studentMenuItems
+
   return (
     <Drawer
-      variant="permanent"
-      anchor="left"
+      variant='permanent'
       open={open}
+      onClose={onClose}
       sx={{
         width: drawerWidth,
         flexShrink: 0,
-        whiteSpace: 'nowrap',
         '& .MuiDrawer-paper': {
           width: drawerWidth,
           boxSizing: 'border-box',
-          height: '100%',
+          bgcolor: 'primary.main',
           transition: theme.transitions.create('width', {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.enteringScreen
-          }),
-          overflowX: 'hidden',
-          bgcolor: 'primary.main',
-          color: 'white'
+          })
         }
       }}
     >
-      <Box sx={{ 
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%'
-      }}>
+      <Box sx={{ overflow: 'auto', height: '100%', display: 'flex', flexDirection: 'column' }}>
         <List>
           {menuItems.map((item) => (
-            <ListItem
-              button
-              component={Link}
-              to={item.path}
-              key={item.text}
-              sx={{
-                minHeight: 48,
-                px: 2.5,
-                justifyContent: open ? 'initial' : 'center',
-                width: '100%',
-                '&:hover': {
-                  bgcolor: 'primary.dark'
-                }
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  minWidth: 0,
-                  mr: open ? 3 : 'auto',
-                  justifyContent: 'center',
-                  width: 24,
-                  color: 'white'
-                }}
-              >
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText 
-                primary={item.text} 
-                sx={{ 
-                  opacity: open ? 1 : 0,
-                  display: open ? 'block' : 'none',
-                  '& .MuiTypography-root': {
-                    color: 'white'
-                  }
-                }} 
-              />
-            </ListItem>
+            <div key={item.text}>
+              {item.subItems ? (
+                <>
+                  <ListItem
+                    button
+                    onClick={() => item.text === 'Courses' ? setOpenCourses(!openCourses) : setOpenStudents(!openStudents)}
+                    sx={{
+                      minHeight: 48,
+                      justifyContent: open ? 'initial' : 'center',
+                      px: 2.5,
+                      '&:hover': {
+                        bgcolor: 'primary.dark'
+                      }
+                    }}
+                  >
+                    <ListItemIcon
+                      sx={{
+                        minWidth: 0,
+                        mr: open ? 3 : 'auto',
+                        justifyContent: 'center',
+                        color: 'white'
+                      }}
+                    >
+                      {item.icon}
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary={item.text} 
+                      sx={{ 
+                        opacity: open ? 1 : 0,
+                        '& .MuiTypography-root': {
+                          color: 'white'
+                        }
+                      }} 
+                    />
+                    {open && (item.text === 'Courses' ? (openCourses ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />) :
+                            (openStudents ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />))}
+                  </ListItem>
+                  <Collapse in={item.text === 'Courses' ? openCourses : openStudents} timeout="auto" unmountOnExit>
+                    <List component="div" disablePadding>
+                      {item.subItems.map((subItem) => (
+                        <ListItem
+                          button
+                          component={Link}
+                          to={subItem.path}
+                          key={subItem.text}
+                          sx={{
+                            pl: 4,
+                            minHeight: 48,
+                            justifyContent: open ? 'initial' : 'center',
+                            width: '100%',
+                            '&:hover': {
+                              bgcolor: 'primary.dark'
+                            }
+                          }}
+                        >
+                          <ListItemText 
+                            primary={subItem.text} 
+                            sx={{ 
+                              opacity: open ? 1 : 0,
+                              display: open ? 'block' : 'none',
+                              '& .MuiTypography-root': {
+                                color: 'white'
+                              }
+                            }} 
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Collapse>
+                </>
+              ) : (
+                <ListItem
+                  button
+                  component={Link}
+                  to={item.path}
+                  sx={{
+                    minHeight: 48,
+                    justifyContent: open ? 'initial' : 'center',
+                    px: 2.5,
+                    '&:hover': {
+                      bgcolor: 'primary.dark'
+                    }
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 0,
+                      mr: open ? 3 : 'auto',
+                      justifyContent: 'center',
+                      color: 'white'
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={item.text} 
+                    sx={{ 
+                      opacity: open ? 1 : 0,
+                      '& .MuiTypography-root': {
+                        color: 'white'
+                      }
+                    }} 
+                  />
+                </ListItem>
+              )}
+            </div>
           ))}
         </List>
         

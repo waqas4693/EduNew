@@ -2,13 +2,13 @@ import express from 'express'
 import { 
   createResource, 
   getSectionResources,
-//   getResourceById 
+  updateResource
 } from '../controllers/resource.js'
 
 const router = express.Router()
 
 router.post('/', createResource)
 router.get('/:sectionId', getSectionResources)
-// router.get('/:resourceId', getResourceById)
+router.put('/:id', updateResource)
 
 export default router 

@@ -1,16 +1,14 @@
 import express from 'express'
 import { 
   createUnit, 
-//   getUnits,
   getCourseUnits,
-//   getUnitById 
+  updateUnit
 } from '../controllers/unit.js'
 
 const router = express.Router()
 
 router.post('/', createUnit)
-// router.get('/', getUnits)
 router.get('/:courseId', getCourseUnits)
-// router.get('/:unitId', getUnitById)
+router.put('/:id', updateUnit)
 
 export default router 

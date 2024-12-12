@@ -71,4 +71,34 @@ export const getUnitSections = async (req, res) => {
   } catch (error) {
     handleError(res, error)
   }
+}
+
+export const updateSection = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { name } = req.body
+
+    const section = await Section.findByIdAndUpdate(
+      id,
+      { 
+        name,
+        updatedAt: Date.now()
+      },
+      { new: true }
+    )
+
+    if (!section) {
+      return res.status(404).json({
+        success: false,
+        message: 'Section not found'
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      data: section
+    })
+  } catch (error) {
+    handleError(res, error)
+  }
 } 

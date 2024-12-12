@@ -64,31 +64,28 @@ export const getAssessments = async (req, res) => {
 export const updateAssessment = async (req, res) => {
   try {
     const { id } = req.params
-    const { percentage } = req.body
+    const {
+      assessmentType,
+      totalMarks,
+      percentage,
+      isTimeBound,
+      timeAllowed,
+      content
+    } = req.body
 
-    if (percentage) {
-      const existingAssessments = await Assessment.find({
-        sectionId: req.body.sectionId,
-        _id: { $ne: id }
-      })
-
-      const totalPercentage = existingAssessments.reduce(
-        (sum, assessment) => sum + assessment.percentage,
-        0
-      )
-
-      if (totalPercentage + Number(percentage) > 100) {
-        return res.status(400).json({
-          success: false,
-          message: 'Total percentage cannot exceed 100%'
-        })
-      }
-    }
-
-    const assessment = await Assessment.findByIdAndUpdate(id, req.body, {
-      new: true,
-      runValidators: true
-    })
+    const assessment = await Assessment.findByIdAndUpdate(
+      id,
+      { 
+        assessmentType,
+        totalMarks,
+        percentage,
+        isTimeBound,
+        timeAllowed,
+        content,
+        updatedAt: Date.now()
+      },
+      { new: true }
+    )
 
     if (!assessment) {
       return res.status(404).json({
@@ -99,11 +96,10 @@ export const updateAssessment = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Assessment updated successfully',
-      assessment
+      data: assessment
     })
   } catch (error) {
-    handleError(error, res)
+    handleError(res, error)
   }
 }
 

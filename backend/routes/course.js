@@ -3,7 +3,8 @@ import {
   createCourse, 
   getCourses, 
   getEnrolledCourses,
-//   getCourseById 
+  getCourseById,
+  updateCourse 
 } from '../controllers/course.js'
 
 const router = express.Router()
@@ -11,6 +12,7 @@ const router = express.Router()
 router.post('/', createCourse)
 router.get('/', getCourses)
 router.get('/enrolled', getEnrolledCourses)
-// router.get('/:courseId', getCourseById)
+router.get('/:id', getCourseById)
+router.put('/:id', updateCourse)
 
 export default router 

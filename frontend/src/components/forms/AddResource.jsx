@@ -16,7 +16,7 @@ import {
   Divider,
   Checkbox
 } from '@mui/material'
-import { postData, getData } from '../../api/api'
+import { postData, getData, putData } from '../../api/api'
 import axios from 'axios'
 import url from '../config/server-url'
 import AddIcon from '@mui/icons-material/Add'
@@ -53,7 +53,7 @@ const chunk = (arr, size) =>
     arr.slice(i * size, i * size + size)
   )
 
-const AddResource = () => {
+const AddResource = ({ courseId: propsCourseId, editMode }) => {
   const [resources, setResources] = useState([{
     name: '',
     resourceType: '',
@@ -84,12 +84,18 @@ const AddResource = () => {
   const [courses, setCourses] = useState([])
   const [units, setUnits] = useState([])
   const [sections, setSections] = useState([])
+  const [selectedCourse, setSelectedCourse] = useState(null)
+  const [selectedUnit, setSelectedUnit] = useState(null)
+  const [selectedSection, setSelectedSection] = useState(null)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
 
   useEffect(() => {
     fetchCourses()
-  }, [])
+    if (editMode && propsCourseId) {
+      setCourseId(propsCourseId)
+    }
+  }, [editMode, propsCourseId])
 
   useEffect(() => {
     if (courseId) {
@@ -102,6 +108,28 @@ const AddResource = () => {
       fetchSections()
     }
   }, [unitId])
+
+  useEffect(() => {
+    if (sectionId) {
+      fetchResources()
+    }
+  }, [sectionId])
+
+  const fetchResources = async () => {
+    if (editMode && sectionId) {
+      try {
+        const response = await getData(`resources/${sectionId}`)
+        if (response.status === 200 && response.data.resources) {
+          setResources(response.data.resources.map(resource => ({
+            ...resource,
+            sectionId: sectionId
+          })))
+        }
+      } catch (error) {
+        console.error('Error fetching resources:', error)
+      }
+    }
+  }
 
   const fetchCourses = async () => {
     try {
@@ -221,122 +249,32 @@ const AddResource = () => {
 
   const handleSubmit = async e => {
     e.preventDefault()
-    setIsUploading(true)
-
     try {
-      if (!sectionId) {
-        alert('Please select a section')
-        return
+      if (editMode) {
+        const updatePromises = resources.map(resource => 
+          putData(`resources/${resource._id}`, {
+            name: resource.name,
+            resourceType: resource.resourceType,
+            content: resource.content,
+            sectionId: resource.sectionId
+          })
+        )
+        
+        await Promise.all(updatePromises)
+        alert('Resources updated successfully')
+      } else {
+        const response = await postData('resources', { resources })
+        if (response.status === 201) {
+          setResources([{ /* initial resource state */ }])
+          setSectionId(null)
+          setUnitId(null)
+          setCourseId(null)
+          alert('Resources added successfully')
+        }
       }
-
-      const resourcePromises = resources.map(async (resource) => {
-        if (!resource.name || !resource.resourceType) {
-          throw new Error('Please fill all required fields')
-        }
-
-        const resourceData = {
-          name: resource.name,
-          resourceType: resource.resourceType,
-          sectionId: sectionId
-        }
-
-        const contentData = {}
-
-        if (resource.content.file) {
-          const fileName = await uploadFileToS3(
-            resource.content.file,
-            resource.name
-          )
-          resourceData.name = fileName
-        }
-
-        if (
-          resource.resourceType === 'AUDIO' &&
-          resource.content.backgroundImage
-        ) {
-          const bgFileName = await uploadFileToS3(
-            resource.content.backgroundImage,
-            `${resource.name}_bg`
-          )
-          contentData.backgroundImageUrl = bgFileName
-        }
-
-        if (resource.resourceType === 'PPT' && resource.content.previewImage) {
-          const previewFileName = await uploadFileToS3(
-            resource.content.previewImage,
-            `${resource.name}_preview`
-          )
-          contentData.previewImageUrl = previewFileName
-        }
-
-        if (resource.content.thumbnail) {
-          const thumbnailFileName = await uploadFileToS3(
-            resource.content.thumbnail,
-            `${resource.name}_thumb`
-          )
-          contentData.thumbnailUrl = thumbnailFileName
-        }
-
-        if (resource.content.externalLink) {
-          contentData.externalLink = resource.content.externalLink
-        }
-
-        if (resource.resourceType === 'MCQ' && resource.content.mcq?.imageFile) {
-          const imageFileName = await uploadFileToS3(
-            resource.content.mcq.imageFile,
-            `${resource.name}_mcqfile`
-          )
-          contentData.mcq = {
-            ...resource.content.mcq,
-            imageUrl: imageFileName
-          }
-          delete contentData.mcq.imageFile
-        }
-
-        resourceData.content = {
-          ...resourceData.content,
-          ...contentData
-        }
-
-        return postData('resources', resourceData)
-      })
-
-      await Promise.all(resourcePromises)
-
-      setResources([{
-        name: '',
-        resourceType: '',
-        content: {
-          text: '',
-          questions: [
-            { question: '', answer: '' },
-            { question: '', answer: '' },
-            { question: '', answer: '' }
-          ],
-          backgroundImage: '',
-          previewImage: '',
-          file: null,
-          thumbnail: null,
-          externalLink: '',
-          mcq: {
-            question: '',
-            options: ['', '', '', ''],
-            numberOfCorrectAnswers: 1,
-            correctAnswers: [],
-            imageFile: null
-          }
-        }
-      }])
-      setSectionId(null)
-      setUnitId(null)
-      setCourseId(null)
-      alert('Resources added successfully')
     } catch (error) {
-      console.error('Error adding resources:', error)
-      alert('Error uploading resources. Please try again.')
-    } finally {
-      setIsUploading(false)
-      setUploadProgress(0)
+      console.error('Error handling resources:', error)
+      alert('Error updating resources')
     }
   }
 
@@ -352,89 +290,45 @@ const AddResource = () => {
             fullWidth
             size='small'
             options={courses}
-            getOptionLabel={option => option.name}
-            onChange={(_, newValue) => setCourseId(newValue?._id)}
+            value={selectedCourse}
+            disabled={editMode}
+            getOptionLabel={option => option?.name || ''}
+            onChange={(_, newValue) => {
+              setSelectedCourse(newValue)
+              setCourseId(newValue?._id)
+            }}
             renderInput={params => (
-              <TextField
-                {...params}
-                size='small'
-                label='Select Course'
-                required
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '8px',
-                    border: '1px solid #20202033',
-                    '& fieldset': {
-                      border: 'none'
-                    }
-                  },
-                  '& .MuiInputLabel-root': {
-                    color: '#8F8F8F',
-                    backgroundColor: 'white',
-                    padding: '0 4px'
-                  }
-                }}
-              />
+              <TextField {...params} label='Select Course' required />
             )}
           />
           <Autocomplete
             fullWidth
             size='small'
             options={units}
-            getOptionLabel={option => option.name}
-            onChange={(_, newValue) => setUnitId(newValue?._id)}
+            value={selectedUnit}
+            getOptionLabel={option => option?.name || ''}
+            onChange={(_, newValue) => {
+              setSelectedUnit(newValue)
+              setUnitId(newValue?._id)
+            }}
             disabled={!courseId}
             renderInput={params => (
-              <TextField
-                {...params}
-                size='small'
-                label='Select Unit'
-                required
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '8px',
-                    border: '1px solid #20202033',
-                    '& fieldset': {
-                      border: 'none'
-                    }
-                  },
-                  '& .MuiInputLabel-root': {
-                    color: '#8F8F8F',
-                    backgroundColor: 'white',
-                    padding: '0 4px'
-                  }
-                }}
-              />
+              <TextField {...params} label='Select Unit' required />
             )}
           />
           <Autocomplete
             fullWidth
             size='small'
             options={sections}
-            getOptionLabel={option => option.name}
-            onChange={(_, newValue) => setSectionId(newValue?._id)}
+            value={selectedSection}
+            getOptionLabel={option => option?.name || ''}
+            onChange={(_, newValue) => {
+              setSelectedSection(newValue)
+              setSectionId(newValue?._id)
+            }}
             disabled={!unitId}
             renderInput={params => (
-              <TextField
-                {...params}
-                size='small'
-                label='Select Section'
-                required
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '8px',
-                    border: '1px solid #20202033',
-                    '& fieldset': {
-                      border: 'none'
-                    }
-                  },
-                  '& .MuiInputLabel-root': {
-                    color: '#8F8F8F',
-                    backgroundColor: 'white',
-                    padding: '0 4px'
-                  }
-                }}
-              />
+              <TextField {...params} label='Select Section' required />
             )}
           />
         </Box>
@@ -896,44 +790,35 @@ const AddResource = () => {
           </Box>
         ))}
 
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mt: 4
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <IconButton
-              onClick={addNewResource}
-              sx={{
-                bgcolor: 'primary.main',
-                color: 'white',
-                width: 30,
-                height: 30,
-                '&:hover': {
-                  bgcolor: 'primary.dark'
-                }
-              }}
-            >
-              <AddIcon />
-            </IconButton>
-            <Typography sx={{ fontWeight: 'bold', color: 'black' }}>
-              Add Resource
-            </Typography>
-          </Box>
-          <Button
-            type='submit'
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {!editMode && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <IconButton 
+                onClick={addNewResource}
+                sx={{
+                  bgcolor: 'primary.main',
+                  color: 'white',
+                  '&:hover': { bgcolor: 'primary.dark' }
+                }}
+              >
+                <AddIcon />
+              </IconButton>
+              <Typography sx={{ fontWeight: 'bold', color: 'black' }}>
+                Add Another Resource
+              </Typography>
+            </Box>
+          )}
+          <Button 
+            type='submit' 
             variant='contained'
-            sx={{
-              minWidth: '100px',
-              width: '100px',
-              borderRadius: '8px',
-              height: '36px'
+            sx={{ 
+              bgcolor: editMode ? 'success.main' : 'primary.main',
+              '&:hover': {
+                bgcolor: editMode ? 'success.dark' : 'primary.dark'
+              }
             }}
           >
-            Save All
+            {editMode ? 'Edit' : 'Save All'}
           </Button>
         </Box>
       </form>

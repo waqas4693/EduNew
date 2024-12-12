@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Box,
   TextField,
@@ -9,13 +9,14 @@ import {
   Tab,
   Divider
 } from '@mui/material'
-import { postData } from '../../api/api'
+import { postData, getData, putData } from '../../api/api'
 import AddUnit from './AddUnit'
 import AddSection from './AddSection'
 import AddResource from './AddResource'
 import AddAssessment from './AddAssessment'
 import axios from 'axios'
 import url from '../config/server-url'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 const TabPanel = ({ children, value, index }) => (
   <div hidden={value !== index} style={{ padding: '20px 0' }}>
@@ -24,10 +25,42 @@ const TabPanel = ({ children, value, index }) => (
 )
 
 const AddCourse = () => {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const editMode = location.state?.courseId ? true : false
+  const courseId = location.state?.courseId
+
   const [name, setName] = useState('')
   const [thumbnail, setThumbnail] = useState(null)
   const [thumbnailPreview, setThumbnailPreview] = useState('')
   const [activeTab, setActiveTab] = useState(0)
+  const [editedData, setEditedData] = useState({
+    units: null,
+    sections: null,
+    resources: null,
+    assessments: null
+  })
+
+  useEffect(() => {
+    if (editMode && courseId) {
+      fetchCourseDetails()
+    }
+  }, [editMode, courseId])
+
+  const fetchCourseDetails = async () => {
+    try {
+      const response = await getData(`courses/${courseId}`)
+      if (response.status === 200) {
+        setName(response.data.data.name)
+        if (response.data.data.thumbnail) {
+          setThumbnailPreview(`${url}uploads/${response.data.data.thumbnail}`)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching course details:', error)
+      alert('Error fetching course details')
+    }
+  }
 
   const handleThumbnailChange = (e) => {
     const file = e.target.files[0]
@@ -66,20 +99,32 @@ const AddCourse = () => {
         })
       }
 
-      const response = await postData('courses', {
-        name,
-        thumbnail: thumbnailFileName
-      })
+      if (editMode) {
+        const response = await putData(`courses/${courseId}`, {
+          name,
+          thumbnail: thumbnailFileName || undefined
+        })
 
-      if (response.status === 201) {
-        setName('')
-        setThumbnail(null)
-        setThumbnailPreview('')
-        alert('Course added successfully')
+        if (response.status === 200) {
+          alert('Course updated successfully')
+          navigate('/admin/dashboard')
+        }
+      } else {
+        const response = await postData('courses', {
+          name,
+          thumbnail: thumbnailFileName
+        })
+
+        if (response.status === 201) {
+          setName('')
+          setThumbnail(null)
+          setThumbnailPreview('')
+          alert('Course added successfully')
+        }
       }
     } catch (error) {
-      console.error('Error adding course:', error)
-      alert('Error adding course')
+      console.error('Error saving course:', error)
+      alert('Error saving course')
     }
   }
 
@@ -90,13 +135,13 @@ const AddCourse = () => {
           variant='h5'
           sx={{ mb: 1, fontWeight: 'bold', fontSize: '24px' }}
         >
-          Add Course
+          {editMode ? 'Edit Course' : 'Add Course'}
         </Typography>
         <Typography
           variant='body1'
           sx={{ mb: 2, fontSize: '18px', color: '#5B5B5B' }}
         >
-          Please provide the details of the course to be added.
+          {editMode ? 'Update the course details.' : 'Please provide the details of the course.'}
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'start' }}>
@@ -137,10 +182,14 @@ const AddCourse = () => {
                   minWidth: '100px',
                   width: '100px',
                   borderRadius: '8px',
-                  height: '36px'
+                  height: '36px',
+                  bgcolor: editMode ? 'success.main' : 'primary.main',
+                  '&:hover': {
+                    bgcolor: editMode ? 'success.dark' : 'primary.dark',
+                  }
                 }}
               >
-                Save
+                {editMode ? 'Edit' : 'Save'}
               </Button>
             </Box>
           </Box>
@@ -168,7 +217,6 @@ const AddCourse = () => {
         </Box>
 
         <Divider sx={{ my: 3 }} />
-
         <Tabs
           value={activeTab}
           onChange={handleTabChange}
@@ -193,16 +241,16 @@ const AddCourse = () => {
 
         <Box sx={{ mt: 2 }}>
           <TabPanel value={activeTab} index={0}>
-            <AddUnit />
+            <AddUnit courseId={courseId} editMode={editMode} />
           </TabPanel>
           <TabPanel value={activeTab} index={1}>
-            <AddSection />
+            <AddSection courseId={courseId} editMode={editMode} />
           </TabPanel>
           <TabPanel value={activeTab} index={2}>
-            <AddResource />
+            <AddResource courseId={courseId} editMode={editMode} />
           </TabPanel>
           <TabPanel value={activeTab} index={3}>
-            <AddAssessment />
+            <AddAssessment courseId={courseId} editMode={editMode} />
           </TabPanel>
         </Box>
       </Paper>

@@ -102,4 +102,36 @@ export const getSectionResources = async (req, res) => {
   } catch (error) {
     handleError(res, error)
   }
+}
+
+export const updateResource = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { name, resourceType, content } = req.body
+
+    const resource = await Resource.findByIdAndUpdate(
+      id,
+      { 
+        name,
+        resourceType,
+        content,
+        updatedAt: Date.now()
+      },
+      { new: true }
+    )
+
+    if (!resource) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resource not found'
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      data: resource
+    })
+  } catch (error) {
+    handleError(res, error)
+  }
 } 

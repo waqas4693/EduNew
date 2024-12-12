@@ -68,4 +68,59 @@ export const getEnrolledCourses = async (req, res) => {
   } catch (error) {
     handleError(res, error)
   }
+}
+
+export const getCourseById = async (req, res) => {
+  try {
+    const { id } = req.params
+    const course = await Course.findOne({ 
+      _id: id,
+      status: 1 
+    })
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      data: course
+    })
+  } catch (error) {
+    handleError(res, error)
+  }
+}
+
+export const updateCourse = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { name, thumbnail } = req.body
+
+    const course = await Course.findByIdAndUpdate(
+      id,
+      { 
+        name, 
+        thumbnail,
+        updatedAt: Date.now()
+      },
+      { new: true }
+    )
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      data: course
+    })
+  } catch (error) {
+    handleError(res, error)
+  }
 } 
