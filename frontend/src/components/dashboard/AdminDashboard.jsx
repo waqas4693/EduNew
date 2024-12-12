@@ -8,7 +8,7 @@ import {
   Menu,
   MenuItem
 } from '@mui/material'
-import { getData } from '../../api/api'
+import { getData, patchData } from '../../api/api'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
@@ -66,6 +66,26 @@ const AdminDashboard = () => {
   const handleDelete = () => {
     // Implement delete functionality
     handleMenuClose()
+  }
+
+  const handleMarkInactive = async () => {
+    try {
+      if (selectedCourse) {
+        const response = await patchData(`courses/${selectedCourse._id}/status`, {
+          status: 2
+        })
+        
+        if (response.status === 200) {
+          // Refresh the courses list
+          fetchCourses()
+          alert('Course marked as inactive successfully')
+        }
+      }
+      handleMenuClose()
+    } catch (error) {
+      console.error('Error marking course as inactive:', error)
+      alert('Error marking course as inactive')
+    }
   }
 
   const StatCard = ({ title, value, icon }) => (
@@ -261,10 +281,7 @@ const AdminDashboard = () => {
         onClose={handleMenuClose}
       >
         <MenuItem onClick={handleEdit}>Edit</MenuItem>
-        <MenuItem onClick={handleArchive}>Archive</MenuItem>
-        <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
-          Delete
-        </MenuItem>
+        <MenuItem onClick={handleMarkInactive}>Mark In-Active</MenuItem>
       </Menu>
     </Box>
   )

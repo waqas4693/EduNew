@@ -40,6 +40,15 @@ export const putData = async (endpoint, data) => {
   }
 }
 
+export const patchData = async (endpoint, data) => {
+  try {
+    const response = await axiosInstance.patch(endpoint, data)
+    return response
+  } catch (error) {
+    throw error.response || error
+  }
+}
+
 export const deleteData = async (endpoint) => {
   try {
     const response = await axiosInstance.delete(endpoint)

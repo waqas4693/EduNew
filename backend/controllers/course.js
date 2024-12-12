@@ -123,4 +123,43 @@ export const updateCourse = async (req, res) => {
   } catch (error) {
     handleError(res, error)
   }
+}
+
+export const updateCourseStatus = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body
+
+    const course = await Course.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    )
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      data: course
+    })
+  } catch (error) {
+    handleError(res, error)
+  }
+}
+
+export const getInactiveCourses = async (req, res) => {
+  try {
+    const courses = await Course.find({ status: 2 })
+    res.status(200).json({
+      success: true,
+      data: courses
+    })
+  } catch (error) {
+    handleError(res, error)
+  }
 } 

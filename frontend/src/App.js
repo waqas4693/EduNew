@@ -17,6 +17,7 @@ import Section from './components/app-components/Section'
 import LearnerFrame from './components/app-components/LearnerFrame'
 import ViewAssessment from './components/app-components/ViewAssessment'
 import InviteStudent from './components/forms/InviteStudent'
+import InactiveCourses from './components/courses/InactiveCourses'
 
 // Create Redux store
 const store = configureStore({
@@ -58,6 +59,7 @@ function App() {
                           <Route path="/dashboard" element={<AdminDashboard />} />
                           <Route path="/add-course" element={<AddCourse />} />
                           <Route path="/invite-student" element={<InviteStudent />} />
+                          <Route path="/inactive-courses" element={<InactiveCourses />} />
                         </Routes>
                       </DashboardLayout>
                     </PrivateRoute>
