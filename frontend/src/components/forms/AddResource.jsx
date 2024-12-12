@@ -84,9 +84,6 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
   const [courses, setCourses] = useState([])
   const [units, setUnits] = useState([])
   const [sections, setSections] = useState([])
-  const [selectedCourse, setSelectedCourse] = useState(null)
-  const [selectedUnit, setSelectedUnit] = useState(null)
-  const [selectedSection, setSelectedSection] = useState(null)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
 
@@ -114,22 +111,6 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
       fetchResources()
     }
   }, [sectionId])
-
-  const fetchResources = async () => {
-    if (editMode && sectionId) {
-      try {
-        const response = await getData(`resources/${sectionId}`)
-        if (response.status === 200 && response.data.resources) {
-          setResources(response.data.resources.map(resource => ({
-            ...resource,
-            sectionId: sectionId
-          })))
-        }
-      } catch (error) {
-        console.error('Error fetching resources:', error)
-      }
-    }
-  }
 
   const fetchCourses = async () => {
     try {
@@ -161,6 +142,44 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
       }
     } catch (error) {
       console.error('Error fetching sections:', error)
+    }
+  }
+
+  const fetchResources = async () => {
+    if (editMode && sectionId) {
+      try {
+        const response = await getData(`resources/${sectionId}`)
+        if (response.status === 200 && response.data.resources) {
+          const formattedResources = response.data.resources.map(resource => ({
+            name: resource.name,
+            resourceType: resource.resourceType,
+            _id: resource._id,
+            content: {
+              text: resource.content?.text || '',
+              questions: resource.content?.questions || [
+                { question: '', answer: '' },
+                { question: '', answer: '' },
+                { question: '', answer: '' }
+              ],
+              backgroundImage: resource.content?.backgroundImage || '',
+              previewImage: resource.content?.previewImage || '',
+              file: null,
+              thumbnail: null,
+              externalLink: resource.content?.externalLink || '',
+              mcq: resource.content?.mcq || {
+                question: '',
+                options: ['', '', '', ''],
+                numberOfCorrectAnswers: 1,
+                correctAnswers: [],
+                imageFile: null
+              }
+            }
+          }))
+          setResources(formattedResources)
+        }
+      } catch (error) {
+        console.error('Error fetching resources:', error)
+      }
     }
   }
 
@@ -249,32 +268,149 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
 
   const handleSubmit = async e => {
     e.preventDefault()
+    setIsUploading(true)
+
     try {
+      if (!sectionId) {
+        alert('Please select a section')
+        return
+      }
+
       if (editMode) {
-        const updatePromises = resources.map(resource => 
-          putData(`resources/${resource._id}`, {
+        const updatePromises = resources.map(async (resource) => {
+          let contentData = { ...resource.content }
+
+          // Handle file uploads if files have changed
+          if (resource.content.file) {
+            const fileName = await uploadFileToS3(
+              resource.content.file,
+              resource.name
+            )
+            contentData.fileUrl = fileName
+          }
+
+          if (resource.content.thumbnail) {
+            const thumbnailFileName = await uploadFileToS3(
+              resource.content.thumbnail,
+              `${resource.name}_thumb`
+            )
+            contentData.thumbnailUrl = thumbnailFileName
+          }
+
+          // Handle other resource type specific uploads
+          if (resource.resourceType === 'AUDIO' && resource.content.backgroundImage) {
+            const bgFileName = await uploadFileToS3(
+              resource.content.backgroundImage,
+              `${resource.name}_bg`
+            )
+            contentData.backgroundImageUrl = bgFileName
+          }
+
+          if (resource.resourceType === 'PPT' && resource.content.previewImage) {
+            const previewFileName = await uploadFileToS3(
+              resource.content.previewImage,
+              `${resource.name}_preview`
+            )
+            contentData.previewImageUrl = previewFileName
+          }
+
+          return putData(`resources/${resource._id}`, {
             name: resource.name,
             resourceType: resource.resourceType,
-            content: resource.content,
-            sectionId: resource.sectionId
+            sectionId: sectionId,
+            content: contentData
           })
-        )
-        
+        })
+
         await Promise.all(updatePromises)
         alert('Resources updated successfully')
       } else {
-        const response = await postData('resources', { resources })
-        if (response.status === 201) {
-          setResources([{ /* initial resource state */ }])
-          setSectionId(null)
-          setUnitId(null)
-          setCourseId(null)
-          alert('Resources added successfully')
-        }
+        // Existing resource creation logic
+        const resourcePromises = resources.map(async (resource) => {
+          if (!resource.name || !resource.resourceType) {
+            throw new Error('Please fill all required fields')
+          }
+
+          const resourceData = {
+            name: resource.name,
+            resourceType: resource.resourceType,
+            sectionId: sectionId
+          }
+
+          const contentData = {}
+
+          if (resource.content.file) {
+            const fileName = await uploadFileToS3(
+              resource.content.file,
+              resource.name
+            )
+            resourceData.name = fileName
+          }
+
+          if (
+            resource.resourceType === 'AUDIO' &&
+            resource.content.backgroundImage
+          ) {
+            const bgFileName = await uploadFileToS3(
+              resource.content.backgroundImage,
+              `${resource.name}_bg`
+            )
+            contentData.backgroundImageUrl = bgFileName
+          }
+
+          if (resource.resourceType === 'PPT' && resource.content.previewImage) {
+            const previewFileName = await uploadFileToS3(
+              resource.content.previewImage,
+              `${resource.name}_preview`
+            )
+            contentData.previewImageUrl = previewFileName
+          }
+
+          if (resource.content.thumbnail) {
+            const thumbnailFileName = await uploadFileToS3(
+              resource.content.thumbnail,
+              `${resource.name}_thumb`
+            )
+            contentData.thumbnailUrl = thumbnailFileName
+          }
+
+          if (resource.content.externalLink) {
+            contentData.externalLink = resource.content.externalLink
+          }
+
+          if (resource.resourceType === 'MCQ' && resource.content.mcq?.imageFile) {
+            const imageFileName = await uploadFileToS3(
+              resource.content.mcq.imageFile,
+              `${resource.name}_mcqfile`
+            )
+            contentData.mcq = {
+              ...resource.content.mcq,
+              imageUrl: imageFileName
+            }
+            delete contentData.mcq.imageFile
+          }
+
+          resourceData.content = {
+            ...resourceData.content,
+            ...contentData
+          }
+
+          return postData('resources', resourceData)
+        })
+
+        await Promise.all(resourcePromises)
+        setResources([{ /* initial state */ }])
+        setSectionId(null)
+        setUnitId(null)
+        setCourseId(null)
+        alert('Resources added successfully')
       }
     } catch (error) {
       console.error('Error handling resources:', error)
-      alert('Error updating resources')
+      alert(editMode ? 'Error updating resources' : 'Error adding resources')
+    } finally {
+      setIsUploading(false)
+      setUploadProgress(0)
     }
   }
 
@@ -290,13 +426,9 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             fullWidth
             size='small'
             options={courses}
-            value={selectedCourse}
+            getOptionLabel={option => option.name}
+            onChange={(_, newValue) => setCourseId(newValue?._id)}
             disabled={editMode}
-            getOptionLabel={option => option?.name || ''}
-            onChange={(_, newValue) => {
-              setSelectedCourse(newValue)
-              setCourseId(newValue?._id)
-            }}
             renderInput={params => (
               <TextField {...params} label='Select Course' required />
             )}
@@ -305,30 +437,60 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             fullWidth
             size='small'
             options={units}
-            value={selectedUnit}
-            getOptionLabel={option => option?.name || ''}
-            onChange={(_, newValue) => {
-              setSelectedUnit(newValue)
-              setUnitId(newValue?._id)
-            }}
+            getOptionLabel={option => option.name}
+            onChange={(_, newValue) => setUnitId(newValue?._id)}
             disabled={!courseId}
             renderInput={params => (
-              <TextField {...params} label='Select Unit' required />
+              <TextField
+                {...params}
+                size='small'
+                label='Select Unit'
+                required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '8px',
+                    border: '1px solid #20202033',
+                    '& fieldset': {
+                      border: 'none'
+                    }
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: '#8F8F8F',
+                    backgroundColor: 'white',
+                    padding: '0 4px'
+                  }
+                }}
+              />
             )}
           />
           <Autocomplete
             fullWidth
             size='small'
             options={sections}
-            value={selectedSection}
-            getOptionLabel={option => option?.name || ''}
-            onChange={(_, newValue) => {
-              setSelectedSection(newValue)
-              setSectionId(newValue?._id)
-            }}
+            getOptionLabel={option => option.name}
+            onChange={(_, newValue) => setSectionId(newValue?._id)}
             disabled={!unitId}
             renderInput={params => (
-              <TextField {...params} label='Select Section' required />
+              <TextField
+                {...params}
+                size='small'
+                label='Select Section'
+                required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '8px',
+                    border: '1px solid #20202033',
+                    '& fieldset': {
+                      border: 'none'
+                    }
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: '#8F8F8F',
+                    backgroundColor: 'white',
+                    padding: '0 4px'
+                  }
+                }}
+              />
             )}
           />
         </Box>
