@@ -54,30 +54,32 @@ const chunk = (arr, size) =>
   )
 
 const AddResource = ({ courseId: propsCourseId, editMode }) => {
-  const [resources, setResources] = useState([{
-    name: '',
-    resourceType: '',
-    content: {
-      text: '',
-      questions: [
-        { question: '', answer: '' },
-        { question: '', answer: '' },
-        { question: '', answer: '' }
-      ],
-      backgroundImage: '',
-      previewImage: '',
-      file: null,
-      thumbnail: null,
-      externalLink: '',
-      mcq: {
-        question: '',
-        options: ['', '', '', ''],
-        numberOfCorrectAnswers: 1,
-        correctAnswers: [],
-        imageFile: null
+  const [resources, setResources] = useState([
+    {
+      name: '',
+      resourceType: '',
+      content: {
+        text: '',
+        questions: [
+          { question: '', answer: '' },
+          { question: '', answer: '' },
+          { question: '', answer: '' }
+        ],
+        backgroundImage: '',
+        previewImage: '',
+        file: null,
+        thumbnail: null,
+        externalLink: '',
+        mcq: {
+          question: '',
+          options: ['', '', '', ''],
+          numberOfCorrectAnswers: 1,
+          correctAnswers: [],
+          imageFile: null
+        }
       }
     }
-  }])
+  ])
   const [courseId, setCourseId] = useState(null)
   const [unitId, setUnitId] = useState(null)
   const [sectionId, setSectionId] = useState(null)
@@ -184,30 +186,33 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
   }
 
   const addNewResource = () => {
-    setResources(prev => [...prev, {
-      name: '',
-      resourceType: '',
-      content: {
-        text: '',
-        questions: [
-          { question: '', answer: '' },
-          { question: '', answer: '' },
-          { question: '', answer: '' }
-        ],
-        backgroundImage: '',
-        previewImage: '',
-        file: null,
-        thumbnail: null,
-        externalLink: '',
-        mcq: {
-          question: '',
-          options: ['', '', '', ''],
-          numberOfCorrectAnswers: 1,
-          correctAnswers: [],
-          imageFile: null
+    setResources(prev => [
+      ...prev,
+      {
+        name: '',
+        resourceType: '',
+        content: {
+          text: '',
+          questions: [
+            { question: '', answer: '' },
+            { question: '', answer: '' },
+            { question: '', answer: '' }
+          ],
+          backgroundImage: '',
+          previewImage: '',
+          file: null,
+          thumbnail: null,
+          externalLink: '',
+          mcq: {
+            question: '',
+            options: ['', '', '', ''],
+            numberOfCorrectAnswers: 1,
+            correctAnswers: [],
+            imageFile: null
+          }
         }
       }
-    }])
+    ])
   }
 
   const handleFormChange = (index, field, value) => {
@@ -277,10 +282,9 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
       }
 
       if (editMode) {
-        const updatePromises = resources.map(async (resource) => {
+        const updatePromises = resources.map(async resource => {
           let contentData = { ...resource.content }
 
-          // Handle file uploads if files have changed
           if (resource.content.file) {
             const fileName = await uploadFileToS3(
               resource.content.file,
@@ -297,7 +301,6 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             contentData.thumbnailUrl = thumbnailFileName
           }
 
-          // Handle other resource type specific uploads
           if (resource.resourceType === 'AUDIO' && resource.content.backgroundImage) {
             const bgFileName = await uploadFileToS3(
               resource.content.backgroundImage,
@@ -325,8 +328,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         await Promise.all(updatePromises)
         alert('Resources updated successfully')
       } else {
-        // Existing resource creation logic
-        const resourcePromises = resources.map(async (resource) => {
+        const resourcePromises = resources.map(async resource => {
           if (!resource.name || !resource.resourceType) {
             throw new Error('Please fill all required fields')
           }
@@ -334,28 +336,33 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
           const resourceData = {
             name: resource.name,
             resourceType: resource.resourceType,
-            sectionId: sectionId
+            sectionId: sectionId,
+            content: {} // Initialize content object
           }
 
-          const contentData = {}
-
-          if (resource.content.file) {
+          // Handle file uploads
+          if (resource.content?.file) {
             const fileName = await uploadFileToS3(
               resource.content.file,
               resource.name
             )
-            resourceData.name = fileName
+            resourceData.content.fileUrl = fileName
           }
 
-          if (
-            resource.resourceType === 'AUDIO' &&
-            resource.content.backgroundImage
-          ) {
+          if (resource.content?.thumbnail) {
+            const thumbnailFileName = await uploadFileToS3(
+              resource.content.thumbnail,
+              `${resource.name}_thumb`
+            )
+            resourceData.content.thumbnailUrl = thumbnailFileName
+          }
+
+          if (resource.resourceType === 'AUDIO' && resource.content.backgroundImage) {
             const bgFileName = await uploadFileToS3(
               resource.content.backgroundImage,
               `${resource.name}_bg`
             )
-            contentData.backgroundImageUrl = bgFileName
+            resourceData.content.backgroundImageUrl = bgFileName
           }
 
           if (resource.resourceType === 'PPT' && resource.content.previewImage) {
@@ -363,19 +370,11 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
               resource.content.previewImage,
               `${resource.name}_preview`
             )
-            contentData.previewImageUrl = previewFileName
-          }
-
-          if (resource.content.thumbnail) {
-            const thumbnailFileName = await uploadFileToS3(
-              resource.content.thumbnail,
-              `${resource.name}_thumb`
-            )
-            contentData.thumbnailUrl = thumbnailFileName
+            resourceData.content.previewImageUrl = previewFileName
           }
 
           if (resource.content.externalLink) {
-            contentData.externalLink = resource.content.externalLink
+            resourceData.content.externalLink = resource.content.externalLink
           }
 
           if (resource.resourceType === 'MCQ' && resource.content.mcq?.imageFile) {
@@ -383,23 +382,43 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
               resource.content.mcq.imageFile,
               `${resource.name}_mcqfile`
             )
-            contentData.mcq = {
+            resourceData.content.mcq = {
               ...resource.content.mcq,
               imageUrl: imageFileName
             }
-            delete contentData.mcq.imageFile
-          }
-
-          resourceData.content = {
-            ...resourceData.content,
-            ...contentData
+            delete resourceData.content.mcq.imageFile
           }
 
           return postData('resources', resourceData)
         })
 
         await Promise.all(resourcePromises)
-        setResources([{ /* initial state */ }])
+        
+        // Reset all states after successful submission
+        setResources([{
+          name: '',
+          resourceType: '',
+          content: {
+            text: '',
+            questions: [
+              { question: '', answer: '' },
+              { question: '', answer: '' },
+              { question: '', answer: '' }
+            ],
+            backgroundImage: '',
+            previewImage: '',
+            file: null,
+            thumbnail: null,
+            externalLink: '',
+            mcq: {
+              question: '',
+              options: ['', '', '', ''],
+              numberOfCorrectAnswers: 1,
+              correctAnswers: [],
+              imageFile: null
+            }
+          }
+        }])
         setSectionId(null)
         setUnitId(null)
         setCourseId(null)
@@ -414,7 +433,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
     }
   }
 
-  const removeResource = (indexToRemove) => {
+  const removeResource = indexToRemove => {
     setResources(prev => prev.filter((_, index) => index !== indexToRemove))
   }
 
@@ -430,7 +449,16 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             onChange={(_, newValue) => setCourseId(newValue?._id)}
             disabled={editMode}
             renderInput={params => (
-              <TextField {...params} label='Select Course' required />
+              <TextField
+                {...params}
+                label='Select Course'
+                required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '8px'
+                  }
+                }}
+              />
             )}
           />
           <Autocomplete
@@ -448,16 +476,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                 required
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: '8px',
-                    border: '1px solid #20202033',
-                    '& fieldset': {
-                      border: 'none'
-                    }
-                  },
-                  '& .MuiInputLabel-root': {
-                    color: '#8F8F8F',
-                    backgroundColor: 'white',
-                    padding: '0 4px'
+                    borderRadius: '8px'
                   }
                 }}
               />
@@ -478,16 +497,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                 required
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: '8px',
-                    border: '1px solid #20202033',
-                    '& fieldset': {
-                      border: 'none'
-                    }
-                  },
-                  '& .MuiInputLabel-root': {
-                    color: '#8F8F8F',
-                    backgroundColor: 'white',
-                    padding: '0 4px'
+                    borderRadius: '8px'
                   }
                 }}
               />
@@ -499,7 +509,9 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
           <Box key={index}>
             {index > 0 && (
               <>
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                <Box
+                  sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}
+                >
                   <IconButton
                     onClick={() => removeResource(index)}
                     sx={{
@@ -516,7 +528,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                 <Divider sx={{ my: 4 }} />
               </>
             )}
-            
+
             <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
               <TextField
                 fullWidth
@@ -527,16 +539,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                 required
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: '8px',
-                    border: '1px solid #20202033',
-                    '& fieldset': {
-                      border: 'none'
-                    }
-                  },
-                  '& .MuiInputLabel-root': {
-                    color: '#8F8F8F',
-                    backgroundColor: 'white',
-                    padding: '0 4px'
+                    borderRadius: '8px'
                   }
                 }}
               />
@@ -552,7 +555,9 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                 </InputLabel>
                 <Select
                   value={resource.resourceType}
-                  onChange={e => handleFormChange(index, 'resourceType', e.target.value)}
+                  onChange={e =>
+                    handleFormChange(index, 'resourceType', e.target.value)
+                  }
                   required
                   sx={{
                     borderRadius: '8px',
@@ -607,7 +612,11 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                     value={resource.content.backgroundImage}
                     accept='image/*'
                     onChange={e =>
-                      handleContentChange(index, 'backgroundImage', e.target.files[0])
+                      handleContentChange(
+                        index,
+                        'backgroundImage',
+                        e.target.files[0]
+                      )
                     }
                   />
                 </>
@@ -628,7 +637,11 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                     value={resource.content.previewImage}
                     accept='image/*'
                     onChange={e =>
-                      handleContentChange(index, 'previewImage', e.target.files[0])
+                      handleContentChange(
+                        index,
+                        'previewImage',
+                        e.target.files[0]
+                      )
                     }
                   />
                 </>
@@ -662,7 +675,11 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                   value={resource.content.backgroundImage}
                   accept='image/*'
                   onChange={e =>
-                    handleContentChange(index, 'backgroundImage', e.target.files[0])
+                    handleContentChange(
+                      index,
+                      'backgroundImage',
+                      e.target.files[0]
+                    )
                   }
                 />
               )}
@@ -802,8 +819,11 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                       value={resource.content.mcq?.options?.length || 4}
                       onChange={e => {
                         const numOptions = e.target.value
-                        const currentOptions = resource.content.mcq?.options || []
-                        const newOptions = Array(numOptions).fill('').map((_, i) => currentOptions[i] || '')
+                        const currentOptions =
+                          resource.content.mcq?.options || []
+                        const newOptions = Array(numOptions)
+                          .fill('')
+                          .map((_, i) => currentOptions[i] || '')
                         handleContentChange(index, 'mcq', {
                           ...resource.content.mcq,
                           options: newOptions
@@ -818,7 +838,9 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                       }}
                     >
                       {[2, 3, 4, 5, 6].map(num => (
-                        <MenuItem key={num} value={num}>{num} Options</MenuItem>
+                        <MenuItem key={num} value={num}>
+                          {num} Options
+                        </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
@@ -851,49 +873,63 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                       }}
                     >
                       {[1, 2, 3, 4, 5, 6].map(num => (
-                        <MenuItem key={num} value={num}>{num} Correct Answers</MenuItem>
+                        <MenuItem key={num} value={num}>
+                          {num} Correct Answers
+                        </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
                 </Box>
 
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
-                  {chunk(resource.content.mcq?.options || [], 2).map((optionPair, pairIndex) => (
-                    <Box key={pairIndex} sx={{ display: 'flex', gap: 2 }}>
-                      {optionPair.map((option, optionIndex) => (
-                        <TextField
-                          key={pairIndex * 2 + optionIndex}
-                          fullWidth
-                          size='small'
-                          label={`Option ${pairIndex * 2 + optionIndex + 1}`}
-                          value={option}
-                          onChange={e => {
-                            const newOptions = [...(resource.content.mcq?.options || [])]
-                            newOptions[pairIndex * 2 + optionIndex] = e.target.value
-                            handleContentChange(index, 'mcq', {
-                              ...resource.content.mcq,
-                              options: newOptions
-                            })
-                          }}
-                          required
-                          sx={{
-                            '& .MuiOutlinedInput-root': {
-                              borderRadius: '8px',
-                              border: '1px solid #20202033',
-                              '& fieldset': {
-                                border: 'none'
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    mb: 2
+                  }}
+                >
+                  {chunk(resource.content.mcq?.options || [], 2).map(
+                    (optionPair, pairIndex) => (
+                      <Box key={pairIndex} sx={{ display: 'flex', gap: 2 }}>
+                        {optionPair.map((option, optionIndex) => (
+                          <TextField
+                            key={pairIndex * 2 + optionIndex}
+                            fullWidth
+                            size='small'
+                            label={`Option ${pairIndex * 2 + optionIndex + 1}`}
+                            value={option}
+                            onChange={e => {
+                              const newOptions = [
+                                ...(resource.content.mcq?.options || [])
+                              ]
+                              newOptions[pairIndex * 2 + optionIndex] =
+                                e.target.value
+                              handleContentChange(index, 'mcq', {
+                                ...resource.content.mcq,
+                                options: newOptions
+                              })
+                            }}
+                            required
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: '8px',
+                                border: '1px solid #20202033',
+                                '& fieldset': {
+                                  border: 'none'
+                                }
+                              },
+                              '& .MuiInputLabel-root': {
+                                color: '#8F8F8F',
+                                backgroundColor: 'white',
+                                padding: '0 4px'
                               }
-                            },
-                            '& .MuiInputLabel-root': {
-                              color: '#8F8F8F',
-                              backgroundColor: 'white',
-                              padding: '0 4px'
-                            }
-                          }}
-                        />
-                      ))}
-                    </Box>
-                  ))}
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    )
+                  )}
                 </Box>
 
                 <FormControl fullWidth size='small' sx={{ mb: 2 }}>
@@ -923,11 +959,15 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                         border: 'none'
                       }
                     }}
-                    renderValue={(selected) => selected.join(', ')}
+                    renderValue={selected => selected.join(', ')}
                   >
                     {resource.content.mcq?.options?.map((option, optIndex) => (
                       <MenuItem key={optIndex} value={option}>
-                        <Checkbox checked={resource.content.mcq?.correctAnswers.includes(option)} />
+                        <Checkbox
+                          checked={resource.content.mcq?.correctAnswers.includes(
+                            option
+                          )}
+                        />
                         Option {optIndex + 1}: {option}
                       </MenuItem>
                     ))}
@@ -952,10 +992,16 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
           </Box>
         ))}
 
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}
+        >
           {!editMode && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <IconButton 
+              <IconButton
                 onClick={addNewResource}
                 sx={{
                   bgcolor: 'primary.main',
@@ -970,10 +1016,10 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
               </Typography>
             </Box>
           )}
-          <Button 
-            type='submit' 
+          <Button
+            type='submit'
             variant='contained'
-            sx={{ 
+            sx={{
               bgcolor: editMode ? 'success.main' : 'primary.main',
               '&:hover': {
                 bgcolor: editMode ? 'success.dark' : 'primary.dark'

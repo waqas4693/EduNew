@@ -151,7 +151,11 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
             setCourseId(newValue?._id)
           }}
           renderInput={params => (
-            <TextField {...params} label='Select Course' required />
+            <TextField {...params} label='Select Course' required sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px'
+              }
+            }}/>
           )}
         />
         <Autocomplete
@@ -166,7 +170,11 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
           }}
           disabled={!courseId}
           renderInput={params => (
-            <TextField {...params} label='Select Unit' required />
+            <TextField {...params} label='Select Unit' required sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px'
+              }
+            }}/>
           )}
         />
       </Box>
@@ -197,7 +205,12 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
             value={section.name}
             onChange={e => handleSectionChange(index, 'name', e.target.value)}
             required
-            sx={{ mb: 2 }}
+            sx={{
+              mb: 2,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px'
+              }
+            }}
           />
         </Box>
       ))}

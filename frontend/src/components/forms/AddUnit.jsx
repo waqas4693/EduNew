@@ -124,7 +124,11 @@ const AddUnit = ({ courseId, editMode }) => {
           handleUnitChange(0, 'courseId', newValue?._id)
         }}
         renderInput={params => (
-          <TextField {...params} label='Select Course' required />
+          <TextField {...params} label='Select Course' required sx={{
+            '& .MuiOutlinedInput-root': {
+              borderRadius: '8px'
+            }
+          }}/>
         )}
         sx={{ mb: 2 }}
       />
@@ -155,7 +159,12 @@ const AddUnit = ({ courseId, editMode }) => {
             value={unit.name}
             onChange={e => handleUnitChange(index, 'name', e.target.value)}
             required
-            sx={{ mb: 2 }}
+            sx={{
+              mb: 2,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px'
+              }
+            }}
           />
         </Box>
       ))}

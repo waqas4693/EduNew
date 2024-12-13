@@ -7,8 +7,8 @@ import {
   Typography,
   Menu,
   MenuItem,
-  Grid
 } from '@mui/material'
+import Grid from '@mui/material/Grid2'
 import { getData, patchData } from '../../api/api'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined'
@@ -63,7 +63,7 @@ const InactiveCourses = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 1 }}>
       <Paper 
         elevation={5} 
         sx={{ 
@@ -80,12 +80,12 @@ const InactiveCourses = () => {
             fontWeight: 'bold'
           }}
         >
-          Inactive Courses
+          InActive Courses
         </Typography>
         
         <Grid container spacing={2}>
           {courses.map((course) => (
-            <Grid key={course._id} xs={12} sm={6} md={4} lg={3}>
+            <Grid key={course._id} size={3}>
               <Card
                 sx={{
                   p: 2,

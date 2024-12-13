@@ -49,7 +49,6 @@ const Sidebar = ({ open, onClose }) => {
       icon: <SchoolIcon />,
       subItems: [
         { text: 'Course Management', path: '/admin/add-course' },
-        { text: 'Active Courses', path: '/admin/dashboard' },
         { text: 'InActive Courses', path: '/admin/inactive-courses' }
       ]
     },
@@ -111,7 +110,6 @@ const Sidebar = ({ open, onClose }) => {
                     button
                     onClick={() => item.text === 'Courses' ? setOpenCourses(!openCourses) : setOpenStudents(!openStudents)}
                     sx={{
-                      minHeight: 48,
                       justifyContent: open ? 'initial' : 'center',
                       px: 2.5,
                       '&:hover': {
@@ -134,7 +132,8 @@ const Sidebar = ({ open, onClose }) => {
                       sx={{ 
                         opacity: open ? 1 : 0,
                         '& .MuiTypography-root': {
-                          color: 'white'
+                          color: 'white',
+                          fontSize: '16px'
                         }
                       }} 
                     />
@@ -142,7 +141,15 @@ const Sidebar = ({ open, onClose }) => {
                             (openStudents ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />))}
                   </ListItem>
                   <Collapse in={item.text === 'Courses' ? openCourses : openStudents} timeout="auto" unmountOnExit>
-                    <List component="div" disablePadding>
+                    <List 
+                      component="div" 
+                      disablePadding
+                      sx={{ 
+                        '& .MuiListItem-root': { 
+                          py: 0.5  // Reduced padding top and bottom
+                        } 
+                      }}
+                    >
                       {item.subItems.map((subItem) => (
                         <ListItem
                           button
@@ -150,8 +157,7 @@ const Sidebar = ({ open, onClose }) => {
                           to={subItem.path}
                           key={subItem.text}
                           sx={{
-                            pl: 4,
-                            minHeight: 48,
+                            pl: 8.5,
                             justifyContent: open ? 'initial' : 'center',
                             width: '100%',
                             '&:hover': {
@@ -165,7 +171,8 @@ const Sidebar = ({ open, onClose }) => {
                               opacity: open ? 1 : 0,
                               display: open ? 'block' : 'none',
                               '& .MuiTypography-root': {
-                                color: 'white'
+                                color: 'white',
+                                fontSize: '14px'
                               }
                             }} 
                           />
@@ -203,7 +210,8 @@ const Sidebar = ({ open, onClose }) => {
                     sx={{ 
                       opacity: open ? 1 : 0,
                       '& .MuiTypography-root': {
-                        color: 'white'
+                        color: 'white',
+                        fontSize: '16px'
                       }
                     }} 
                   />

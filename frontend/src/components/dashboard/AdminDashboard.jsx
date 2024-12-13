@@ -58,16 +58,6 @@ const AdminDashboard = () => {
     handleMenuClose()
   }
 
-  const handleArchive = () => {
-    // Implement archive functionality
-    handleMenuClose()
-  }
-
-  const handleDelete = () => {
-    // Implement delete functionality
-    handleMenuClose()
-  }
-
   const handleMarkInactive = async () => {
     try {
       if (selectedCourse) {
@@ -76,7 +66,6 @@ const AdminDashboard = () => {
         })
         
         if (response.status === 200) {
-          // Refresh the courses list
           fetchCourses()
           alert('Course marked as inactive successfully')
         }
@@ -133,7 +122,7 @@ const AdminDashboard = () => {
   )
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 1 }}>
       <Paper 
         elevation={5} 
         sx={{ 
