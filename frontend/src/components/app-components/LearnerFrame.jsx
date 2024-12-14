@@ -655,7 +655,9 @@ const LearnerFrame = () => {
               sx={{
                 bgcolor: '#f5f5f5',
                 p: 2,
-                position: 'relative'
+                position: 'relative',
+                width: '100%',
+                overflow: 'hidden'
               }}
             >
               {/* Left Arrow */}
@@ -694,9 +696,12 @@ const LearnerFrame = () => {
                   overflowX: 'auto',
                   scrollBehavior: 'smooth',
                   px: 4,
+                  mx: 4,
                   '&::-webkit-scrollbar': { display: 'none' },
                   msOverflowStyle: 'none',
-                  scrollbarWidth: 'none'
+                  scrollbarWidth: 'none',
+                  width: 'calc(100% - 8px)',
+                  position: 'relative'
                 }}
               >
                 {resources.map((resource, index) => (

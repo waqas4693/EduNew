@@ -35,7 +35,7 @@ const Sidebar = ({ open, onClose }) => {
 
   const handleLogout = () => {
     logout()
-    navigate('/login')
+    navigate('/')
   }
 
   const adminMenuItems = [
