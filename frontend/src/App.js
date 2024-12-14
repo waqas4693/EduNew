@@ -51,7 +51,7 @@ function App() {
             <MuiThemeProvider theme={theme}>
               <CssBaseline />
               <Routes>
-                <Route path="/login" element={<Login />} />
+                <Route path="/" element={<Login />} />
                 
                 {/* Admin Routes */}
                 <Route

@@ -352,7 +352,11 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
               resource.content.file,
               resource.name
             )
-            resourceData.content.fileUrl = fileName
+            if (resource.resourceType === 'IMAGE') {
+              resourceData.content.imageUrl = fileName
+            } else {
+              resourceData.content.fileUrl = fileName
+            }
           }
 
           if (resource.content?.thumbnail) {

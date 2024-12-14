@@ -8,6 +8,14 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Box, Typography, IconButton, Paper, Checkbox, Button, Alert } from '@mui/material'
 import { ChevronLeft, ChevronRight, Launch } from '@mui/icons-material'
 
+const formatExternalUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  return `https://${url}`;
+};
+
 const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
   const [selectedAnswers, setSelectedAnswers] = useState([])
   const [hasSubmitted, setHasSubmitted] = useState(false)
@@ -226,6 +234,40 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
             style={{ width: '100%', height: '50px', backgroundColor: '#000' }}
             controls
           />
+        </Box>
+      )
+
+    case 'PPT':
+      return (
+        <Box sx={{ 
+          width: '100%', 
+          height: '80vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 2
+        }}>
+          {resource.content.previewImage && (
+            <img
+              src={signedUrls[resource.content.previewImage]}
+              alt="PPT Preview"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '70vh',
+                objectFit: 'contain'
+              }}
+            />
+          )}
+          <Button 
+            variant="contained"
+            startIcon={<Launch />}
+            href={signedUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open Presentation
+          </Button>
         </Box>
       )
 
@@ -543,9 +585,10 @@ const LearnerFrame = () => {
                     }}
                   >
                     <IconButton
-                      href={resources[currentIndex].content.externalLink}
+                      href={formatExternalUrl(resources[currentIndex].content.externalLink)}
                       target='_blank'
                       rel='noopener noreferrer'
+                      component="a"
                       sx={{
                         color: 'white',
                         display: 'flex',
@@ -561,7 +604,7 @@ const LearnerFrame = () => {
                         variant='body2'
                         sx={{
                           fontSize: '14px',
-                          display: { xs: 'none', sm: 'block' } // Hide text on mobile
+                          display: { xs: 'none', sm: 'block' }
                         }}
                       >
                         External Link
