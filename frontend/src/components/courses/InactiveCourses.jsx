@@ -12,6 +12,7 @@ import Grid from '@mui/material/Grid2'
 import { getData, patchData } from '../../api/api'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined'
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 
 const InactiveCourses = () => {
   const [courses, setCourses] = useState([])
@@ -174,7 +175,10 @@ const InactiveCourses = () => {
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        <MenuItem onClick={handleMarkActive}>Mark Active</MenuItem>
+        <MenuItem onClick={handleMarkActive} sx={{ color: 'success.main' }}>
+          <CheckCircleOutlineIcon sx={{ mr: 1, fontSize: 20 }} />
+          Mark Active
+        </MenuItem>
       </Menu>
     </Box>
   )

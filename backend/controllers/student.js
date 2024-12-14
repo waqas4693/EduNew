@@ -1,6 +1,7 @@
 import User from '../models/user.js'
 import Student from '../models/student.js'
 import bcrypt from 'bcryptjs'
+import Course from '../models/course.js'
 
 export const newStudent = async (req, res) => {
   try {
@@ -14,7 +15,8 @@ export const newStudent = async (req, res) => {
     const user = new User({
       email,
       password: password,
-      role: 2
+      role: 2,
+      status: 1
     })
     await user.save()
 
@@ -23,6 +25,7 @@ export const newStudent = async (req, res) => {
       email,
       contactNo,
       address,
+      status: 1,
       courses: [{
         courseId: courseId,
         courseStatus: 1,
@@ -43,7 +46,12 @@ export const newStudent = async (req, res) => {
       }
     })
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    console.error('Error creating student:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    })
   }
 }
 
@@ -86,6 +94,209 @@ export const getDashboardData = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Internal server error'
+    })
+  }
+}
+
+export const getAllStudents = async (req, res) => {
+  try {
+    const { status } = req.query
+    
+    const query = status ? { status: parseInt(status) } : {}
+    
+    const students = await Student.find(query)
+    res.status(200).json(students)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+}
+
+export const updateStudentStatus = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body
+
+    // First find the student to get their email
+    const student = await Student.findById(id)
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' })
+    }
+
+    // Update student status
+    const updatedStudent = await Student.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    )
+
+    // Update corresponding user status
+    await User.findOneAndUpdate(
+      { email: student.email },
+      { status }
+    )
+
+    res.status(200).json(updatedStudent)
+  } catch (error) {
+    console.error('Error updating status:', error)
+    res.status(500).json({ 
+      message: 'Error updating status',
+      error: error.message 
+    })
+  }
+}
+
+export const getStudentCourses = async (req, res) => {
+  try {
+    const studentId = req.params.id
+
+    // First get the student and populate course details
+    const student = await Student.findById(studentId)
+      .populate({
+        path: 'courses.courseId',
+        select: 'name thumbnail status' // Only select needed fields
+      })
+      .lean()
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found'
+      })
+    }
+
+    // Transform the courses data
+    const courses = student.courses.map(course => ({
+      _id: course.courseId._id,
+      name: course.courseId.name,
+      thumbnail: course.courseId.thumbnail,
+      courseStatus: course.courseId.status,
+      enrollmentDate: course.enrollmentDate
+    }))
+
+    res.status(200).json({
+      success: true,
+      data: {
+        studentName: student.name,
+        courses
+      }
+    })
+
+  } catch (error) {
+    console.error('Error fetching student courses:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    })
+  }
+}
+
+export const assignCourse = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { courseId } = req.body
+
+    const student = await Student.findById(id)
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' })
+    }
+
+    // Check if course is already assigned
+    const courseExists = student.courses.some(
+      course => course.courseId.toString() === courseId
+    )
+
+    if (courseExists) {
+      return res.status(400).json({ 
+        message: 'Course is already assigned to this student' 
+      })
+    }
+
+    // Add new course
+    student.courses.push({
+      courseId,
+      courseStatus: 1,
+      enrollmentDate: new Date()
+    })
+
+    await student.save()
+
+    res.status(200).json({
+      message: 'Course assigned successfully',
+      student
+    })
+
+  } catch (error) {
+    console.error('Error assigning course:', error)
+    res.status(500).json({ 
+      message: 'Error assigning course',
+      error: error.message 
+    })
+  }
+}
+
+export const removeCourse = async (req, res) => {
+  try {
+    const { id, courseId } = req.params
+
+    const student = await Student.findById(id)
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' })
+    }
+
+    // Remove the course from the student's courses array
+    student.courses = student.courses.filter(
+      course => course.courseId.toString() !== courseId
+    )
+
+    await student.save()
+
+    res.status(200).json({
+      message: 'Course removed successfully',
+      student
+    })
+
+  } catch (error) {
+    console.error('Error removing course:', error)
+    res.status(500).json({ 
+      message: 'Error removing course',
+      error: error.message 
+    })
+  }
+}
+
+export const getCourseStudents = async (req, res) => {
+  try {
+    const { courseId } = req.params
+
+    // First get the course name
+    const course = await Course.findById(courseId)
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      })
+    }
+
+    // Find all students who have this course
+    const students = await Student.find({
+      'courses.courseId': courseId
+    }).select('name email contactNo status')
+
+    res.status(200).json({
+      success: true,
+      data: {
+        courseName: course.name,
+        students
+      }
+    })
+
+  } catch (error) {
+    console.error('Error fetching course students:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
     })
   }
 }

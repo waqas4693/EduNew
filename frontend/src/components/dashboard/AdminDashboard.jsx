@@ -17,6 +17,9 @@ import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined'
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined'
 import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined'
 import Grid from '@mui/material/Grid2'
+import EditIcon from '@mui/icons-material/Edit'
+import GroupIcon from '@mui/icons-material/Group'
+import BlockIcon from '@mui/icons-material/Block'
 
 const AdminDashboard = () => {
   const [courses, setCourses] = useState([])
@@ -54,6 +57,14 @@ const AdminDashboard = () => {
       navigate('/admin/add-course', {
         state: { courseId: selectedCourse._id }
       })
+    }
+    handleMenuClose()
+  }
+
+  const handleViewStudents = () => {
+    if (selectedCourse) {
+      console.log('Navigating to:', `/admin/courses/${selectedCourse._id}/students`)
+      navigate(`/admin/courses/${selectedCourse._id}/students`)
     }
     handleMenuClose()
   }
@@ -269,8 +280,18 @@ const AdminDashboard = () => {
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        <MenuItem onClick={handleEdit}>Edit</MenuItem>
-        <MenuItem onClick={handleMarkInactive}>Mark In-Active</MenuItem>
+        <MenuItem onClick={handleEdit} sx={{ color: 'primary.main' }}>
+          <EditIcon sx={{ mr: 1, fontSize: 20 }} />
+          Edit
+        </MenuItem>
+        <MenuItem onClick={handleViewStudents} sx={{ color: 'info.main' }}>
+          <GroupIcon sx={{ mr: 1, fontSize: 20 }} />
+          View Students
+        </MenuItem>
+        <MenuItem onClick={handleMarkInactive} sx={{ color: 'error.main' }}>
+          <BlockIcon sx={{ mr: 1, fontSize: 20 }} />
+          Mark In-Active
+        </MenuItem>
       </Menu>
     </Box>
   )

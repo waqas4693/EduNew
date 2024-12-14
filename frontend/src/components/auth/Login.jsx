@@ -7,7 +7,11 @@ import {
   Paper,
   Alert,
   IconButton,
-  InputAdornment
+  InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import { postData } from '../../api/api'
@@ -25,6 +29,8 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState('student')
+  const [openDialog, setOpenDialog] = useState(false)
+  const [dialogTitle, setDialogTitle] = useState('')
   const navigate = useNavigate()
   const { login } = useAuth()
 
@@ -44,6 +50,10 @@ const Login = () => {
     setError('')
   }
 
+  const handleCloseDialog = () => {
+    setOpenDialog(false)
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
@@ -57,9 +67,6 @@ const Login = () => {
         localStorage.setItem('user', JSON.stringify(user))
         login(user)
 
-        console.log('User:', user)
-        console.log('Role:', user._id)
-
         if (user.role === ADMIN_ROLE) {
           navigate('/admin/dashboard', { replace: true })
         } else if (user.role === STUDENT_ROLE) {
@@ -67,15 +74,20 @@ const Login = () => {
         }
       }
     } catch (error) {
-      if (error.response?.status === 403) {
+      if (error.status === 403) {
+        setDialogTitle('Account Inactive')
         setError('Your account is currently inactive. Please contact administration.')
-      } else if (error.response?.status === 404) {
+      } else if (error.status === 404) {
+        setDialogTitle('User Not Found')
         setError('User not found with this email.')
-      } else if (error.response?.status === 401) {
+      } else if (error.status === 401) {
+        setDialogTitle('Invalid Credentials')
         setError('Invalid email or password.')
       } else {
+        setDialogTitle('Error')
         setError('An error occurred. Please try again.')
       }
+      setOpenDialog(true)
     }
   }
 
@@ -136,12 +148,6 @@ const Login = () => {
           </Box>
         </Box>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
-
         <form onSubmit={handleSubmit}>
           <TextField
             fullWidth
@@ -193,6 +199,32 @@ const Login = () => {
           </Button>
         </form>
       </Paper>
+
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            minWidth: 300
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 2 }}>
+          {dialogTitle}
+        </DialogTitle>
+        <DialogContent>
+          <Typography>{error}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={handleCloseDialog}
+            variant="contained"
+          >
+            OK
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

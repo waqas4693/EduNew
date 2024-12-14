@@ -56,6 +56,8 @@ const Sidebar = ({ open, onClose }) => {
       text: 'Students',
       icon: <PersonAddIcon />,
       subItems: [
+        { text: 'Active Students', path: '/admin/active-students' },
+        { text: 'Inactive Students', path: '/admin/inactive-students' },
         { text: 'Invite Student', path: '/admin/invite-student' }
       ]
     }
@@ -65,7 +67,7 @@ const Sidebar = ({ open, onClose }) => {
     {
       text: 'Dashboard',
       icon: <DashboardIcon />,
-      path: '/student/dashboard'
+      path: '/dashboard'
     },
     {
       text: 'Profile',

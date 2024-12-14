@@ -301,7 +301,10 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             contentData.thumbnailUrl = thumbnailFileName
           }
 
-          if (resource.resourceType === 'AUDIO' && resource.content.backgroundImage) {
+          if (
+            resource.resourceType === 'AUDIO' &&
+            resource.content.backgroundImage
+          ) {
             const bgFileName = await uploadFileToS3(
               resource.content.backgroundImage,
               `${resource.name}_bg`
@@ -309,7 +312,10 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             contentData.backgroundImageUrl = bgFileName
           }
 
-          if (resource.resourceType === 'PPT' && resource.content.previewImage) {
+          if (
+            resource.resourceType === 'PPT' &&
+            resource.content.previewImage
+          ) {
             const previewFileName = await uploadFileToS3(
               resource.content.previewImage,
               `${resource.name}_preview`
@@ -357,7 +363,10 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             resourceData.content.thumbnailUrl = thumbnailFileName
           }
 
-          if (resource.resourceType === 'AUDIO' && resource.content.backgroundImage) {
+          if (
+            resource.resourceType === 'AUDIO' &&
+            resource.content.backgroundImage
+          ) {
             const bgFileName = await uploadFileToS3(
               resource.content.backgroundImage,
               `${resource.name}_bg`
@@ -365,7 +374,10 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             resourceData.content.backgroundImageUrl = bgFileName
           }
 
-          if (resource.resourceType === 'PPT' && resource.content.previewImage) {
+          if (
+            resource.resourceType === 'PPT' &&
+            resource.content.previewImage
+          ) {
             const previewFileName = await uploadFileToS3(
               resource.content.previewImage,
               `${resource.name}_preview`
@@ -377,7 +389,10 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             resourceData.content.externalLink = resource.content.externalLink
           }
 
-          if (resource.resourceType === 'MCQ' && resource.content.mcq?.imageFile) {
+          if (
+            resource.resourceType === 'MCQ' &&
+            resource.content.mcq?.imageFile
+          ) {
             const imageFileName = await uploadFileToS3(
               resource.content.mcq.imageFile,
               `${resource.name}_mcqfile`
@@ -393,32 +408,34 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         })
 
         await Promise.all(resourcePromises)
-        
+
         // Reset all states after successful submission
-        setResources([{
-          name: '',
-          resourceType: '',
-          content: {
-            text: '',
-            questions: [
-              { question: '', answer: '' },
-              { question: '', answer: '' },
-              { question: '', answer: '' }
-            ],
-            backgroundImage: '',
-            previewImage: '',
-            file: null,
-            thumbnail: null,
-            externalLink: '',
-            mcq: {
-              question: '',
-              options: ['', '', '', ''],
-              numberOfCorrectAnswers: 1,
-              correctAnswers: [],
-              imageFile: null
+        setResources([
+          {
+            name: '',
+            resourceType: '',
+            content: {
+              text: '',
+              questions: [
+                { question: '', answer: '' },
+                { question: '', answer: '' },
+                { question: '', answer: '' }
+              ],
+              backgroundImage: '',
+              previewImage: '',
+              file: null,
+              thumbnail: null,
+              externalLink: '',
+              mcq: {
+                question: '',
+                options: ['', '', '', ''],
+                numberOfCorrectAnswers: 1,
+                correctAnswers: [],
+                imageFile: null
+              }
             }
           }
-        }])
+        ])
         setSectionId(null)
         setUnitId(null)
         setCourseId(null)
@@ -683,8 +700,24 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                   }
                 />
               )}
+
+              {resource.resourceType === 'MCQ' && (
+                <UploadButton
+                  label='Choose Question Image'
+                  value={resource.content.mcq?.imageFile}
+                  accept='image/*'
+                  onChange={e =>
+                    handleContentChange(index, 'mcq', {
+                      ...resource.content.mcq,
+                      imageFile: e.target.files[0]
+                    })
+                  }
+                />
+              )}
             </Box>
 
+            {/* These are kept outside of the main box because they have 
+            multiple fields which shrinks if placeed in the main box */}
             {resource.resourceType === 'TEXT' && (
               <>
                 {resource.content.questions.map((q, index) => (
@@ -747,31 +780,6 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                 ))}
               </>
             )}
-
-            <TextField
-              fullWidth
-              size='small'
-              label='External Link (Optional)'
-              value={resource.content.externalLink}
-              onChange={e =>
-                handleContentChange(index, 'externalLink', e.target.value)
-              }
-              sx={{
-                mb: 2,
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                  border: '1px solid #20202033',
-                  '& fieldset': {
-                    border: 'none'
-                  }
-                },
-                '& .MuiInputLabel-root': {
-                  color: '#8F8F8F',
-                  backgroundColor: 'white',
-                  padding: '0 4px'
-                }
-              }}
-            />
 
             {resource.resourceType === 'MCQ' && (
               <Box sx={{ mt: 2 }}>
@@ -973,22 +981,34 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                     ))}
                   </Select>
                 </FormControl>
-
-                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                  <UploadButton
-                    label='Choose Question Image'
-                    value={resource.content.mcq?.imageFile}
-                    accept='image/*'
-                    onChange={e =>
-                      handleContentChange(index, 'mcq', {
-                        ...resource.content.mcq,
-                        imageFile: e.target.files[0]
-                      })
-                    }
-                  />
-                </Box>
               </Box>
             )}
+            {/* End here */}
+
+            <TextField
+              fullWidth
+              size='small'
+              label='External Link (Optional)'
+              value={resource.content.externalLink}
+              onChange={e =>
+                handleContentChange(index, 'externalLink', e.target.value)
+              }
+              sx={{
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  border: '1px solid #20202033',
+                  '& fieldset': {
+                    border: 'none'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#8F8F8F',
+                  backgroundColor: 'white',
+                  padding: '0 4px'
+                }
+              }}
+            />
           </Box>
         ))}
 
