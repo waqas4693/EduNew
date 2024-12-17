@@ -5,13 +5,15 @@ import {
   Button,
   CardMedia,
   ListItem,
-  Skeleton
+  Skeleton,
+  LinearProgress
 } from '@mui/material'
 import { getData } from '../../api/api'
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { setCurrentUnit } from '../../redux/slices/courseSlice'
+import { useAuth } from '../../context/AuthContext'
 
 import Grid from '@mui/material/Grid2'
 import Calendar from '../calendar/Calendar'
@@ -24,6 +26,14 @@ const Section = () => {
   const location = useLocation()
   const [sections, setSections] = useState([])
   const [loading, setLoading] = useState(true)
+  const [unitProgress, setUnitProgress] = useState({
+    performancePercentage: 0,
+    totalAssessments: 0,
+    completedAssessments: 0,
+    totalObtainedMarks: 0,
+    totalPossibleMarks: 0
+  })
+  const { user } = useAuth()
 
   const { courseId, unitId } = useParams()
   const dispatch = useDispatch()
@@ -74,17 +84,87 @@ const Section = () => {
     }
   }
 
+  const fetchUnitProgress = async () => {
+    try {
+      const response = await getData(`assessment-review/progress/${unitId}/${user.id}`)
+      if (response.status === 200) {
+        setUnitProgress(response.data.data)
+      }
+    } catch (error) {
+      console.error('Error fetching unit progress:', error)
+    }
+  }
+
+  useEffect(() => {
+    console.log('User from useAuth = ')
+    console.log(user)
+  })
+
+  useEffect(() => {
+    console.log('User from useAuth 2= ')
+    console.log(user)
+
+    console.log('UnitId = ')
+    console.log(unitId)
+
+    console.log('User ID = ')
+    console.log(user?.id)
+
+    if (unitId && user?.id) {
+      console.log('Fetching unit progress')
+      console.log(unitId, user?.id)
+
+      fetchUnitProgress()
+    }
+  }, [unitId, user?.id])
+
+  const ProgressBar = ({ progress, color }) => (
+    <Box sx={{ mb: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+        <Typography variant="body2" color="text.secondary">
+          Performance Score
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {progress}%
+        </Typography>
+      </Box>
+      <LinearProgress 
+        variant="determinate" 
+        value={progress} 
+        sx={{
+          height: 8,
+          borderRadius: 4,
+          backgroundColor: `${color}20`,
+          '& .MuiLinearProgress-bar': {
+            backgroundColor: color,
+            borderRadius: 4
+          }
+        }}
+      />
+    </Box>
+  )
+
+  const UnitProgressSummary = () => (
+    <Box sx={{ mb: 4 }}>
+      <Typography variant="h6" gutterBottom>
+        Unit Progress
+      </Typography>
+      
+      <ProgressBar 
+        progress={unitProgress.performancePercentage}
+        color="#4169e1"
+      />
+
+      <Typography variant="body2" color="text.secondary">
+        Total Score: {unitProgress.totalObtainedMarks}/{unitProgress.totalPossibleMarks}
+      </Typography>
+    </Box>
+  )
+
   return (
     <Grid container spacing={2}>
       <Grid size={7.5}>
-        <Paper
-          elevation={5}
-          sx={{ 
-            p: '24px 24px', 
-            borderRadius: '16px', 
-            backgroundColor: 'white' 
-          }}
-        >
+        <Paper elevation={5} sx={{ p: '24px 24px', borderRadius: '16px', backgroundColor: 'white' }}>
           <Box sx={{ mb: 1 }}>
             <Typography
               variant='body2'
@@ -135,6 +215,8 @@ const Section = () => {
           >
             Unit: {unitName || 'Unit Name Not Available'}
           </Typography>
+
+          <UnitProgressSummary />
 
           {loading ? (
             [...Array(3)].map((_, index) => (

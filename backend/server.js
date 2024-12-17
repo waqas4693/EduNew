@@ -15,6 +15,7 @@ import studentRoutes from './routes/student.js'
 import sectionRoutes from './routes/section.js'
 import resourceRoutes from './routes/resource.js'
 import assessmentRoutes from './routes/assessment.js'
+import assessmentReviewRoutes from './routes/assessmentReview.js'
 import assessmentAttemptRoutes from './routes/assessmentAttempt.js'
 
 /* CONFIGURATION */
@@ -50,7 +51,7 @@ app.use('/sections', sectionRoutes)
 app.use('/resources', resourceRoutes)
 app.use('/assessments', assessmentRoutes)
 app.use('/assessment-attempts', assessmentAttemptRoutes)
-
+app.use('/assessment-review', assessmentReviewRoutes)
 mongoose.set('strictQuery', false)
 
 await mongoose

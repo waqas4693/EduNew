@@ -25,6 +25,12 @@ const resourceSchema = new mongoose.Schema({
     previewImage: String,
     thumbnailUrl: String,
     externalLink: String,
+    repeatCount: {
+      type: Number,
+      min: 1,
+      max: 11,
+      default: 1
+    },
     mcq: {
       question: String,
       options: [String],

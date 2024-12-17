@@ -3,7 +3,7 @@ import url from '../config/server-url'
 import Grid from '@mui/material/Grid2'
 
 import { getData } from '../../api/api'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Box, Typography, IconButton, Paper, Checkbox, Button, Alert } from '@mui/material'
 import { ChevronLeft, ChevronRight, Launch } from '@mui/icons-material'
@@ -20,6 +20,37 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
   const [selectedAnswers, setSelectedAnswers] = useState([])
   const [hasSubmitted, setHasSubmitted] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
+  const audioRef = useRef(null)
+  const [playCount, setPlayCount] = useState(0)
+
+  useEffect(() => {
+    if (resource.resourceType === 'AUDIO' && audioRef.current) {
+      const audio = audioRef.current
+      const repeatCount = resource.content.repeatCount || 1
+
+      const handleEnded = () => {
+        setPlayCount(prev => {
+          const newCount = prev + 1
+          if (newCount < repeatCount) {
+            audio.play()
+          }
+          return newCount
+        })
+      }
+
+      const handlePlay = () => {
+        setPlayCount(0)
+      }
+
+      audio.addEventListener('ended', handleEnded)
+      audio.addEventListener('play', handlePlay)
+
+      return () => {
+        audio.removeEventListener('ended', handleEnded)
+        audio.removeEventListener('play', handlePlay)
+      }
+    }
+  }, [resource])
 
   const handleAnswerSelect = (option) => {
     if (hasSubmitted) return
@@ -226,14 +257,24 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
               : 'none',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            bgcolor: '#000'
+            bgcolor: '#000',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2,
+            p: 2
           }}
         >
           <audio
+            ref={audioRef}
             src={signedUrl}
             style={{ width: '100%', height: '50px', backgroundColor: '#000' }}
             controls
           />
+          <Typography sx={{ color: 'white' }}>
+            Will repeat {resource.content.repeatCount || 1} time{resource.content.repeatCount > 1 ? 's' : ''}
+            {playCount > 0 && ` (${playCount}/${resource.content.repeatCount})`}
+          </Typography>
         </Box>
       )
 

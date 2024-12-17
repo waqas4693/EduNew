@@ -15,7 +15,8 @@ import {
   Dashboard as DashboardIcon,
   School as SchoolIcon,
   Logout as LogoutIcon,
-  PersonAdd as PersonAddIcon
+  PersonAdd as PersonAddIcon,
+  Assignment as AssignmentIcon
 } from '@mui/icons-material'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -60,6 +61,11 @@ const Sidebar = ({ open, onClose }) => {
         { text: 'Inactive Students', path: '/admin/inactive-students' },
         { text: 'Invite Student', path: '/admin/invite-student' }
       ]
+    },
+    {
+      text: 'Assessment Review',
+      icon: <AssignmentIcon />,
+      path: '/admin/assessment-review'
     }
   ]
 
