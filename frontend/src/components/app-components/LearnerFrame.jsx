@@ -251,8 +251,9 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
         <Box
           sx={{
             width: '100%',
-            height: '100%',
-            backgroundImage: resource.content.backgroundImage
+            height: '70vh',
+            position: 'relative',
+            backgroundImage: resource.content.backgroundImageUrl
               ? `url(${signedUrls[resource.content.backgroundImageUrl]})`
               : 'none',
             backgroundSize: 'cover',
@@ -261,20 +262,35 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: 2,
+            justifyContent: 'flex-start',
             p: 2
           }}
         >
-          <audio
-            ref={audioRef}
-            src={signedUrl}
-            style={{ width: '100%', height: '50px', backgroundColor: '#000' }}
-            controls
-          />
-          <Typography sx={{ color: 'white' }}>
-            Will repeat {resource.content.repeatCount || 1} time{resource.content.repeatCount > 1 ? 's' : ''}
-            {playCount > 0 && ` (${playCount}/${resource.content.repeatCount})`}
-          </Typography>
+          <Box
+            sx={{
+              width: '100%',
+              maxWidth: '600px',
+              position: 'absolute',
+              top: '20px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 1,
+              bgcolor: 'rgba(0, 0, 0, 0.7)',
+              borderRadius: '8px',
+              p: 2
+            }}
+          >
+            <audio
+              ref={audioRef}
+              src={signedUrl}
+              style={{ width: '100%' }}
+              controls
+            />
+            <Typography sx={{ color: 'white', mt: 1, textAlign: 'center' }}>
+              Will repeat {resource.content.repeatCount || 1} time{resource.content.repeatCount > 1 ? 's' : ''}
+              {playCount > 0 && ` (${playCount}/${resource.content.repeatCount})`}
+            </Typography>
+          </Box>
         </Box>
       )
 

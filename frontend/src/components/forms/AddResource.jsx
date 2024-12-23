@@ -281,176 +281,107 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         return
       }
 
+      const processResource = async (resource) => {
+        let contentData = { ...resource.content }
+
+        // Handle main file upload
+        if (resource.content.file) {
+          const fileName = await uploadFileToS3(
+            resource.content.file,
+            resource.name
+          )
+          contentData.fileUrl = fileName
+          delete contentData.file
+        }
+
+        // Handle thumbnail upload
+        if (resource.content.thumbnail) {
+          const thumbnailFileName = await uploadFileToS3(
+            resource.content.thumbnail,
+            `${resource.name}_thumb`
+          )
+          contentData.thumbnailUrl = thumbnailFileName
+          delete contentData.thumbnail
+        }
+
+        // Handle audio background image
+        if (resource.resourceType === 'AUDIO' && resource.content.backgroundImage) {
+          const bgFileName = await uploadFileToS3(
+            resource.content.backgroundImage,
+            `${resource.name}_bg`
+          )
+          contentData.backgroundImageUrl = bgFileName
+          delete contentData.backgroundImage
+        }
+
+        // Ensure repeatCount is included for audio
+        if (resource.resourceType === 'AUDIO') {
+          contentData.repeatCount = resource.content.repeatCount || 1
+        }
+
+        // Rest of your existing upload logic...
+        
+        return {
+          name: resource.name,
+          resourceType: resource.resourceType,
+          sectionId: sectionId,
+          content: contentData
+        }
+      }
+
       if (editMode) {
         const updatePromises = resources.map(async resource => {
-          let contentData = { ...resource.content }
-
-          if (resource.content.file) {
-            const fileName = await uploadFileToS3(
-              resource.content.file,
-              resource.name
-            )
-            contentData.fileUrl = fileName
-          }
-
-          if (resource.content.thumbnail) {
-            const thumbnailFileName = await uploadFileToS3(
-              resource.content.thumbnail,
-              `${resource.name}_thumb`
-            )
-            contentData.thumbnailUrl = thumbnailFileName
-          }
-
-          if (
-            resource.resourceType === 'AUDIO' &&
-            resource.content.backgroundImage
-          ) {
-            const bgFileName = await uploadFileToS3(
-              resource.content.backgroundImage,
-              `${resource.name}_bg`
-            )
-            contentData.backgroundImageUrl = bgFileName
-          }
-
-          if (
-            resource.resourceType === 'PPT' &&
-            resource.content.previewImage
-          ) {
-            const previewFileName = await uploadFileToS3(
-              resource.content.previewImage,
-              `${resource.name}_preview`
-            )
-            contentData.previewImageUrl = previewFileName
-          }
-
-          return putData(`resources/${resource._id}`, {
-            name: resource.name,
-            resourceType: resource.resourceType,
-            sectionId: sectionId,
-            content: contentData
-          })
+          const processedData = await processResource(resource)
+          return putData(`resources/${resource._id}`, processedData)
         })
 
         await Promise.all(updatePromises)
         alert('Resources updated successfully')
       } else {
         const resourcePromises = resources.map(async resource => {
-          if (!resource.name || !resource.resourceType) {
-            throw new Error('Please fill all required fields')
-          }
-
-          const resourceData = {
-            name: resource.name,
-            resourceType: resource.resourceType,
-            sectionId: sectionId,
-            content: {} // Initialize content object
-          }
-
-          // Handle file uploads
-          if (resource.content?.file) {
-            const fileName = await uploadFileToS3(
-              resource.content.file,
-              resource.name
-            )
-            if (resource.resourceType === 'IMAGE') {
-              resourceData.content.imageUrl = fileName
-            } else {
-              resourceData.content.fileUrl = fileName
-            }
-          }
-
-          if (resource.content?.thumbnail) {
-            const thumbnailFileName = await uploadFileToS3(
-              resource.content.thumbnail,
-              `${resource.name}_thumb`
-            )
-            resourceData.content.thumbnailUrl = thumbnailFileName
-          }
-
-          if (
-            resource.resourceType === 'AUDIO' &&
-            resource.content.backgroundImage
-          ) {
-            const bgFileName = await uploadFileToS3(
-              resource.content.backgroundImage,
-              `${resource.name}_bg`
-            )
-            resourceData.content.backgroundImageUrl = bgFileName
-          }
-
-          if (
-            resource.resourceType === 'PPT' &&
-            resource.content.previewImage
-          ) {
-            const previewFileName = await uploadFileToS3(
-              resource.content.previewImage,
-              `${resource.name}_preview`
-            )
-            resourceData.content.previewImageUrl = previewFileName
-          }
-
-          if (resource.content.externalLink) {
-            resourceData.content.externalLink = resource.content.externalLink
-          }
-
-          if (
-            resource.resourceType === 'MCQ' &&
-            resource.content.mcq?.imageFile
-          ) {
-            const imageFileName = await uploadFileToS3(
-              resource.content.mcq.imageFile,
-              `${resource.name}_mcqfile`
-            )
-            resourceData.content.mcq = {
-              ...resource.content.mcq,
-              imageUrl: imageFileName
-            }
-            delete resourceData.content.mcq.imageFile
-          }
-
-          return postData('resources', resourceData)
+          const processedData = await processResource(resource)
+          return postData('resources', processedData)
         })
 
         await Promise.all(resourcePromises)
-
-        // Reset all states after successful submission
-        setResources([
-          {
-            name: '',
-            resourceType: '',
-            content: {
-              text: '',
-              questions: [
-                { question: '', answer: '' },
-                { question: '', answer: '' },
-                { question: '', answer: '' }
-              ],
-              backgroundImage: '',
-              previewImage: '',
-              file: null,
-              thumbnail: null,
-              externalLink: '',
-              mcq: {
-                question: '',
-                options: ['', '', '', ''],
-                numberOfCorrectAnswers: 1,
-                correctAnswers: [],
-                imageFile: null
-              }
-            }
-          }
-        ])
-        setSectionId(null)
-        setUnitId(null)
-        setCourseId(null)
         alert('Resources added successfully')
       }
+
+      // Reset all states after successful submission
+      setResources([
+        {
+          name: '',
+          resourceType: '',
+          content: {
+            text: '',
+            questions: [
+              { question: '', answer: '' },
+              { question: '', answer: '' },
+              { question: '', answer: '' }
+            ],
+            backgroundImage: '',
+            previewImage: '',
+            file: null,
+            thumbnail: null,
+            externalLink: '',
+            mcq: {
+              question: '',
+              options: ['', '', '', ''],
+              numberOfCorrectAnswers: 1,
+              correctAnswers: [],
+              imageFile: null
+            }
+          }
+        }
+      ])
+      setSectionId(null)
+      setUnitId(null)
+      setCourseId(null)
     } catch (error) {
-      console.error('Error handling resources:', error)
-      alert(editMode ? 'Error updating resources' : 'Error adding resources')
+      console.error('Error:', error)
+      alert('Error uploading resources')
     } finally {
       setIsUploading(false)
-      setUploadProgress(0)
     }
   }
 
