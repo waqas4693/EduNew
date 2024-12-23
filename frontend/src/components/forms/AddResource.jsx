@@ -59,7 +59,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
       name: '',
       resourceType: '',
       content: {
-        text: '',
+        fileName: '',
         questions: [
           { question: '', answer: '' },
           { question: '', answer: '' },
@@ -157,7 +157,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             resourceType: resource.resourceType,
             _id: resource._id,
             content: {
-              text: resource.content?.text || '',
+              fileName: resource.content?.fileName || '',
               questions: resource.content?.questions || [
                 { question: '', answer: '' },
                 { question: '', answer: '' },
@@ -192,7 +192,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         name: '',
         resourceType: '',
         content: {
-          text: '',
+          fileName: '',
           questions: [
             { question: '', answer: '' },
             { question: '', answer: '' },
@@ -290,7 +290,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             resource.content.file,
             resource.name
           )
-          contentData.fileUrl = fileName
+          contentData.fileName = fileName
           delete contentData.file
         }
 
@@ -350,7 +350,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
           name: '',
           resourceType: '',
           content: {
-            text: '',
+            fileName: '',
             questions: [
               { question: '', answer: '' },
               { question: '', answer: '' },
