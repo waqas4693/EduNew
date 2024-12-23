@@ -5,16 +5,24 @@ import Grid from '@mui/material/Grid2'
 import { getData } from '../../api/api'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Box, Typography, IconButton, Paper, Checkbox, Button, Alert } from '@mui/material'
+import {
+  Box,
+  Typography,
+  IconButton,
+  Paper,
+  Checkbox,
+  Button,
+  Alert
+} from '@mui/material'
 import { ChevronLeft, ChevronRight, Launch } from '@mui/icons-material'
 
-const formatExternalUrl = (url) => {
-  if (!url) return '';
+const formatExternalUrl = url => {
+  if (!url) return ''
   if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url;
+    return url
   }
-  return `https://${url}`;
-};
+  return `https://${url}`
+}
 
 const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
   const [selectedAnswers, setSelectedAnswers] = useState([])
@@ -22,24 +30,36 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
   const [isCorrect, setIsCorrect] = useState(false)
   const audioRef = useRef(null)
   const [playCount, setPlayCount] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(false)
 
   useEffect(() => {
     if (resource.resourceType === 'AUDIO' && audioRef.current) {
       const audio = audioRef.current
-      const repeatCount = resource.content.repeatCount || 1
+      const repeatCount = resource.content.repeatCount
+
+      console.log('Repeat Count:')
+      console.log(repeatCount)
 
       const handleEnded = () => {
         setPlayCount(prev => {
           const newCount = prev + 1
-          if (newCount < repeatCount) {
-            audio.play()
+          if (newCount <= repeatCount) {
+            setTimeout(() => {
+              audio.currentTime = 0
+              audio.play()
+            }, 0)
+            return newCount
           }
-          return newCount
+          setIsPlaying(false)
+          return 0
         })
       }
 
       const handlePlay = () => {
-        setPlayCount(0)
+        if (!isPlaying) {
+          setPlayCount(1)
+          setIsPlaying(true)
+        }
       }
 
       audio.addEventListener('ended', handleEnded)
@@ -50,16 +70,19 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
         audio.removeEventListener('play', handlePlay)
       }
     }
-  }, [resource])
+  }, [resource, isPlaying])
 
-  const handleAnswerSelect = (option) => {
+  const handleAnswerSelect = option => {
     if (hasSubmitted) return
 
     setSelectedAnswers(prev => {
       const currentAnswers = [...prev]
       const index = currentAnswers.indexOf(option)
 
-      if (index === -1 && currentAnswers.length < resource.content.mcq.numberOfCorrectAnswers) {
+      if (
+        index === -1 &&
+        currentAnswers.length < resource.content.mcq.numberOfCorrectAnswers
+      ) {
         return [...currentAnswers, option]
       } else if (index !== -1) {
         return currentAnswers.filter(ans => ans !== option)
@@ -69,14 +92,20 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
   }
 
   const handleSubmit = () => {
-    if (selectedAnswers.length !== resource.content.mcq.numberOfCorrectAnswers) {
-      alert(`Please select ${resource.content.mcq.numberOfCorrectAnswers} answer(s)`)
+    if (
+      selectedAnswers.length !== resource.content.mcq.numberOfCorrectAnswers
+    ) {
+      alert(
+        `Please select ${resource.content.mcq.numberOfCorrectAnswers} answer(s)`
+      )
       return
     }
 
-    const isAnswerCorrect = 
+    const isAnswerCorrect =
       selectedAnswers.length === resource.content.mcq.correctAnswers.length &&
-      selectedAnswers.every(answer => resource.content.mcq.correctAnswers.includes(answer))
+      selectedAnswers.every(answer =>
+        resource.content.mcq.correctAnswers.includes(answer)
+      )
 
     setIsCorrect(isAnswerCorrect)
     setHasSubmitted(true)
@@ -88,10 +117,12 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
     setIsCorrect(false)
   }
 
-  const getOptionStyle = (option) => {
+  const getOptionStyle = option => {
     if (!hasSubmitted) {
       return {
-        border: selectedAnswers.includes(option) ? '2px solid #3366CC' : '1px solid #ddd'
+        border: selectedAnswers.includes(option)
+          ? '2px solid #3366CC'
+          : '1px solid #ddd'
       }
     }
 
@@ -170,31 +201,29 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
         <Box sx={{ p: 3, maxWidth: '800px', mx: 'auto' }}>
           {resource.content.mcq.imageUrl && (
             <Box sx={{ mb: 3, textAlign: 'center' }}>
-              <img 
-                src={signedUrls[resource.content.mcq.imageUrl]} 
-                alt="Question"
+              <img
+                src={signedUrls[resource.content.mcq.imageUrl]}
+                alt='Question'
                 style={{ maxWidth: '100%', maxHeight: '300px' }}
               />
             </Box>
           )}
 
-          <Typography variant="h6" sx={{ mb: 2, color: '#000' }}>
+          <Typography variant='h6' sx={{ mb: 2, color: '#000' }}>
             {resource.content.mcq.question}
           </Typography>
 
           {hasSubmitted && (
-            <Alert 
-              severity={isCorrect ? "success" : "error"} 
-              sx={{ mb: 2 }}
-            >
-              {isCorrect 
-                ? "Correct! Well done!" 
+            <Alert severity={isCorrect ? 'success' : 'error'} sx={{ mb: 2 }}>
+              {isCorrect
+                ? 'Correct! Well done!'
                 : `Incorrect. Expected ${resource.content.mcq.numberOfCorrectAnswers} correct answer(s).`}
             </Alert>
           )}
 
-          <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
-            Select {resource.content.mcq.numberOfCorrectAnswers} answer{resource.content.mcq.numberOfCorrectAnswers > 1 ? 's' : ''}.
+          <Typography variant='body2' sx={{ mb: 2, color: 'text.secondary' }}>
+            Select {resource.content.mcq.numberOfCorrectAnswers} answer
+            {resource.content.mcq.numberOfCorrectAnswers > 1 ? 's' : ''}.
           </Typography>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -225,20 +254,22 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
             ))}
           </Box>
 
-          <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'center' }}>
+          <Box
+            sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'center' }}
+          >
             {!hasSubmitted ? (
-              <Button 
-                variant="contained" 
+              <Button
+                variant='contained'
                 onClick={handleSubmit}
-                disabled={selectedAnswers.length !== resource.content.mcq.numberOfCorrectAnswers}
+                disabled={
+                  selectedAnswers.length !==
+                  resource.content.mcq.numberOfCorrectAnswers
+                }
               >
                 Submit Answer
               </Button>
             ) : (
-              <Button 
-                variant="outlined" 
-                onClick={handleReset}
-              >
+              <Button variant='outlined' onClick={handleReset}>
                 Try Again
               </Button>
             )}
@@ -251,64 +282,80 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
         <Box
           sx={{
             width: '100%',
-            height: '70vh',
-            position: 'relative',
-            backgroundImage: resource.content.backgroundImage
-              ? `url(${signedUrls[resource.content.backgroundImage]})`
-              : 'none',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            bgcolor: '#000',
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'flex-start',
-            p: 2
           }}
         >
           <Box
             sx={{
-              width: '100%',
-              maxWidth: '600px',
-              position: 'absolute',
-              top: '20px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              zIndex: 1,
-              bgcolor: 'rgba(0, 0, 0, 0.7)',
+              m: 1,
+              p: 1,
+              display: 'flex',
+              bgcolor: '#f5f5f5',
               borderRadius: '8px',
-              p: 2
+              alignItems: 'center',
+              flexDirection: 'column',
+              justifyContent: 'center'
             }}
           >
             <audio
+              controls
               ref={audioRef}
               src={signedUrl}
-              style={{ width: '100%' }}
-              controls
+              style={{ width: '100%', maxWidth: '600px' }}
             />
-            <Typography sx={{ color: 'white', mt: 1, textAlign: 'center' }}>
-              Will repeat {resource.content.repeatCount || 1} time{resource.content.repeatCount > 1 ? 's' : ''}
-              {playCount > 0 && ` (${playCount}/${resource.content.repeatCount})`}
+            <Typography
+              variant='body1'
+              sx={{
+                textAlign: 'center',
+                color: 'text.primary'
+              }}
+            >
+              This audio will play {resource.content.repeatCount} time
+              {resource.content.repeatCount > 1 ? 's' : ''}
             </Typography>
           </Box>
+
+          {resource.content.backgroundImage && (
+            <Box
+              sx={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <img
+                src={signedUrls[resource.content.backgroundImage]}
+                alt={resource.name}
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  objectFit: 'contain'
+                }}
+              />
+            </Box>
+          )}
         </Box>
       )
 
     case 'PPT':
       return (
-        <Box sx={{ 
-          width: '100%', 
-          height: '80vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 2
-        }}>
+        <Box
+          sx={{
+            width: '100%',
+            height: '80vh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 2
+          }}
+        >
           {resource.content.previewImage && (
             <img
               src={signedUrls[resource.content.previewImage]}
-              alt="PPT Preview"
+              alt='PPT Preview'
               style={{
                 maxWidth: '100%',
                 maxHeight: '70vh',
@@ -316,12 +363,12 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
               }}
             />
           )}
-          <Button 
-            variant="contained"
+          <Button
+            variant='contained'
             startIcon={<Launch />}
             href={signedUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+            target='_blank'
+            rel='noopener noreferrer'
           >
             Open Presentation
           </Button>
@@ -445,7 +492,10 @@ const LearnerFrame = () => {
         }
 
         // Load main resource content if not already loaded
-        if (resource.content.fileName && !signedUrls[resource.content.fileName]) {
+        if (
+          resource.content.fileName &&
+          !signedUrls[resource.content.fileName]
+        ) {
           const signedUrl = await getSignedUrl(resource.content.fileName)
           setSignedUrls(prev => ({
             ...prev,
@@ -569,7 +619,7 @@ const LearnerFrame = () => {
             }}
           >
             {/* Resource Title Bar */}
-             <Box
+            <Box
               sx={{
                 p: 1,
                 display: 'flex',
@@ -592,10 +642,12 @@ const LearnerFrame = () => {
                     }}
                   >
                     <IconButton
-                      href={formatExternalUrl(resources[currentIndex].content.externalLink)}
+                      href={formatExternalUrl(
+                        resources[currentIndex].content.externalLink
+                      )}
                       target='_blank'
                       rel='noopener noreferrer'
-                      component="a"
+                      component='a'
                       sx={{
                         color: 'white',
                         display: 'flex',
@@ -651,7 +703,9 @@ const LearnerFrame = () => {
               {resources[currentIndex] && (
                 <ResourceRenderer
                   resource={resources[currentIndex]}
-                  signedUrl={signedUrls[resources[currentIndex].content.fileName]}
+                  signedUrl={
+                    signedUrls[resources[currentIndex].content.fileName]
+                  }
                   signedUrls={signedUrls}
                 />
               )}
@@ -741,7 +795,10 @@ const LearnerFrame = () => {
                         }}
                       />
                     ) : (
-                      getThumbnailContent(resource, signedUrls[resource.content.fileName])
+                      getThumbnailContent(
+                        resource,
+                        signedUrls[resource.content.fileName]
+                      )
                     )}
 
                     {/* Resource Type Label */}

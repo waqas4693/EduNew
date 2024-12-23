@@ -284,45 +284,75 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
       const processResource = async (resource) => {
         let contentData = { ...resource.content }
 
-        // Handle main file upload
-        if (resource.content.file) {
-          const fileName = await uploadFileToS3(
-            resource.content.file,
-            resource.name
-          )
-          contentData.fileName = fileName
-          delete contentData.file
-        }
+        try {
+          // Handle main file upload (video, audio, pdf, ppt, image)
+          if (resource.content.file) {
+            const fileName = await uploadFileToS3(
+              resource.content.file,
+              `${resource.name}_main`
+            )
+            contentData.fileName = fileName
+            delete contentData.file
+          }
 
-        // Handle thumbnail upload
-        if (resource.content.thumbnail) {
-          const thumbnailFileName = await uploadFileToS3(
-            resource.content.thumbnail,
-            `${resource.name}_thumb`
-          )
-          contentData.thumbnailUrl = thumbnailFileName
-          delete contentData.thumbnail
-        }
+          // Handle thumbnail upload
+          if (resource.content.thumbnail) {
+            const thumbnailFileName = await uploadFileToS3(
+              resource.content.thumbnail,
+              `${resource.name}_thumb`
+            )
+            contentData.thumbnailUrl = thumbnailFileName
+            delete contentData.thumbnail
+          }
 
-        // Handle audio background image
-        if (resource.resourceType === 'AUDIO' && resource.content.backgroundImage) {
-          const bgFileName = await uploadFileToS3(
-            resource.content.backgroundImage,
-            `${resource.name}_${Date.now()}_bg`
-          )
-          contentData.backgroundImage = bgFileName
-        }
+          // Handle preview image for PPT
+          if (resource.resourceType === 'PPT' && resource.content.previewImage) {
+            const previewFileName = await uploadFileToS3(
+              resource.content.previewImage,
+              `${resource.name}_preview`
+            )
+            contentData.previewImage = previewFileName
+            delete contentData.previewImage
+          }
 
-        // Ensure repeatCount is included for audio
-        if (resource.resourceType === 'AUDIO') {
-          contentData.repeatCount = resource.content.repeatCount
-        }
+          // Handle background image for AUDIO and TEXT
+          if ((resource.resourceType === 'AUDIO' || resource.resourceType === 'TEXT') && resource.content.backgroundImage) {
+            const bgFileName = await uploadFileToS3(
+              resource.content.backgroundImage,
+              `${resource.name}_bg`
+            )
+            contentData.backgroundImage = bgFileName
+            delete contentData.backgroundImage
+          }
 
-        return {
-          name: resource.name,
-          resourceType: resource.resourceType,
-          sectionId: sectionId,
-          content: contentData
+          // Handle MCQ image
+          if (resource.resourceType === 'MCQ' && resource.content.mcq?.imageFile) {
+            const mcqImageFileName = await uploadFileToS3(
+              resource.content.mcq.imageFile,
+              `${resource.name}_mcq`
+            )
+            contentData.mcq = {
+              ...contentData.mcq,
+              imageUrl: mcqImageFileName
+            }
+            delete contentData.mcq.imageFile
+          }
+
+          // Ensure repeatCount is included for audio
+          if (resource.resourceType === 'AUDIO') {
+            contentData.repeatCount = resource.content.repeatCount || 1
+          }
+
+          return {
+            name: resource.name,
+            resourceType: resource.resourceType,
+            sectionId: sectionId,
+            content: contentData
+          }
+
+        } catch (error) {
+          console.error('Error processing resource:', error)
+          throw error
         }
       }
 
@@ -350,7 +380,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
           name: '',
           resourceType: '',
           content: {
-            fileName: '',
+            text: '',
             questions: [
               { question: '', answer: '' },
               { question: '', answer: '' },
