@@ -440,16 +440,16 @@ const LearnerFrame = () => {
         }
 
         // Skip if it's TEXT type without image
-        if (resource.resourceType === 'TEXT' && !resource.content.imageUrl) {
+        if (resource.resourceType === 'TEXT') {
           return
         }
 
         // Load main resource content if not already loaded
-        if (!signedUrls[resource.name]) {
-          const signedUrl = await getSignedUrl(resource.name)
+        if (resource.content.fileName && !signedUrls[resource.content.fileName]) {
+          const signedUrl = await getSignedUrl(resource.content.fileName)
           setSignedUrls(prev => ({
             ...prev,
-            [resource.name]: signedUrl
+            [resource.content.fileName]: signedUrl
           }))
         }
 
@@ -500,68 +500,18 @@ const LearnerFrame = () => {
   const getThumbnailContent = (resource, signedUrl) => {
     switch (resource.resourceType) {
       case 'VIDEO':
-        return (
-          <Box sx={{ width: '100%', height: '100%', bgcolor: '#000' }}>
-            <video
-              src={signedUrl}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          </Box>
-        )
-
       case 'IMAGE':
-        return (
-          <Box sx={{ width: '100%', height: '100%', bgcolor: '#000' }}>
-            <img
-              src={signedUrl}
-              alt={resource.name}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          </Box>
-        )
-
       case 'AUDIO':
-        return (
-          <Box
-            sx={{
-              width: '100%',
-              height: '100%',
-              backgroundImage: resource.content.thumbnailUrl
-                ? `url(${signedUrls[resource.content.thumbnailUrl]})`
-                : 'none',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center'
-            }}
-          >
-            <audio
-              src={signedUrl}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              controls
-            />
-          </Box>
-        )
-
       case 'PDF':
         return (
           <Box sx={{ width: '100%', height: '100%', bgcolor: '#000' }}>
-            <iframe
-              src={signedUrl}
-              width='100%'
-              height='100%'
-              title={resource.name}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          </Box>
-        )
-
-      case 'PPT':
-        return (
-          <Box sx={{ width: '100%', height: '100%', bgcolor: '#000' }}>
-            <img
-              src={resource.content.previewImageUrl}
-              alt={resource.name}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
+            {resource.content.fileName && (
+              <img
+                src={signedUrl}
+                alt={resource.name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            )}
           </Box>
         )
 
@@ -701,7 +651,7 @@ const LearnerFrame = () => {
               {resources[currentIndex] && (
                 <ResourceRenderer
                   resource={resources[currentIndex]}
-                  signedUrl={signedUrls[resources[currentIndex].name]}
+                  signedUrl={signedUrls[resources[currentIndex].content.fileName]}
                   signedUrls={signedUrls}
                 />
               )}
@@ -791,7 +741,7 @@ const LearnerFrame = () => {
                         }}
                       />
                     ) : (
-                      getThumbnailContent(resource, signedUrls[resource.name])
+                      getThumbnailContent(resource, signedUrls[resource.content.fileName])
                     )}
 
                     {/* Resource Type Label */}

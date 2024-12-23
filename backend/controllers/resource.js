@@ -20,7 +20,7 @@ export const createResource = async (req, res) => {
         resourceType: resourceData.resourceType,
         sectionId: resourceData.sectionId,
         content: {
-          text: resourceData.content?.text || '',
+          fileName: resourceData.content?.fileName || '',
           questions: resourceData.content?.questions || [],
           backgroundImage: resourceData.content?.backgroundImage || '',
           previewImage: resourceData.content?.previewImage || '',
