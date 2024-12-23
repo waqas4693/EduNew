@@ -16,7 +16,7 @@ const resourceSchema = new mongoose.Schema({
     required: true
   },
   content: {
-    text: String,
+    fileName: String,
     questions: [{
       question: String,
       answer: String

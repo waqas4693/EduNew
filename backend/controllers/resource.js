@@ -26,6 +26,7 @@ export const createResource = async (req, res) => {
           previewImage: resourceData.content?.previewImage || '',
           thumbnailUrl: resourceData.content?.thumbnailUrl || '',
           externalLink: resourceData.content?.externalLink || '',
+          repeatCount: resourceData.content?.repeatCount,
           mcq: resourceData.resourceType === 'MCQ' ? {
             question: resourceData.content?.mcq?.question || '',
             options: resourceData.content?.mcq?.options || [],

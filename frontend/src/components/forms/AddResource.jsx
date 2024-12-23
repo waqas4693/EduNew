@@ -282,8 +282,6 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
       }
 
       const processResource = async (resource) => {
-        console.log('Resource Data:')
-        console.log(resource)
         let contentData = { ...resource.content }
 
         // Handle main file upload
@@ -317,12 +315,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
 
         // Ensure repeatCount is included for audio
         if (resource.resourceType === 'AUDIO') {
-          console.log('Repeat Count From The Data Submitted:')
-          console.log(resource.content.repeatCount)
-
-          console.log('Repeat Count Type From The Data Submitted:')
-          console.log(typeof resource.content.repeatCount)
-          contentData.repeatCount = parseInt(resource.content.repeatCount)
+          contentData.repeatCount = resource.content.repeatCount
         }
 
         return {
@@ -582,8 +575,8 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                     onChange={e => 
                       handleContentChange(index, 'repeatCount', parseInt(e.target.value))
                     }
-                    InputProps={{
-                      inputProps: { min: 1 }
+                    slotProps={{
+                      input: { min: 1, max: 11 }
                     }}
                     sx={{ width: '120px' }}
                   />
