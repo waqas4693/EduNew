@@ -319,7 +319,10 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         if (resource.resourceType === 'AUDIO') {
           console.log('Repeat Count From The Data Submitted:')
           console.log(resource.content.repeatCount)
-          contentData.repeatCount = resource.content.repeatCount || 1
+
+          console.log('Repeat Count Type From The Data Submitted:')
+          console.log(typeof resource.content.repeatCount)
+          contentData.repeatCount = parseInt(resource.content.repeatCount)
         }
 
         return {
@@ -579,7 +582,9 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                     onChange={e => 
                       handleContentChange(index, 'repeatCount', parseInt(e.target.value))
                     }
-                    inputProps={{ min: 1 }}
+                    InputProps={{
+                      inputProps: { min: 1 }
+                    }}
                     sx={{ width: '120px' }}
                   />
                 </>
