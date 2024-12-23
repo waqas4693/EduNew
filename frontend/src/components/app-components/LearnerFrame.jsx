@@ -253,8 +253,8 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
             width: '100%',
             height: '70vh',
             position: 'relative',
-            backgroundImage: resource.content.backgroundImageUrl
-              ? `url(${signedUrls[resource.content.backgroundImageUrl]})`
+            backgroundImage: resource.content.backgroundImage
+              ? `url(${signedUrls[resource.content.backgroundImage]})`
               : 'none',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
@@ -456,13 +456,13 @@ const LearnerFrame = () => {
         // Load additional resource-specific content
         if (
           resource.resourceType === 'AUDIO' &&
-          resource.content.backgroundImageUrl &&
-          !signedUrls[resource.content.backgroundImageUrl]
+          resource.content.backgroundImage &&
+          !signedUrls[resource.content.backgroundImage]
         ) {
-          const bgUrl = await getSignedUrl(resource.content.backgroundImageUrl)
+          const bgUrl = await getSignedUrl(resource.content.backgroundImage)
           setSignedUrls(prev => ({
             ...prev,
-            [resource.content.backgroundImageUrl]: bgUrl
+            [resource.content.backgroundImage]: bgUrl
           }))
         }
 

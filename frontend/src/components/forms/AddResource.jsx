@@ -308,19 +308,17 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         if (resource.resourceType === 'AUDIO' && resource.content.backgroundImage) {
           const bgFileName = await uploadFileToS3(
             resource.content.backgroundImage,
-            `${resource.name}_bg`
+            `${resource.name}_${Date.now()}_bg`
           )
-          contentData.backgroundImageUrl = bgFileName
+          contentData.backgroundImage = bgFileName
           delete contentData.backgroundImage
         }
 
         // Ensure repeatCount is included for audio
         if (resource.resourceType === 'AUDIO') {
-          contentData.repeatCount = resource.content.repeatCount || 1
+          contentData.repeatCount = parseInt(resource.content.repeatCount) || 1
         }
 
-        // Rest of your existing upload logic...
-        
         return {
           name: resource.name,
           resourceType: resource.resourceType,
