@@ -282,6 +282,8 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
       }
 
       const processResource = async (resource) => {
+        console.log('Resource Data:')
+        console.log(resource)
         let contentData = { ...resource.content }
 
         // Handle main file upload
@@ -311,12 +313,13 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             `${resource.name}_${Date.now()}_bg`
           )
           contentData.backgroundImage = bgFileName
-          delete contentData.backgroundImage
         }
 
         // Ensure repeatCount is included for audio
         if (resource.resourceType === 'AUDIO') {
-          contentData.repeatCount = parseInt(resource.content.repeatCount) || 1
+          console.log('Repeat Count From The Data Submitted:')
+          console.log(resource.content.repeatCount)
+          contentData.repeatCount = resource.content.repeatCount || 1
         }
 
         return {
