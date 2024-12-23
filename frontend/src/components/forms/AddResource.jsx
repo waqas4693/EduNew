@@ -571,6 +571,16 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                       )
                     }
                   />
+                  <TextField
+                    type="number"
+                    label="Repeat Count"
+                    value={resource.content.repeatCount || 1}
+                    onChange={e => 
+                      handleContentChange(index, 'repeatCount', parseInt(e.target.value))
+                    }
+                    inputProps={{ min: 1 }}
+                    sx={{ width: '120px' }}
+                  />
                 </>
               )}
 
@@ -944,35 +954,6 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                 }
               }}
             />
-
-            {resource.resourceType === 'AUDIO' && (
-              <FormControl fullWidth size='small' sx={{ mb: 2 }}>
-                <InputLabel sx={{
-                  color: '#8F8F8F',
-                  backgroundColor: 'white',
-                  padding: '0 4px'
-                }}>
-                  Repeat Audio
-                </InputLabel>
-                <Select
-                  value={resource.content.repeatCount || 1}
-                  onChange={(e) => handleContentChange(index, 'repeatCount', e.target.value)}
-                  sx={{
-                    borderRadius: '8px',
-                    border: '1px solid #20202033',
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      border: 'none'
-                    }
-                  }}
-                >
-                  {[...Array(11)].map((_, i) => (
-                    <MenuItem key={i + 1} value={i + 1}>
-                      {i + 1} {i === 0 ? 'time' : 'times'}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            )}
           </Box>
         ))}
 
