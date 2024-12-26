@@ -12,9 +12,13 @@ import {
   Paper,
   Checkbox,
   Button,
-  Alert
+  Alert,
+  CircularProgress,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material'
-import { ChevronLeft, ChevronRight, Launch } from '@mui/icons-material'
+import { ChevronLeft, ChevronRight, Launch, ExpandMore } from '@mui/icons-material'
 
 const formatExternalUrl = url => {
   if (!url) return ''
@@ -186,13 +190,91 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
           sx={{
             width: '100%',
             minHeight: '70vh',
-            p: 3,
             display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'flex-start'
+            flexDirection: 'column',
+            gap: 3,
+            p: 3
           }}
         >
-          <Typography variant='body1'>{resource.content.text}</Typography>
+          {/* Background Image */}
+          {resource.content.backgroundImage && (
+            <Box
+              sx={{
+                width: '100%',
+                height: '40vh',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                mb: 3
+              }}
+            >
+              <img
+                src={signedUrls[resource.content.backgroundImage]}
+                alt="Background"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  objectFit: 'contain',
+                  borderRadius: '8px'
+                }}
+              />
+            </Box>
+          )}
+
+          {/* Questions and Answers */}
+          <Box sx={{ width: '100%', maxWidth: '800px', mx: 'auto' }}>
+            {resource.content.questions.map((qa, index) => (
+              <Accordion 
+                key={index}
+                sx={{
+                  mb: 2,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  '&:before': {
+                    display: 'none',
+                  },
+                  borderRadius: '8px !important',
+                  overflow: 'hidden'
+                }}
+              >
+                <AccordionSummary
+                  expandIcon={<ExpandMore />}
+                  sx={{
+                    backgroundColor: 'primary.main',
+                    color: 'white',
+                    '& .MuiAccordionSummary-expandIconWrapper': {
+                      color: 'white'
+                    }
+                  }}
+                >
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontSize: '1.1rem',
+                      fontWeight: 500
+                    }}
+                  >
+                    Question {index + 1}: {qa.question}
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails
+                  sx={{
+                    backgroundColor: 'background.paper',
+                    p: 3
+                  }}
+                >
+                  <Typography 
+                    variant="body1"
+                    sx={{
+                      color: 'text.primary',
+                      whiteSpace: 'pre-line'  // Preserves line breaks in the answer
+                    }}
+                  >
+                    {qa.answer}
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
+            ))}
+          </Box>
         </Box>
       )
 
@@ -347,31 +429,21 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
             height: '80vh',
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 2
+            gap: 2,
+            p: 2
           }}
         >
-          {resource.content.previewImage && (
-            <img
-              src={signedUrls[resource.content.previewImage]}
-              alt='PPT Preview'
-              style={{
-                maxWidth: '100%',
-                maxHeight: '70vh',
-                objectFit: 'contain'
-              }}
-            />
-          )}
-          <Button
-            variant='contained'
-            startIcon={<Launch />}
-            href={signedUrl}
-            target='_blank'
-            rel='noopener noreferrer'
-          >
-            Open Presentation
-          </Button>
+          <iframe
+            src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(signedUrl)}`}
+            style={{
+              width: '50%',
+              height: '100%',
+              border: 'none',
+              borderRadius: '8px'
+            }}
+            title="PowerPoint Presentation"
+            allowFullScreen
+          />
         </Box>
       )
 
@@ -396,6 +468,7 @@ const LearnerFrame = () => {
   const [resources, setResources] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [signedUrls, setSignedUrls] = useState({})
+  const [isLoading, setIsLoading] = useState(true)
   const navigate = useNavigate()
   const { courseId, unitId, sectionId } = useParams()
 
@@ -414,6 +487,7 @@ const LearnerFrame = () => {
   // Fetch all thumbnails on mount
   useEffect(() => {
     const fetchAllThumbnails = async () => {
+      setIsLoading(true)
       try {
         const response = await getData(`resources/${sectionId}`)
         if (response.status === 200) {
@@ -423,7 +497,6 @@ const LearnerFrame = () => {
           const thumbnailPromises = response.data.resources.map(
             async resource => {
               if (resource.content.thumbnailUrl) {
-                // Get thumbnail URL
                 const thumbnailUrl = await getSignedUrl(
                   resource.content.thumbnailUrl
                 )
@@ -432,7 +505,6 @@ const LearnerFrame = () => {
                   url: thumbnailUrl
                 }
               }
-              // Get default thumbnail based on resource type
               if (resource.resourceType !== 'TEXT') {
                 const defaultThumbnail = await getSignedUrl(resource.name)
                 return {
@@ -445,8 +517,6 @@ const LearnerFrame = () => {
           )
 
           const thumbnailUrls = await Promise.all(thumbnailPromises)
-
-          // Update signedUrls state with all thumbnail URLs
           const newSignedUrls = {}
           thumbnailUrls.forEach(item => {
             if (item) {
@@ -461,6 +531,8 @@ const LearnerFrame = () => {
         }
       } catch (error) {
         console.error('Error fetching resources and thumbnails:', error)
+      } finally {
+        setIsLoading(false)
       }
     }
 
@@ -587,6 +659,29 @@ const LearnerFrame = () => {
       default:
         return <Typography>Unsupported resource type</Typography>
     }
+  }
+
+  if (isLoading) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '80vh',
+          width: '100%',
+          bgcolor: 'background.paper'
+        }}
+      >
+        <CircularProgress 
+          size={80} 
+          thickness={4}
+          sx={{
+            color: 'primary.main'
+          }}
+        />
+      </Box>
+    )
   }
 
   return (
