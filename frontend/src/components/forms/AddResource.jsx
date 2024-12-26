@@ -677,19 +677,21 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             multiple fields which shrinks if placeed in the main box */}
             {resource.resourceType === 'TEXT' && (
               <>
-                {resource.content.questions.map((q, index) => (
-                  <Box key={index} sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                {(resource.content.questions || []).map((q, qIndex) => (
+                  <Box key={qIndex} sx={{ display: 'flex', gap: 2, mb: 2 }}>
                     <TextField
                       fullWidth
                       size='small'
-                      label={`Question ${index + 1}`}
+                      label={`Question ${qIndex + 1}`}
                       value={q.question}
-                      onChange={e =>
-                        handleContentChange(index, 'questions', {
-                          ...q,
+                      onChange={e => {
+                        const newQuestions = [...resource.content.questions]
+                        newQuestions[qIndex] = {
+                          ...newQuestions[qIndex],
                           question: e.target.value
-                        })
-                      }
+                        }
+                        handleContentChange(index, 'questions', newQuestions)
+                      }}
                       required
                       sx={{
                         '& .MuiOutlinedInput-root': {
@@ -709,14 +711,16 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                     <TextField
                       fullWidth
                       size='small'
-                      label={`Answer ${index + 1}`}
+                      label={`Answer ${qIndex + 1}`}
                       value={q.answer}
-                      onChange={e =>
-                        handleContentChange(index, 'questions', {
-                          ...q,
+                      onChange={e => {
+                        const newQuestions = [...resource.content.questions]
+                        newQuestions[qIndex] = {
+                          ...newQuestions[qIndex],
                           answer: e.target.value
-                        })
-                      }
+                        }
+                        handleContentChange(index, 'questions', newQuestions)
+                      }}
                       required
                       sx={{
                         '& .MuiOutlinedInput-root': {
