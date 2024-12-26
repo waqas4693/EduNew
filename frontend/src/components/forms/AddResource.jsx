@@ -281,7 +281,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         return
       }
 
-      const processResource = async (resource) => {
+      const processResource = async resource => {
         let contentData = { ...resource.content }
 
         // Handle main file upload
@@ -305,7 +305,10 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         }
 
         // Handle audio background image
-        if (resource.resourceType === 'AUDIO' && resource.content.backgroundImage) {
+        if (
+          (resource.resourceType === 'AUDIO' || resource.resourceType === 'TEXT') &&
+          resource.content.backgroundImage
+        ) {
           const bgFileName = await uploadFileToS3(
             resource.content.backgroundImage,
             `${resource.name}_${Date.now()}_bg`
@@ -568,18 +571,28 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                       )
                     }
                   />
-                  <TextField
-                    type="number"
-                    label="Repeat Count"
+                  {/* <TextField
+                    fullWidth
+                    size='small'
+                    type='number'
+                    label='Repeat Count'
                     value={resource.content.repeatCount || 1}
-                    onChange={e => 
-                      handleContentChange(index, 'repeatCount', parseInt(e.target.value))
+                    onChange={e =>
+                      handleContentChange(
+                        index,
+                        'repeatCount',
+                        parseInt(e.target.value)
+                      )
                     }
                     slotProps={{
                       input: { min: 1, max: 11 }
                     }}
-                    sx={{ width: '120px' }}
-                  />
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '8px'
+                      }
+                    }}
+                  /> */}
                 </>
               )}
 
@@ -664,21 +677,19 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             multiple fields which shrinks if placeed in the main box */}
             {resource.resourceType === 'TEXT' && (
               <>
-                {resource.content.questions.map((q, qIndex) => (
-                  <Box key={qIndex} sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                {resource.content.questions.map((q, index) => (
+                  <Box key={index} sx={{ display: 'flex', gap: 2, mb: 2 }}>
                     <TextField
                       fullWidth
                       size='small'
-                      label={`Question ${qIndex + 1}`}
+                      label={`Question ${index + 1}`}
                       value={q.question}
-                      onChange={e => {
-                        const newQuestions = [...resource.content.questions]
-                        newQuestions[qIndex] = {
-                          ...newQuestions[qIndex],
+                      onChange={e =>
+                        handleContentChange(index, 'questions', {
+                          ...q,
                           question: e.target.value
-                        }
-                        handleContentChange(index, 'questions', newQuestions)
-                      }}
+                        })
+                      }
                       required
                       sx={{
                         '& .MuiOutlinedInput-root': {
@@ -698,16 +709,14 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                     <TextField
                       fullWidth
                       size='small'
-                      label={`Answer ${qIndex + 1}`}
+                      label={`Answer ${index + 1}`}
                       value={q.answer}
-                      onChange={e => {
-                        const newQuestions = [...resource.content.questions]
-                        newQuestions[qIndex] = {
-                          ...newQuestions[qIndex],
+                      onChange={e =>
+                        handleContentChange(index, 'questions', {
+                          ...q,
                           answer: e.target.value
-                        }
-                        handleContentChange(index, 'questions', newQuestions)
-                      }}
+                        })
+                      }
                       required
                       sx={{
                         '& .MuiOutlinedInput-root': {
@@ -930,6 +939,32 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                   </Select>
                 </FormControl>
               </Box>
+            )}
+
+            {resource.resourceType === 'AUDIO' && (
+              <TextField
+                fullWidth
+                size='small'
+                type='number'
+                label='Repeat Count'
+                value={resource.content.repeatCount || 1}
+                onChange={e =>
+                  handleContentChange(
+                    index,
+                    'repeatCount',
+                    parseInt(e.target.value)
+                  )
+                }
+                slotProps={{
+                  input: { min: 1, max: 11 }
+                }}
+                sx={{
+                  mb: 2,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '8px'
+                  }
+                }}
+              />
             )}
             {/* End here */}
 
