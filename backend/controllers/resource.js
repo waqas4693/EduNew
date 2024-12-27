@@ -23,7 +23,6 @@ export const createResource = async (req, res) => {
           fileName: resourceData.content?.fileName || '',
           questions: resourceData.content?.questions || [],
           backgroundImage: resourceData.content?.backgroundImage || '',
-          previewImage: resourceData.content?.previewImage || '',
           thumbnailUrl: resourceData.content?.thumbnailUrl || '',
           externalLink: resourceData.content?.externalLink || '',
           repeatCount: resourceData.content?.repeatCount,

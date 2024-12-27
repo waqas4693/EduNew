@@ -105,21 +105,20 @@ const Login = () => {
     >
       <Paper 
         sx={{ 
-          p: 4, 
-          maxWidth: 450,
-          width: '90%',
-          borderRadius: 2
+          p: '60px',
+          width: '40%',
+          borderRadius: '16px'
         }}
       >
         <Typography 
-          variant="h5" 
+          variant="h4" 
           component="h1" 
           sx={{ mb: 3, textAlign: 'center', fontWeight: 500 }}
         >
-          Login
+          eduSupplements
         </Typography>
 
-        <Box sx={{ mb: 4, borderBottom: 1, borderColor: 'divider' }}>
+        {/* <Box sx={{ mb: 4, borderBottom: 1, borderColor: 'divider' }}>
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
               sx={{
@@ -146,7 +145,7 @@ const Login = () => {
               Admin
             </Button>
           </Box>
-        </Box>
+        </Box> */}
 
         <form onSubmit={handleSubmit}>
           <TextField
@@ -157,7 +156,12 @@ const Login = () => {
             value={formData.email}
             onChange={handleChange}
             required
-            sx={{ mb: 3 }}
+            sx={{
+              mb: 3,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px'
+              }
+            }}
             variant="outlined"
           />
           <TextField
@@ -168,34 +172,43 @@ const Login = () => {
             value={formData.password}
             onChange={handleChange}
             required
-            sx={{ mb: 4 }}
+            sx={{
+              mb: 3,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px'
+              }
+            }}
             variant="outlined"
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    onClick={handleClickShowPassword}
-                    edge="end"
-                  >
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              )
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={handleClickShowPassword}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }
             }}
           />
           <Button 
             type="submit" 
-            variant="contained" 
-            fullWidth 
             size="large"
+            variant="contained"
             sx={{
-              py: 1.5,
-              borderRadius: 1,
+              borderRadius: '8px',
+              fontSize: '16px',
               textTransform: 'none',
-              fontSize: '1rem'
+              display: 'block',
+              mx: 'auto',
+              px: '30px'
             }}
           >
-            Login
+            Log In
           </Button>
         </form>
       </Paper>

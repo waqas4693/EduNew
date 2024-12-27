@@ -18,7 +18,12 @@ import {
   AccordionSummary,
   AccordionDetails
 } from '@mui/material'
-import { ChevronLeft, ChevronRight, Launch, ExpandMore } from '@mui/icons-material'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Launch,
+  ExpandMore
+} from '@mui/icons-material'
 
 const formatExternalUrl = url => {
   if (!url) return ''
@@ -40,9 +45,6 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
     if (resource.resourceType === 'AUDIO' && audioRef.current) {
       const audio = audioRef.current
       const repeatCount = resource.content.repeatCount
-
-      console.log('Repeat Count:')
-      console.log(repeatCount)
 
       const handleEnded = () => {
         setPlayCount(prev => {
@@ -210,7 +212,7 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
             >
               <img
                 src={signedUrls[resource.content.backgroundImage]}
-                alt="Background"
+                alt='Background'
                 style={{
                   maxWidth: '100%',
                   maxHeight: '100%',
@@ -222,15 +224,15 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
           )}
 
           {/* Questions and Answers */}
-          <Box sx={{ width: '100%', maxWidth: '800px', mx: 'auto' }}>
+          <Box sx={{ width: '100%' }}>
             {resource.content.questions.map((qa, index) => (
-              <Accordion 
+              <Accordion
                 key={index}
                 sx={{
-                  mb: 2,
+                  mb: '10px',
                   boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
                   '&:before': {
-                    display: 'none',
+                    display: 'none'
                   },
                   borderRadius: '8px !important',
                   overflow: 'hidden'
@@ -239,18 +241,26 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
                 <AccordionSummary
                   expandIcon={<ExpandMore />}
                   sx={{
-                    backgroundColor: 'primary.main',
-                    color: 'white',
+                    bgcolor: 'grey.200',
                     '& .MuiAccordionSummary-expandIconWrapper': {
-                      color: 'white'
+                    },
+                    '& .MuiAccordionSummary-content': {
+                      overflow: 'hidden'
                     }
                   }}
                 >
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
+                  <Typography
+                    variant='h6'
+                    sx={{
                       fontSize: '1.1rem',
-                      fontWeight: 500
+                      fontWeight: 500,
+                      wordBreak: 'break-word',
+                      whiteSpace: 'pre-wrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical'
                     }}
                   >
                     Question {index + 1}: {qa.question}
@@ -262,11 +272,12 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
                     p: 3
                   }}
                 >
-                  <Typography 
-                    variant="body1"
+                  <Typography
+                    variant='body1'
                     sx={{
                       color: 'text.primary',
-                      whiteSpace: 'pre-line'  // Preserves line breaks in the answer
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word'
                     }}
                   >
                     {qa.answer}
@@ -365,7 +376,7 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
           sx={{
             width: '100%',
             display: 'flex',
-            flexDirection: 'column',
+            flexDirection: 'column'
           }}
         >
           <Box
@@ -425,23 +436,25 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
       return (
         <Box
           sx={{
+            p: 2,
+            gap: 2,
             width: '100%',
             height: '80vh',
             display: 'flex',
-            flexDirection: 'column',
-            gap: 2,
-            p: 2
+            flexDirection: 'column'
           }}
         >
           <iframe
-            src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(signedUrl)}`}
+            src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
+              signedUrl
+            )}`}
             style={{
               width: '50%',
               height: '100%',
               border: 'none',
               borderRadius: '8px'
             }}
-            title="PowerPoint Presentation"
+            title='PowerPoint Presentation'
             allowFullScreen
           />
         </Box>
@@ -472,6 +485,14 @@ const LearnerFrame = () => {
   const navigate = useNavigate()
   const { courseId, unitId, sectionId } = useParams()
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 2500)
+
+    return () => clearTimeout(timer)
+  }, [])
+
   const getSignedUrl = async fileName => {
     try {
       const response = await axios.post(`${url}s3/get`, {
@@ -484,58 +505,56 @@ const LearnerFrame = () => {
     }
   }
 
+  const fetchAllThumbnails = async () => {
+    setIsLoading(true)
+    try {
+      const response = await getData(`resources/${sectionId}`)
+      if (response.status === 200) {
+        setResources(response.data.resources)
+
+        // Fetch thumbnails for all resources
+        const thumbnailPromises = response.data.resources.map(
+          async resource => {
+            if (resource.content.thumbnailUrl) {
+              const thumbnailUrl = await getSignedUrl(
+                resource.content.thumbnailUrl
+              )
+              return {
+                fileName: resource.content.thumbnailUrl,
+                url: thumbnailUrl
+              }
+            }
+            if (resource.resourceType !== 'TEXT') {
+              const defaultThumbnail = await getSignedUrl(resource.name)
+              return {
+                fileName: resource.name,
+                url: defaultThumbnail
+              }
+            }
+            return null
+          }
+        )
+
+        const thumbnailUrls = await Promise.all(thumbnailPromises)
+        const newSignedUrls = {}
+        thumbnailUrls.forEach(item => {
+          if (item) {
+            newSignedUrls[item.fileName] = item.url
+          }
+        })
+
+        setSignedUrls(prev => ({
+          ...prev,
+          ...newSignedUrls
+        }))
+      }
+    } catch (error) {
+      console.error('Error fetching resources and thumbnails:', error)
+    }
+  }
+
   // Fetch all thumbnails on mount
   useEffect(() => {
-    const fetchAllThumbnails = async () => {
-      setIsLoading(true)
-      try {
-        const response = await getData(`resources/${sectionId}`)
-        if (response.status === 200) {
-          setResources(response.data.resources)
-
-          // Fetch thumbnails for all resources
-          const thumbnailPromises = response.data.resources.map(
-            async resource => {
-              if (resource.content.thumbnailUrl) {
-                const thumbnailUrl = await getSignedUrl(
-                  resource.content.thumbnailUrl
-                )
-                return {
-                  fileName: resource.content.thumbnailUrl,
-                  url: thumbnailUrl
-                }
-              }
-              if (resource.resourceType !== 'TEXT') {
-                const defaultThumbnail = await getSignedUrl(resource.name)
-                return {
-                  fileName: resource.name,
-                  url: defaultThumbnail
-                }
-              }
-              return null
-            }
-          )
-
-          const thumbnailUrls = await Promise.all(thumbnailPromises)
-          const newSignedUrls = {}
-          thumbnailUrls.forEach(item => {
-            if (item) {
-              newSignedUrls[item.fileName] = item.url
-            }
-          })
-
-          setSignedUrls(prev => ({
-            ...prev,
-            ...newSignedUrls
-          }))
-        }
-      } catch (error) {
-        console.error('Error fetching resources and thumbnails:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     fetchAllThumbnails()
   }, [sectionId])
 
@@ -558,11 +577,6 @@ const LearnerFrame = () => {
           }))
         }
 
-        // Skip if it's TEXT type without image
-        if (resource.resourceType === 'TEXT') {
-          return
-        }
-
         // Load main resource content if not already loaded
         if (
           resource.content.fileName &&
@@ -577,7 +591,8 @@ const LearnerFrame = () => {
 
         // Load additional resource-specific content
         if (
-          resource.resourceType === 'AUDIO' &&
+          (resource.resourceType === 'AUDIO' ||
+            resource.resourceType === 'TEXT') &&
           resource.content.backgroundImage &&
           !signedUrls[resource.content.backgroundImage]
         ) {
@@ -663,24 +678,29 @@ const LearnerFrame = () => {
 
   if (isLoading) {
     return (
-      <Box
+      <Paper
+        elevation={5}
         sx={{
+          borderRadius: '16px',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
           minHeight: '80vh',
           width: '100%',
-          bgcolor: 'background.paper'
+          bgcolor: 'background.paper',
+          flexDirection: 'column'
         }}
       >
-        <CircularProgress 
-          size={80} 
-          thickness={4}
+        <CircularProgress
+          size={180}
+          thickness={3}
           sx={{
-            color: 'primary.main'
+            color: 'primary.main',
+            mb: 3
           }}
         />
-      </Box>
+        <Typography variant='h5'>Loading Learner's Frame</Typography>
+      </Paper>
     )
   }
 

@@ -22,7 +22,6 @@ const resourceSchema = new mongoose.Schema({
       answer: String
     }],
     backgroundImage: String,
-    previewImage: String,
     thumbnailUrl: String,
     externalLink: String,
     repeatCount: {

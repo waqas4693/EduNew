@@ -64,7 +64,7 @@ const AssessmentRenderer = ({
     onSubmit() // Automatically submit the assessment
   }
 
-  const formatTime = (seconds) => {
+  const formatTime = seconds => {
     const minutes = Math.floor(seconds / 60)
     const remainingSeconds = seconds % 60
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
@@ -76,12 +76,12 @@ const AssessmentRenderer = ({
     if (!isAssessmentStarted) {
       return (
         <Box sx={{ textAlign: 'center', mb: 3 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
+          <Typography variant='h6' sx={{ mb: 2 }}>
             Time Allowed: {assessment.timeAllowed} minutes
           </Typography>
           <Button
-            variant="contained"
-            color="primary"
+            variant='contained'
+            color='primary'
             onClick={handleStartAssessment}
             sx={{ minWidth: 200 }}
           >
@@ -92,18 +92,20 @@ const AssessmentRenderer = ({
     }
 
     return (
-      <Box sx={{ 
-        position: 'fixed', 
-        top: 20, 
-        right: 20, 
-        zIndex: 1000,
-        bgcolor: timeRemaining <= 300 ? '#f44336' : 'primary.main', // Red when ≤ 5 minutes
-        color: 'white',
-        padding: '10px 20px',
-        borderRadius: '4px',
-        boxShadow: 3
-      }}>
-        <Typography variant="h6">
+      <Box
+        sx={{
+          position: 'fixed',
+          top: 20,
+          right: 20,
+          zIndex: 1000,
+          bgcolor: timeRemaining <= 300 ? '#f44336' : 'primary.main', // Red when ≤ 5 minutes
+          color: 'white',
+          padding: '10px 20px',
+          borderRadius: '4px',
+          boxShadow: 3
+        }}
+      >
+        <Typography variant='h6'>
           Time Remaining: {formatTime(timeRemaining)}
         </Typography>
       </Box>
@@ -182,26 +184,22 @@ const AssessmentRenderer = ({
   switch (assessment.assessmentType) {
     case 'QNA':
       return (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: 2 }}>
           <form onSubmit={onSubmit}>
             {assessment.content.questions.map((q, index) => (
-              <Box key={index} sx={{ mb: 4 }}>
-                <Typography
-                  variant='subtitle1'
-                  sx={{ fontWeight: 'bold', mb: 2 }}
-                >
+              <Box key={index} sx={{ mb: '15px' }}>
+                <Typography variant='subtitle1' sx={{ fontWeight: 'bold' }}>
                   Question {index + 1}: {q.question}
                 </Typography>
                 <TextField
                   fullWidth
                   multiline
-                  rows={4}
+                  rows={3}
                   value={attemptData?.answers?.[index]?.answer || ''}
                   onChange={e =>
                     onAnswerChange('answers', index, e.target.value)
                   }
                   placeholder='Enter your answer here'
-                  sx={{ mt: 1 }}
                 />
               </Box>
             ))}
@@ -219,18 +217,20 @@ const AssessmentRenderer = ({
 
       if (isAssessmentEnded) {
         return (
-          <Box sx={{ 
-            textAlign: 'center', 
-            mt: 4,
-            p: 3,
-            bgcolor: '#f44336',
-            color: 'white',
-            borderRadius: '4px'
-          }}>
-            <Typography variant="h4" sx={{ mb: 2 }}>
+          <Box
+            sx={{
+              textAlign: 'center',
+              mt: 4,
+              p: 3,
+              bgcolor: '#f44336',
+              color: 'white',
+              borderRadius: '4px'
+            }}
+          >
+            <Typography variant='h4' sx={{ mb: 2 }}>
               Time's Up!
             </Typography>
-            <Typography variant="body1">
+            <Typography variant='body1'>
               Your assessment has been submitted automatically.
             </Typography>
           </Box>
@@ -239,30 +239,30 @@ const AssessmentRenderer = ({
 
       const currentMcq = assessment.content.mcqs[currentMcqIndex]
       return (
-        <Grid container spacing={2}>
+        <Grid container>
           {renderTimerOrStartButton()}
-          
+
           {/* MCQ Content Area */}
-          <Grid size={10} sx={{ pl: '20px' }}>
+          <Grid size={10} sx={{ px: '15px' }}>
             <Box
               sx={{
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                mb: 3
+                mb: '10px'
               }}
             >
-              <Typography variant='h6'>
-                Question {currentMcqIndex + 1} of{' '}
+              <Typography variant='body1'>
+                {currentMcqIndex + 1} /{' '}
                 {assessment.content.mcqs.length}
               </Typography>
             </Box>
 
             <Box>
-              <Box sx={{ mb: 4 }}>
+              <Box sx={{ mb: '15px' }}>
                 <Typography
-                  variant='subtitle1'
-                  sx={{ fontWeight: 'bold', mb: 2 }}
+                  variant='h6'
+                  sx={{ fontWeight: 'bold', mb: '10px' }}
                 >
                   {currentMcq.question}
                 </Typography>
@@ -279,13 +279,13 @@ const AssessmentRenderer = ({
                   </IconButton>
                 )}
 
-                <Box sx={{ mt: 3 }}>
+                <Box>
                   {currentMcq.options.map((option, optIndex) => (
                     <Box
                       key={optIndex}
                       sx={{
-                        mb: 2,
-                        p: 2,
+                        px: '10px',
+                        mb: '10px',
                         border: '1px solid #ddd',
                         borderRadius: '8px',
                         cursor: 'pointer',
@@ -320,8 +320,7 @@ const AssessmentRenderer = ({
                   sx={{
                     display: 'flex',
                     justifyContent: 'space-between',
-                    mt: 4,
-                    px: 2
+                    mt: '10px',
                   }}
                 >
                   <IconButton
@@ -354,7 +353,7 @@ const AssessmentRenderer = ({
 
                 {/* Submit Button - only show on last question */}
                 {currentMcqIndex === assessment.content.mcqs.length - 1 && (
-                  <Box sx={{ mt: 4, textAlign: 'center' }}>
+                  <Box sx={{ mt: '10px', textAlign: 'center' }}>
                     <Button
                       variant='contained'
                       onClick={onSubmit}
@@ -503,6 +502,17 @@ const ViewAssessment = () => {
   const { user } = useAuth()
   const [audioPlayer, setAudioPlayer] = useState(null)
   const [audioUrls, setAudioUrls] = useState({})
+  const [selectedAssessment, setSelectedAssessment] = useState(null)
+
+  // Group assessments by type
+  const groupedAssessments = assessments.reduce((groups, assessment) => {
+    const type = assessment.assessmentType
+    if (!groups[type]) {
+      groups[type] = []
+    }
+    groups[type].push(assessment)
+    return groups
+  }, {})
 
   const getSignedUrl = async fileName => {
     try {
@@ -704,10 +714,8 @@ const ViewAssessment = () => {
     <Paper
       elevation={5}
       sx={{
-        borderRadius: '16px',
-        overflow: 'hidden',
-        height: '100%',
         display: 'flex',
+        borderRadius: '16px',
         flexDirection: 'column'
       }}
     >
@@ -727,70 +735,88 @@ const ViewAssessment = () => {
         </Typography>
       </Box>
 
-      <Box
-        sx={{
-          bgcolor: 'primary.main',
-          color: 'white',
-          p: 2,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}
-      >
-        <Box>
-          <Typography variant='h6'>
-            {assessments[currentIndex]?.assessmentType} Assessment
-          </Typography>
-          <Typography variant='body2'>
-            Total Marks: {assessments[currentIndex]?.totalMarks} | Percentage:{' '}
-            {assessments[currentIndex]?.percentage}%
-          </Typography>
-        </Box>
-        <Typography>
-          {currentIndex + 1}/{assessments.length}
-        </Typography>
-      </Box>
-
-      <Box
-        sx={{
-          flex: 1,
-          overflow: 'auto',
-          position: 'relative'
-        }}
-      >
-        {assessments[currentIndex] && (
-          <AssessmentRenderer
-            assessment={assessments[currentIndex]}
-            signedUrl={
-              signedUrls[assessments[currentIndex].content.assessmentFile]
-            }
-            attemptData={attemptData}
-            onAnswerChange={handleAnswerChange}
-            onSubmit={handleSubmit}
-            onPlayAudio={handlePlayAudio}
-          />
-        )}
-      </Box>
-
-      <Box
-        sx={{
-          p: 2,
-          bgcolor: '#f5f5f5',
-          display: 'flex',
-          justifyContent: 'center',
-          gap: 2,
-          borderTop: '1px solid rgba(0, 0, 0, 0.12)'
-        }}
-      >
-        <IconButton onClick={handlePrevious} disabled={currentIndex === 0}>
-          <ChevronLeftIcon />
-        </IconButton>
-        <IconButton
-          onClick={handleNext}
-          disabled={currentIndex === assessments.length - 1}
+      <Box sx={{ display: 'flex', height: 'calc(100% - 48px)' }}>
+        {/* Assessment List Sidebar */}
+        <Box
+          sx={{
+            width: '300px',
+            borderRight: '1px solid rgba(0, 0, 0, 0.12)',
+            overflow: 'auto'
+          }}
         >
-          <ChevronRightIcon />
-        </IconButton>
+          {Object.entries(groupedAssessments).map(([type, typeAssessments]) => (
+            <Box key={type} sx={{ mb: 2 }}>
+              <Typography
+                variant='body1'
+                sx={{
+                  p: '10px',
+                  color: 'white',
+                  bgcolor: 'primary.main'
+                }}
+              >
+                {type} Assessments
+              </Typography>
+              {typeAssessments.map((assessment, index) => (
+                <Box
+                  key={assessment._id}
+                  onClick={() => setSelectedAssessment(assessment)}
+                  sx={{
+                    py: '3px',
+                    px: '10px',
+                    cursor: 'pointer',
+                    borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
+                    bgcolor:
+                      selectedAssessment?._id === assessment._id
+                        ? 'action.selected'
+                        : 'transparent',
+                    '&:hover': {
+                      bgcolor: 'action.hover'
+                    }
+                  }}
+                >
+                  <Typography variant='subtitle1'>
+                    Assessment {index + 1}
+                  </Typography>
+                  <Typography variant='body2' color='text.secondary'>
+                    Marks: {assessment.totalMarks} | {assessment.percentage}%
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          ))}
+        </Box>
+
+        {/* Assessment Content Area */}
+        <Box
+          sx={{
+            flex: 1,
+            overflow: 'auto'
+          }}
+        >
+          {selectedAssessment ? (
+            <AssessmentRenderer
+              assessment={selectedAssessment}
+              signedUrl={signedUrls[selectedAssessment.content.assessmentFile]}
+              attemptData={attemptData}
+              onAnswerChange={handleAnswerChange}
+              onSubmit={handleSubmit}
+              onPlayAudio={handlePlayAudio}
+            />
+          ) : (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%'
+              }}
+            >
+              <Typography variant='h6' color='text.secondary'>
+                Select an assessment to begin
+              </Typography>
+            </Box>
+          )}
+        </Box>
       </Box>
     </Paper>
   )
