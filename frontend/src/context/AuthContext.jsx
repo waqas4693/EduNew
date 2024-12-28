@@ -18,7 +18,6 @@ export const AuthProvider = ({ children }) => {
         const userData = JSON.parse(storedUser)
         setUser(userData)
         
-        // Redirect to appropriate dashboard if on login page
         if (window.location.pathname === '/login') {
           if (userData.role === ADMIN_ROLE) {
             navigate('/admin/dashboard')
@@ -29,7 +28,7 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Error parsing user data:', error)
-      localStorage.removeItem('user') // Clear invalid data
+      localStorage.removeItem('user')
     } finally {
       setLoading(false)
     }
@@ -37,6 +36,8 @@ export const AuthProvider = ({ children }) => {
 
   const login = (userData) => {
     try {
+      console.log('Storing user data:', userData)
+      
       setUser(userData)
       localStorage.setItem('user', JSON.stringify(userData))
     } catch (error) {
@@ -52,7 +53,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   if (loading) {
-    return null // or a loading spinner
+    return null
   }
 
   return (

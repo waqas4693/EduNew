@@ -1,6 +1,7 @@
 import Resource from '../models/resource.js'
 import { handleError } from '../utils/errorHandler.js'
 import Section from '../models/section.js'
+import ResourceView from '../models/resourceView.js'
 
 export const createResource = async (req, res) => {
   try {
@@ -130,6 +131,39 @@ export const updateResource = async (req, res) => {
     res.status(200).json({
       success: true,
       data: resource
+    })
+  } catch (error) {
+    handleError(res, error)
+  }
+}
+
+export const getResourcesWithViewStatus = async (req, res) => {
+  try {
+    const { sectionId, studentId } = req.params
+
+    // Get all resources for the section
+    const resources = await Resource.find({ sectionId })
+
+    // Get all resource views for this student
+    const resourceViews = await ResourceView.find({
+      studentId,
+      resourceId: { $in: resources.map(r => r._id) }
+    })
+
+    // Map resources with their view status
+    const resourcesWithStatus = resources.map(resource => ({
+      _id: resource._id,
+      name: resource.name,
+      resourceType: resource.resourceType,
+      content: resource.content,
+      isViewed: resourceViews.some(view => 
+        view.resourceId.toString() === resource._id.toString()
+      )   // Ask AI to explain this line
+    }))
+
+    res.status(200).json({
+      success: true,
+      data: resourcesWithStatus
     })
   } catch (error) {
     handleError(res, error)

@@ -63,9 +63,17 @@ const Login = () => {
       
       if (response.status === 200) {
         const { token, user } = response.data.data
+        
+        // Store token
         localStorage.setItem('token', token)
-        localStorage.setItem('user', JSON.stringify(user))
-        login(user)
+        
+        // Store complete user data including studentId if present
+        const userData = {
+          ...user,  // This includes id, email, role, studentId, name, etc.
+        }
+        
+        // Pass the complete userData to login
+        login(userData)
 
         if (user.role === ADMIN_ROLE) {
           navigate('/admin/dashboard', { replace: true })

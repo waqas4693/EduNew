@@ -2,7 +2,7 @@ import axios from 'axios'
 import url from '../config/server-url'
 import Grid from '@mui/material/Grid2'
 
-import { getData } from '../../api/api'
+import { getData, postData } from '../../api/api'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
@@ -24,6 +24,7 @@ import {
   Launch,
   ExpandMore
 } from '@mui/icons-material'
+import { useAuth } from '../../context/AuthContext'
 
 const formatExternalUrl = url => {
   if (!url) return ''
@@ -441,7 +442,7 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
             width: '100%',
             height: '80vh',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'row'
           }}
         >
           <iframe
@@ -457,6 +458,29 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
             title='PowerPoint Presentation'
             allowFullScreen
           />
+          {resource.content.backgroundImage && (
+            <Box
+              sx={{
+                width: '50%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                p: 2
+              }}
+            >
+              <img
+                src={signedUrls[resource.content.backgroundImage]}
+                alt="Presentation Preview"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  objectFit: 'contain',
+                  borderRadius: '8px'
+                }}
+              />
+            </Box>
+          )}
         </Box>
       )
 
@@ -484,6 +508,7 @@ const LearnerFrame = () => {
   const [isLoading, setIsLoading] = useState(true)
   const navigate = useNavigate()
   const { courseId, unitId, sectionId } = useParams()
+  const { user } = useAuth()
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -592,7 +617,8 @@ const LearnerFrame = () => {
         // Load additional resource-specific content
         if (
           (resource.resourceType === 'AUDIO' ||
-            resource.resourceType === 'TEXT') &&
+            resource.resourceType === 'TEXT' ||
+            resource.resourceType === 'PPT') &&
           resource.content.backgroundImage &&
           !signedUrls[resource.content.backgroundImage]
         ) {
@@ -675,6 +701,31 @@ const LearnerFrame = () => {
         return <Typography>Unsupported resource type</Typography>
     }
   }
+
+  const recordResourceView = async (resource) => {
+    try {
+      if (!user.studentId) {
+        console.error('No student ID found')
+        return
+      }
+
+      await postData('resource-views/record', {
+        studentId: user.studentId,
+        resourceId: resource._id,
+        courseId,
+        unitId,
+        sectionId
+      })
+    } catch (error) {
+      console.error('Error recording resource view:', error)
+    }
+  }
+
+  useEffect(() => {
+    if (resources[currentIndex]) {
+      recordResourceView(resources[currentIndex])
+    }
+  }, [currentIndex, resources])
 
   if (isLoading) {
     return (

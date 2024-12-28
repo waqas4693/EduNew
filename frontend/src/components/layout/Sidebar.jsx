@@ -16,7 +16,8 @@ import {
   School as SchoolIcon,
   Logout as LogoutIcon,
   PersonAdd as PersonAddIcon,
-  Assignment as AssignmentIcon
+  Assignment as AssignmentIcon,
+  Analytics as AnalyticsIcon
 } from '@mui/icons-material'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -66,7 +67,12 @@ const Sidebar = ({ open, onClose }) => {
       text: 'Assessment Review',
       icon: <AssignmentIcon />,
       path: '/admin/assessment-review'
-    }
+    },
+    // {
+    //   text: 'Resource Analytics',
+    //   icon: <AnalyticsIcon />,
+    //   path: '/admin/resource-analytics'
+    // }
   ]
 
   const studentMenuItems = [
