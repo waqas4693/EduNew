@@ -24,6 +24,7 @@ import StudentCourses from './components/students/StudentCourses'
 import CourseStudents from './components/courses/CourseStudents'
 import AssessmentReview from './components/assessment/AssessmentReview'
 import ResourceAnalytics from './components/admin/ResourceAnalytics'
+import StudentProgress from './components/students/StudentProgress' 
 
 // Create Redux store
 const store = configureStore({
@@ -72,6 +73,7 @@ function App() {
                           <Route path="/courses/:id/students" element={<CourseStudents />} />
                           <Route path="/assessment-review" element={<AssessmentReview />} />
                           <Route path="/resource-analytics" element={<ResourceAnalytics />} />
+                          <Route path="/students/:id/courses/:courseId/progress" element={<StudentProgress />} />
                         </Routes>
                       </DashboardLayout>
                     </PrivateRoute>

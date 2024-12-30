@@ -32,6 +32,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import MenuBookIcon from '@mui/icons-material/MenuBook'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import BlockIcon from '@mui/icons-material/Block'
+import AssessmentIcon from '@mui/icons-material/Assessment'
 
 const ActiveStudents = () => {
   const navigate = useNavigate()
@@ -318,6 +319,13 @@ const ActiveStudents = () => {
           <MenuItem onClick={handleAssignCourse} sx={{ color: 'success.main' }}>
             <AddCircleOutlineIcon sx={{ mr: 1, fontSize: 20 }} />
             Assign Course
+          </MenuItem>
+          <MenuItem onClick={() => {
+            navigate(`/admin/students/${selectedStudent._id}/progress`)
+            handleMenuClose()
+          }} sx={{ color: 'primary.main' }}>
+            <AssessmentIcon sx={{ mr: 1, fontSize: 20 }} />
+            Student Progress
           </MenuItem>
           <MenuItem onClick={handleMakeInactive} sx={{ color: 'error.main' }}>
             <BlockIcon sx={{ mr: 1, fontSize: 20 }} />
