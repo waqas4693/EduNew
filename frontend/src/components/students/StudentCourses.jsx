@@ -22,208 +22,97 @@ import { getData, deleteData } from '../../api/api'
 
 // Separate Analytics Content Component
 const AnalyticsContent = memo(({ courseId, studentId }) => {
-  const [units, setUnits] = useState([])
-  const [sections, setSections] = useState({})
-  const [resourcesWithStatus, setResourcesWithStatus] = useState({})
-  const [loading, setLoading] = useState(false)
-  const [sectionLoading, setSectionLoading] = useState(false)
-  const [resourceLoading, setResourceLoading] = useState(false)
-  const [selectedUnit, setSelectedUnit] = useState(null)
-  const [selectedSection, setSelectedSection] = useState(null)
+  const [unitsProgress, setUnitsProgress] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchUnits(courseId)
-  }, [courseId])
+    fetchUnitsProgress()
+  }, [courseId, studentId])
 
-  const fetchUnits = async courseId => {
+  const fetchUnitsProgress = async () => {
     setLoading(true)
     try {
-      const response = await getData(`units/${courseId}`)
-      setUnits(response.data.units || [])
+      const response = await getData(`student/${studentId}/courses/${courseId}/progress`)
+      setUnitsProgress(response.data.data || [])
     } catch (error) {
-      console.error('Error fetching units:', error)
-      setUnits([])
+      console.error('Error fetching units progress:', error)
+      setUnitsProgress([])
     } finally {
       setLoading(false)
     }
   }
 
-  const handleUnitSelect = async unit => {
-    setSelectedUnit(unit)
-    setSelectedSection(null)
-    if (!sections[unit._id]) {
-      setSectionLoading(true)
-      try {
-        const response = await getData(`sections/${unit._id}`)
-        setSections(prev => ({
-          ...prev,
-          [unit._id]: response.data.sections || []
-        }))
-      } catch (error) {
-        console.error('Error fetching sections:', error)
-        setSections(prev => ({
-          ...prev,
-          [unit._id]: []
-        }))
-      } finally {
-        setSectionLoading(false)
-      }
-    }
-  }
-
-  const handleSectionSelect = async section => {
-    setSelectedSection(section)
-    if (!resourcesWithStatus[section._id]) {
-      setResourceLoading(true)
-      try {
-        const response = await getData(
-          `resources/${section._id}/student/${studentId}/status`
-        )
-        setResourcesWithStatus(prev => ({
-          ...prev,
-          [section._id]: response.data.data || []
-        }))
-      } catch (error) {
-        console.error('Error fetching resources:', error)
-        setResourcesWithStatus(prev => ({
-          ...prev,
-          [section._id]: []
-        }))
-      } finally {
-        setResourceLoading(false)
-      }
-    }
-  }
-
   return (
-    <Box sx={{ display: 'flex', width: '100%', height: '100%' }}>
-      {/* Left sidebar with units */}
-      <Box
-        sx={{
-          width: '250px',
-          borderRight: 1,
-          borderColor: 'divider',
-          overflow: 'auto'
-        }}
-      >
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-            <CircularProgress size={24} />
-          </Box>
-        ) : (
-          units.map(unit => (
-            <Box
-              key={unit._id}
-              onClick={() => handleUnitSelect(unit)}
-              sx={{
-                p: 2,
-                cursor: 'pointer',
-                bgcolor:
-                  selectedUnit?._id === unit._id
-                    ? 'primary.light'
-                    : 'transparent',
-                '&:hover': {
-                  bgcolor: 'action.hover'
-                }
-              }}
-            >
-              <Typography>{unit.name}</Typography>
-            </Box>
-          ))
-        )}
-      </Box>
-
-      {/* Right content area */}
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {selectedUnit && (
-          <Box sx={{ display: 'flex', height: '100%' }}>
-            {/* Sections list */}
-            <Box
-              sx={{
-                width: '250px',
-                borderRight: 1,
-                borderColor: 'divider',
-                overflow: 'auto'
-              }}
-            >
-              {sectionLoading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-                  <CircularProgress size={24} />
+    <Box sx={{ width: '100%', p: 3 }}>
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <Grid container spacing={2}>
+          {unitsProgress.map(unit => (
+            <Grid key={unit._id} item xs={12} md={6}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  border: 1,
+                  borderColor: 'divider',
+                  borderRadius: 2
+                }}
+              >
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="h6" sx={{ fontSize: '1rem' }}>
+                    {unit.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {unit.viewedResources} of {unit.totalResources} resources viewed
+                  </Typography>
                 </Box>
-              ) : (
-                sections[selectedUnit._id]?.map(section => (
+                <Box sx={{ position: 'relative', pt: 0.5 }}>
                   <Box
-                    key={section._id}
-                    onClick={() => handleSectionSelect(section)}
                     sx={{
-                      p: 2,
-                      cursor: 'pointer',
-                      bgcolor:
-                        selectedSection?._id === section._id
-                          ? 'primary.light'
-                          : 'transparent',
-                      '&:hover': {
-                        bgcolor: 'action.hover'
-                      }
+                      width: '100%',
+                      height: 8,
+                      bgcolor: 'grey.100',
+                      borderRadius: 1
                     }}
                   >
-                    <Typography>{section.name}</Typography>
+                    <Box
+                      sx={{
+                        width: `${unit.progress}%`,
+                        height: '100%',
+                        bgcolor: 'primary.main',
+                        borderRadius: 1,
+                        transition: 'width 0.5s ease-in-out'
+                      }}
+                    />
                   </Box>
-                ))
-              )}
-            </Box>
-
-            {/* Resources list */}
-            <Box sx={{ flex: 1, p: 2, overflow: 'auto' }}>
-              {selectedSection && (
-                <>
-                  {resourceLoading ? (
-                    <Box
-                      sx={{ display: 'flex', justifyContent: 'center', p: 2 }}
-                    >
-                      <CircularProgress size={24} />
-                    </Box>
-                  ) : (
-                    <Box
-                      sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
-                    >
-                      {resourcesWithStatus[selectedSection._id]?.map(
-                        resource => (
-                          <Paper
-                            key={resource._id}
-                            elevation={0}
-                            sx={{
-                              p: 2,
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              border: 1,
-                              borderColor: 'divider',
-                              borderRadius: 1
-                            }}
-                          >
-                            <Typography>{resource.name}</Typography>
-                            <Typography
-                              sx={{
-                                color: resource.isViewed
-                                  ? 'success.main'
-                                  : 'error.main',
-                                fontWeight: 'bold'
-                              }}
-                            >
-                              {resource.isViewed ? 'Viewed' : 'Not Viewed'}
-                            </Typography>
-                          </Paper>
-                        )
-                      )}
-                    </Box>
-                  )}
-                </>
-              )}
-            </Box>
-          </Box>
-        )}
-      </Box>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      position: 'absolute',
+                      right: 0,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: 'text.secondary'
+                    }}
+                  >
+                    {unit.progress}%
+                  </Typography>
+                </Box>
+              </Paper>
+            </Grid>
+          ))}
+          {unitsProgress.length === 0 && (
+            <Grid item xs={12}>
+              <Typography color="text.secondary" align="center">
+                No units found for this course
+              </Typography>
+            </Grid>
+          )}
+        </Grid>
+      )}
     </Box>
   )
 })
@@ -283,7 +172,8 @@ const StudentCourses = () => {
     }
   }
 
-  const handleOpenAnalytics = course => {
+  const handleOpenAnalytics = (e, course) => {
+    e.stopPropagation() // Prevent course card click
     setSelectedCourseForAnalytics(course)
     setOpenAnalyticsDialog(true)
   }
@@ -346,11 +236,11 @@ const StudentCourses = () => {
               </IconButton>
 
               <IconButton
-                onClick={() => handleOpenAnalytics(course)}
+                onClick={(e) => handleOpenAnalytics(e, course)}
                 sx={{
                   position: 'absolute',
                   top: 8,
-                  right: 48, // Position it next to remove button
+                  right: 48,
                   backgroundColor: 'white',
                   boxShadow: '0px 2px 4px rgba(0,0,0,0.1)',
                   '&:hover': {

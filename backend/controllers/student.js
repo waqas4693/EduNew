@@ -2,6 +2,10 @@ import User from '../models/user.js'
 import Student from '../models/student.js'
 import bcrypt from 'bcryptjs'
 import Course from '../models/course.js'
+import Unit from '../models/unit.js'
+import Section from '../models/section.js'
+import Resource from '../models/resource.js'
+import ResourceView from '../models/resourceView.js'
 
 export const newStudent = async (req, res) => {
   try {
@@ -293,6 +297,62 @@ export const getCourseStudents = async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching course students:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    })
+  }
+}
+
+export const getUnitProgress = async (req, res) => {
+  try {
+    const { studentId, courseId } = req.params
+
+    // Get all units for the course
+    const units = await Unit.find({ courseId, status: 1 }).lean()
+
+    // Calculate progress for each unit
+    const unitsProgress = await Promise.all(units.map(async unit => {
+      // Get all sections for this unit
+      const sections = await Section.find({ unitId: unit._id, status: 1 }).lean()
+      
+      // Get all resources from these sections
+      const sectionIds = sections.map(section => section._id)
+      const resources = await Resource.find({ 
+        sectionId: { $in: sectionIds }, 
+        status: 1 
+      }).lean()
+      
+      // Get viewed resources count from ResourceView collection
+      const viewedResourcesCount = await ResourceView.countDocuments({
+        studentId,
+        courseId,
+        unitId: unit._id,
+        resourceId: { $in: resources.map(r => r._id) }
+      })
+
+      const totalResources = resources.length
+      const progress = totalResources > 0 
+        ? Math.round((viewedResourcesCount / totalResources) * 100) 
+        : 0
+
+      return {
+        _id: unit._id,
+        name: unit.name,
+        totalResources,
+        viewedResources: viewedResourcesCount,
+        progress
+      }
+    }))
+
+    res.status(200).json({
+      success: true,
+      data: unitsProgress
+    })
+
+  } catch (error) {
+    console.error('Error fetching unit progress:', error)
     res.status(500).json({
       success: false,
       message: 'Internal server error',

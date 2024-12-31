@@ -1,33 +1,29 @@
 import Grid from '@mui/material/Grid2'
 import CancelIcon from '@mui/icons-material/Cancel'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import CustomDataGrid from '../reusable-components/CustomDataGrid'
 
 import { getData } from '../../api/api'
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import {
-  Box,
-  Chip,
-  Paper,
-  Typography,
-  CircularProgress
-} from '@mui/material'
-import CustomDataGrid from '../reusable-components/CustomDataGrid'
+import { Box, Chip, Paper, Typography, CircularProgress } from '@mui/material'
 
 const StudentProgress = () => {
   const { id: studentId, courseId } = useParams()
-  const [studentName, setStudentName] = useState('')
-  const [courseName, setCourseName] = useState('')
-  const [units, setUnits] = useState([])
-  const [sections, setSections] = useState([])
-  const [resources, setResources] = useState([])
-  const [selectedUnit, setSelectedUnit] = useState(null)
-  const [selectedSection, setSelectedSection] = useState(null)
+
   const [loading, setLoading] = useState({
     units: false,
     sections: false,
     resources: false
   })
+
+  const [units, setUnits] = useState([])
+  const [sections, setSections] = useState([])
+  const [resources, setResources] = useState([])
+  const [courseName, setCourseName] = useState('')
+  const [studentName, setStudentName] = useState('')
+  const [selectedUnit, setSelectedUnit] = useState(null)
+  const [selectedSection, setSelectedSection] = useState(null)
 
   // Fetch student and course details
   useEffect(() => {
@@ -116,7 +112,14 @@ const StudentProgress = () => {
       flex: 0.5,
       minWidth: 100,
       renderCell: params => (
-        <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 1 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 1
+          }}
+        >
           {params.row.isViewed ? (
             <CheckCircleIcon sx={{ color: 'success.main' }} />
           ) : (

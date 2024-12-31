@@ -7,7 +7,8 @@ import {
   getStudentCourses,
   assignCourse,
   removeCourse,
-  getCourseStudents
+  getCourseStudents,
+  getUnitProgress
 } from '../controllers/student.js'
 import { verifyToken } from '../middleware/auth.js'
 
@@ -21,5 +22,6 @@ router.post('/', newStudent)
 router.patch('/:id/assign-course', assignCourse)
 router.delete('/:id/courses/:courseId', removeCourse)
 router.get('/course/:courseId/students', getCourseStudents)
+router.get('/:studentId/courses/:courseId/progress', getUnitProgress)
 
 export default router

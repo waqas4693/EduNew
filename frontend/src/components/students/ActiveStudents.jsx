@@ -320,13 +320,13 @@ const ActiveStudents = () => {
             <AddCircleOutlineIcon sx={{ mr: 1, fontSize: 20 }} />
             Assign Course
           </MenuItem>
-          <MenuItem onClick={() => {
+          {/* <MenuItem onClick={() => {
             navigate(`/admin/students/${selectedStudent._id}/progress`)
             handleMenuClose()
           }} sx={{ color: 'primary.main' }}>
             <AssessmentIcon sx={{ mr: 1, fontSize: 20 }} />
             Student Progress
-          </MenuItem>
+          </MenuItem> */}
           <MenuItem onClick={handleMakeInactive} sx={{ color: 'error.main' }}>
             <BlockIcon sx={{ mr: 1, fontSize: 20 }} />
             Mark Inactive
