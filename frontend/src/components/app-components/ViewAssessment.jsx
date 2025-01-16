@@ -689,7 +689,7 @@ const ViewAssessment = () => {
   const fetchAssessments = async () => {
     try {
       console.log('Assessment Fetching With User Id = ', user)
-      const response = await getData(`assessments/${sectionId}?studentId=${user.id}`)
+      const response = await getData(`assessments/${sectionId}?studentId=${user.studentId}`)
       if (response.status === 200) {
         setAssessments(response.data.assessments)
       }
@@ -701,7 +701,7 @@ const ViewAssessment = () => {
   const fetchExistingAttempt = async () => {
     try {
       const response = await getData(
-        `assessment-attempts/${assessments[currentIndex]._id}?studentId=${user._id}`
+        `assessment-attempts/${assessments[currentIndex]._id}?studentId=${user.studentId}`
       )
       if (response.status === 200 && response.data.attempt) {
         setExistingAttempt(response.data.attempt)
@@ -757,7 +757,7 @@ const ViewAssessment = () => {
 
       await axios.post(`${url}assessment-attempts`, {
         assessmentId: assessments[currentIndex]._id,
-        studentId: user.id,
+        studentId: user.studentId,
         content: finalAttemptData
       })
 

@@ -75,6 +75,9 @@ const Login = () => {
         // Pass the complete userData to login
         login(userData)
 
+        console.log('User Data:')
+        console.log(userData)
+
         if (user.role === ADMIN_ROLE) {
           navigate('/admin/dashboard', { replace: true })
         } else if (user.role === STUDENT_ROLE) {

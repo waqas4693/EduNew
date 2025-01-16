@@ -91,7 +91,7 @@ const Sidebar = ({ open, onClose }) => {
     },
     {
       text: 'Assessment',
-      icon: <SchoolIcon />,
+      icon: <AssignmentIcon />,
       path: '/assessment'
     }
   ]

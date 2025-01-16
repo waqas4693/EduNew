@@ -203,6 +203,17 @@ const ActiveStudents = () => {
     }
   }
 
+  const handleViewAssessments = () => {
+    if (selectedStudent) {
+
+      console.log('Selected Student From Active Students:')
+      console.log(selectedStudent)
+
+      navigate(`/admin/students/${selectedStudent._id}/assessments`)
+    }
+    handleMenuClose()
+  }
+
   return (
     <>
       <Paper elevation={5} sx={{ p: '20px', borderRadius: '16px' }}>
@@ -321,13 +332,10 @@ const ActiveStudents = () => {
             <AddCircleOutlineIcon sx={{ mr: 1, fontSize: 20 }} />
             Assign Course
           </MenuItem>
-          {/* <MenuItem onClick={() => {
-            navigate(`/admin/students/${selectedStudent._id}/progress`)
-            handleMenuClose()
-          }} sx={{ color: 'primary.main' }}>
+          <MenuItem onClick={handleViewAssessments} sx={{ color: 'warning.main' }}>
             <AssessmentIcon sx={{ mr: 1, fontSize: 20 }} />
-            Student Progress
-          </MenuItem> */}
+            View Assessments
+          </MenuItem>
           <MenuItem onClick={handleMakeInactive} sx={{ color: 'error.main' }}>
             <BlockIcon sx={{ mr: 1, fontSize: 20 }} />
             Mark Inactive

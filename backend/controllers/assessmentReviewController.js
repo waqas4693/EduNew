@@ -211,4 +211,61 @@ export const getGradedAssessments = async (req, res) => {
       message: 'Error fetching graded assessments'
     })
   }
-} 
+}
+
+export const getStudentAssessments = async (req, res) => {
+  try {
+    const studentId = req.params.studentId;
+    
+    const assessments = await AssessmentAttempt.find({
+      studentId: studentId
+    })
+    .populate('assessmentId', 'assessmentType totalMarks content')
+    .populate({
+      path: 'assessmentId',
+      populate: {
+        path: 'sectionId',
+        populate: {
+          path: 'unitId',
+          populate: 'courseId'
+        }
+      }
+    })
+    .sort({ submittedAt: -1 });
+
+    const assessmentsWithCalculatedMarks = await Promise.all(assessments.map(async attempt => {
+      let calculatedMarks = 0;
+      
+      if (attempt.assessmentId.assessmentType === 'MCQ') {
+        const mcqs = attempt.assessmentId.content.mcqs;
+        const mcqAnswers = attempt.content.mcqAnswers || [];
+        
+        mcqs.forEach((mcq, index) => {
+          if (mcqAnswers[index]?.selectedOption === mcq.correctAnswer) {
+            calculatedMarks += 100 / mcqs.length;
+          }
+        });
+      }
+
+      return {
+        ...attempt._doc,
+        calculatedMarks: Math.round(calculatedMarks),
+        totalPossibleMarks: attempt.assessmentId.totalMarks,
+        percentage: attempt.status === 'GRADED' 
+          ? Math.round((attempt.obtainedMarks / attempt.assessmentId.totalMarks) * 100)
+          : Math.round(calculatedMarks)
+      };
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: assessmentsWithCalculatedMarks
+    });
+  } catch (error) {
+    console.error('Error fetching student assessments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching student assessments'
+    });
+  }
+}; 
