@@ -184,7 +184,12 @@ const StudentCourses = () => {
   }
 
   const handleCourseClick = course => {
-    navigate(`/admin/students/${id}/courses/${course._id}/progress`)
+    navigate(`/admin/students/${id}/courses/${course._id}/progress`, {
+      state: {
+        studentName: studentName,
+        courseName: course.name
+      }
+    })
   }
 
   const CourseGrid = ({ courses, title }) => (

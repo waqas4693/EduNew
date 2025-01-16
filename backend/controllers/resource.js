@@ -2,73 +2,58 @@ import Resource from '../models/resource.js'
 import { handleError } from '../utils/errorHandler.js'
 import Section from '../models/section.js'
 import ResourceView from '../models/resourceView.js'
+import { uploadFile } from '../utils/fileUpload.js'
 
 export const createResource = async (req, res) => {
   try {
-    const { resources } = req.body
-    
-    const saveResource = async (resourceData) => {
-      if (resourceData.resourceType === 'MCQ') {
-        console.log('MCQ Data:', {
-          numberOfCorrectAnswers: resourceData.content?.mcq?.numberOfCorrectAnswers,
-          correctAnswers: resourceData.content?.mcq?.correctAnswers,
-          correctAnswersLength: resourceData.content?.mcq?.correctAnswers?.length
-        })
-      }
+    const { name, resourceType, sectionId } = req.body
+    const content = JSON.parse(req.body.content)
 
-      const resource = new Resource({
-        name: resourceData.name,
-        resourceType: resourceData.resourceType,
-        sectionId: resourceData.sectionId,
-        content: {
-          fileName: resourceData.content?.fileName || '',
-          questions: resourceData.content?.questions || [],
-          backgroundImage: resourceData.content?.backgroundImage || '',
-          thumbnailUrl: resourceData.content?.thumbnailUrl || '',
-          externalLink: resourceData.content?.externalLink || '',
-          repeatCount: resourceData.content?.repeatCount,
-          mcq: resourceData.resourceType === 'MCQ' ? {
-            question: resourceData.content?.mcq?.question || '',
-            options: resourceData.content?.mcq?.options || [],
-            numberOfCorrectAnswers: parseInt(resourceData.content?.mcq?.numberOfCorrectAnswers) || 1,
-            correctAnswers: resourceData.content?.mcq?.correctAnswers || [],
-            imageUrl: resourceData.content?.mcq?.imageUrl || ''
-          } : undefined
-        }
-      })
-
-      if (resourceData.resourceType === 'MCQ') {
-        console.log('Constructed Resource MCQ:', {
-          numberOfCorrectAnswers: resource.content.mcq.numberOfCorrectAnswers,
-          correctAnswers: resource.content.mcq.correctAnswers,
-          correctAnswersLength: resource.content.mcq.correctAnswers.length
-        })
-      }
-
-      const savedResource = await resource.save()
-      
-      await Section.findByIdAndUpdate(
-        resourceData.sectionId,
-        { $push: { resources: savedResource._id } }
+    // Handle file uploads
+    if (req.files.file) {
+      const fileName = await uploadFile(
+        req.files.file[0],
+        resourceType,
+        req.files.file[0].originalname
       )
-      
-      return savedResource
+      content.fileName = fileName
     }
 
-    if (!Array.isArray(resources)) {
-      const savedResource = await saveResource(req.body)
-      return res.status(201).json({ success: true, data: savedResource })
+    if (req.files.thumbnail) {
+      const thumbnailName = await uploadFile(
+        req.files.thumbnail[0],
+        'THUMBNAILS',
+        req.files.thumbnail[0].originalname
+      )
+      content.thumbnailUrl = thumbnailName
     }
 
-    const savedResources = await Promise.all(resources.map(saveResource))
-    res.status(201).json({ success: true, data: savedResources })
+    if (req.files.backgroundImage) {
+      const bgImageName = await uploadFile(
+        req.files.backgroundImage[0],
+        'BACKGROUNDS',
+        req.files.backgroundImage[0].originalname
+      )
+      content.backgroundImage = bgImageName
+    }
 
-  } catch (error) {
-    console.error('Resource Creation Error:', {
-      message: error.message,
-      name: error.name,
-      stack: error.stack
+    const resource = new Resource({
+      name,
+      resourceType,
+      sectionId,
+      content
     })
+
+    const savedResource = await resource.save()
+    
+    await Section.findByIdAndUpdate(
+      sectionId,
+      { $push: { resources: savedResource._id } }
+    )
+
+    res.status(201).json({ success: true, data: savedResource })
+  } catch (error) {
+    console.error('Resource Creation Error:', error)
     handleError(res, error)
   }
 }
@@ -144,21 +129,29 @@ export const getResourcesWithViewStatus = async (req, res) => {
     // Get all resources for the section
     const resources = await Resource.find({ sectionId })
 
-    // Get all resource views for this student
+    // Get all resource views for this student with viewedAt field
     const resourceViews = await ResourceView.find({
       studentId,
       resourceId: { $in: resources.map(r => r._id) }
-    })
+    }).select('resourceId viewedAt').lean()
 
-    // Map resources with their view status
+    // Create a map for quick lookup of viewedAt dates
+    const viewsMap = resourceViews.reduce((acc, view) => {
+      acc[view.resourceId.toString()] = view.viewedAt
+      return acc
+    }, {})
+
+    // Map resources with their view status and viewedAt date
     const resourcesWithStatus = resources.map(resource => ({
       _id: resource._id,
       name: resource.name,
       resourceType: resource.resourceType,
-      content: resource.content,
       isViewed: resourceViews.some(view => 
         view.resourceId.toString() === resource._id.toString()
-      )   // Ask AI to explain this line
+      ),
+      viewedAt: viewsMap[resource._id.toString()] 
+        ? new Date(viewsMap[resource._id.toString()]).toLocaleString() 
+        : null
     }))
 
     res.status(200).json({

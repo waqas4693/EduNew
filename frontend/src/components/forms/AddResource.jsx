@@ -259,35 +259,38 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
     })
   }
 
-  const uploadFileToS3 = async (file, resourceName) => {
-    try {
-      const fileExtension = file.name.split('.').pop()
-      const finalFileName = `${resourceName}.${fileExtension}`
+  const processResource = async resource => {
+    let contentData = { ...resource.content }
+    const formData = new FormData()
 
-      const {
-        data: { signedUrl }
-      } = await axios.post(url + 's3', {
-        fileName: finalFileName,
-        fileType: file.type
-      })
-
-      await axios.put(signedUrl, file, {
-        headers: {
-          'Content-Type': file.type
-        },
-        onUploadProgress: progressEvent => {
-          const progress = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
-          )
-          setUploadProgress(progress)
-        }
-      })
-
-      return finalFileName
-    } catch (error) {
-      console.error('Error uploading to S3:', error)
-      throw error
+    // Handle main file upload
+    if (resource.content.file) {
+      formData.append('file', resource.content.file)
+      contentData.fileName = resource.content.file.name
     }
+
+    // Handle thumbnail upload
+    if (resource.content.thumbnail) {
+      formData.append('thumbnail', resource.content.thumbnail)
+      contentData.thumbnailUrl = resource.content.thumbnail.name
+    }
+
+    // Handle background image for PPT, AUDIO and TEXT
+    if ((resource.resourceType === 'PPT' || 
+         resource.resourceType === 'AUDIO' || 
+         resource.resourceType === 'TEXT') && 
+        resource.content.backgroundImage) {
+      formData.append('backgroundImage', resource.content.backgroundImage)
+      contentData.backgroundImage = resource.content.backgroundImage.name
+    }
+
+    // Add other data
+    formData.append('name', resource.name)
+    formData.append('resourceType', resource.resourceType)
+    formData.append('sectionId', sectionId)
+    formData.append('content', JSON.stringify(contentData))
+
+    return formData
   }
 
   const handleSubmit = async e => {
@@ -300,66 +303,22 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         return
       }
 
-      const processResource = async resource => {
-        let contentData = { ...resource.content }
-
-        // Handle main file upload
-        if (resource.content.file) {
-          const fileName = await uploadFileToS3(
-            resource.content.file,
-            resource.name
-          )
-          contentData.fileName = fileName
-          delete contentData.file
-        }
-
-        // Handle thumbnail upload
-        if (resource.content.thumbnail) {
-          const thumbnailFileName = await uploadFileToS3(
-            resource.content.thumbnail,
-            `${resource.name}_thumb`
-          )
-          contentData.thumbnailUrl = thumbnailFileName
-          delete contentData.thumbnail
-        }
-
-        // Handle background image for PPT, AUDIO and TEXT
-        if ((resource.resourceType === 'PPT' || 
-             resource.resourceType === 'AUDIO' || 
-             resource.resourceType === 'TEXT') && 
-            resource.content.backgroundImage) {
-          const bgFileName = await uploadFileToS3(
-            resource.content.backgroundImage,
-            `${resource.name}_bg`
-          )
-          contentData.backgroundImage = bgFileName
-        }
-
-        // Ensure repeatCount is included for audio
-        if (resource.resourceType === 'AUDIO') {
-          contentData.repeatCount = resource.content.repeatCount
-        }
-
-        return {
-          name: resource.name,
-          resourceType: resource.resourceType,
-          sectionId: sectionId,
-          content: contentData
-        }
-      }
-
       if (editMode) {
         const updatePromises = resources.map(async resource => {
-          const processedData = await processResource(resource)
-          return putData(`resources/${resource._id}`, processedData)
+          const formData = await processResource(resource)
+          return axios.put(`${url}resources/${resource._id}`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          })
         })
 
         await Promise.all(updatePromises)
         alert('Resources updated successfully')
       } else {
         const resourcePromises = resources.map(async resource => {
-          const processedData = await processResource(resource)
-          return postData('resources', processedData)
+          const formData = await processResource(resource)
+          return axios.post(`${url}resources`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          })
         })
 
         await Promise.all(resourcePromises)
@@ -733,19 +692,21 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                 multiple fields which shrinks if placeed in the main box */}
                 {resource.resourceType === 'TEXT' && (
                   <>
-                    {resource.content.questions.map((q, index) => (
-                      <Box key={index} sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                    {resource.content.questions.map((q, qIndex) => (
+                      <Box key={qIndex} sx={{ display: 'flex', gap: 2, mb: 2 }}>
                         <TextField
                           fullWidth
                           size='small'
-                          label={`Question ${index + 1}`}
+                          label={`Question ${qIndex + 1}`}
                           value={q.question}
-                          onChange={e =>
-                            handleContentChange(index, 'questions', {
-                              ...q,
+                          onChange={e => {
+                            const newQuestions = [...resource.content.questions];
+                            newQuestions[qIndex] = {
+                              ...newQuestions[qIndex],
                               question: e.target.value
-                            })
-                          }
+                            };
+                            handleContentChange(index, 'questions', newQuestions);
+                          }}
                           required
                           sx={{
                             '& .MuiOutlinedInput-root': {
@@ -765,14 +726,16 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                         <TextField
                           fullWidth
                           size='small'
-                          label={`Answer ${index + 1}`}
+                          label={`Answer ${qIndex + 1}`}
                           value={q.answer}
-                          onChange={e =>
-                            handleContentChange(index, 'questions', {
-                              ...q,
+                          onChange={e => {
+                            const newQuestions = [...resource.content.questions];
+                            newQuestions[qIndex] = {
+                              ...newQuestions[qIndex],
                               answer: e.target.value
-                            })
-                          }
+                            };
+                            handleContentChange(index, 'questions', newQuestions);
+                          }}
                           required
                           sx={{
                             '& .MuiOutlinedInput-root': {

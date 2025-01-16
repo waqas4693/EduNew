@@ -5,6 +5,11 @@ import dotenv from 'dotenv'
 import helmet from 'helmet'
 import morgan from 'morgan'
 import mongoose from 'mongoose'
+import multer from 'multer'
+import path from 'path'
+
+import { fileURLToPath } from 'url'
+import { dirname } from 'path'
 
 // import loginRoutes from './routes/login.js'
 import s3Routes from './routes/s3.js'
@@ -18,6 +23,7 @@ import assessmentRoutes from './routes/assessment.js'
 import assessmentReviewRoutes from './routes/assessmentReview.js'
 import assessmentAttemptRoutes from './routes/assessmentAttempt.js'
 import resourceViewRoutes from './routes/resourceView.js'
+import uploadRoutes from './routes/upload.js'
 
 /* CONFIGURATION */
 dotenv.config()
@@ -29,11 +35,32 @@ app.use(
   })
 )
 app.use(express.json())
-app.use(helmet())
-app.use(helmet.crossOriginResourcePolicy({ policy: 'cross-origin' }))
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      connectSrc: ["'self'"],
+      frameSrc: ["'self'"],
+      childSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      fontSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      frameAncestors: ["'self'"]
+    }
+  },
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}))
 app.use(morgan('common'))
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: false }))
+
+const storage = multer.memoryStorage()
+const upload = multer({ storage: storage })
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 /* ROUTES */
 
@@ -49,11 +76,18 @@ app.use('/units', unitRoutes)
 app.use('/courses', courseRoutes)
 app.use('/student', studentRoutes)
 app.use('/sections', sectionRoutes)
-app.use('/resources', resourceRoutes)
+app.use('/resources', upload.fields([
+  { name: 'file', maxCount: 1 },
+  { name: 'thumbnail', maxCount: 1 },
+  { name: 'backgroundImage', maxCount: 1 },
+  { name: 'mcqImage', maxCount: 1 }
+]), resourceRoutes)
 app.use('/assessments', assessmentRoutes)
 app.use('/assessment-attempts', assessmentAttemptRoutes)
 app.use('/assessment-review', assessmentReviewRoutes)
 app.use('/resource-views', resourceViewRoutes)
+app.use('/resources/files', express.static(path.join(__dirname, 'ResourceFiles')))
+app.use('/upload', uploadRoutes)
 mongoose.set('strictQuery', false)
 
 await mongoose

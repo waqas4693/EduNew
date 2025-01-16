@@ -1,6 +1,7 @@
 import { handleError } from '../utils/errorHandler.js'
 import Assessment from '../models/assessment.js'
 import Section from '../models/section.js'
+import AssessmentAttempt from '../models/AssessmentAttempt.js'
 
 export const createAssessment = async (req, res) => {
   try {
@@ -50,13 +51,51 @@ export const createAssessment = async (req, res) => {
 export const getAssessments = async (req, res) => {
   try {
     const { sectionId } = req.params
+    const studentId = req.query.studentId
+
+    console.log('Fetching assessments for:', { sectionId, studentId })
+
+    // Get all assessments for the section
     const assessments = await Assessment.find({ sectionId })
+    console.log('Found assessments:', assessments.length)
+
+    if (studentId) {
+      // Get all attempts for these assessments by this student
+      const attempts = await AssessmentAttempt.find({
+        assessmentId: { $in: assessments.map(a => a._id) },
+        studentId: studentId
+      })
+      console.log('Found attempts:', attempts.length)
+
+      // Create a map of attempts by assessment ID for easier lookup
+      const attemptsByAssessment = attempts.reduce((acc, attempt) => {
+        acc[attempt.assessmentId.toString()] = attempt
+        return acc
+      }, {})
+
+      // Add attempt data to each assessment
+      const assessmentsWithAttempts = assessments.map(assessment => {
+        const assessmentObj = assessment.toObject()
+        const attempt = attemptsByAssessment[assessment._id.toString()]
+        return {
+          ...assessmentObj,
+          attempt: attempt || null
+        }
+      })
+
+      console.log('Sending assessments with attempts:', assessmentsWithAttempts.length)
+      return res.status(200).json({
+        success: true,
+        assessments: assessmentsWithAttempts
+      })
+    }
 
     res.status(200).json({
       success: true,
       assessments
     })
   } catch (error) {
+    console.error('Error in getAssessments:', error)
     handleError(error, res)
   }
 }

@@ -249,7 +249,8 @@ const AssessmentReview = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Student</TableCell>
+                <TableCell>Student Name</TableCell>
+                <TableCell>Email</TableCell>
                 <TableCell>Course</TableCell>
                 <TableCell>Unit</TableCell>
                 <TableCell>Submitted Date</TableCell>
@@ -258,11 +259,12 @@ const AssessmentReview = () => {
                 <TableCell align="center">Action</TableCell>
               </TableRow>
             </TableHead>
-            <TableBody> 
+            <TableBody>
               {assessments
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((attempt) => (
                   <TableRow key={attempt._id}>
+                    <TableCell>{attempt.studentName}</TableCell>
                     <TableCell>{attempt.studentId?.email || 'N/A'}</TableCell>
                     <TableCell>{attempt.assessmentId?.sectionId?.unitId?.courseId?.name}</TableCell>
                     <TableCell>{attempt.assessmentId?.sectionId?.unitId?.name}</TableCell>

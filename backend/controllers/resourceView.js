@@ -3,7 +3,6 @@ import { handleError } from '../utils/errorHandler.js'
 
 // Record a resource view
 export const recordResourceView = async (req, res) => {
-  console.log('recordResourceView', req.body)
   try {
     const { studentId, resourceId, courseId, unitId, sectionId } = req.body
 

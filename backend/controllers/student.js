@@ -1,6 +1,5 @@
 import User from '../models/user.js'
 import Student from '../models/student.js'
-import bcrypt from 'bcryptjs'
 import Course from '../models/course.js'
 import Unit from '../models/unit.js'
 import Section from '../models/section.js'
@@ -104,14 +103,54 @@ export const getDashboardData = async (req, res) => {
 
 export const getAllStudents = async (req, res) => {
   try {
-    const { status } = req.query
+    const { courseId } = req.params
+    const { status } = req.query  // Get status from query params
     
-    const query = status ? { status: parseInt(status) } : {}
-    
+    // Set default query for active students if no status provided
+    let query = { status: status ? parseInt(status) : 1 }
+
+    // If courseId is provided, filter students enrolled in that course
+    if (courseId) {
+      query['courses.courseId'] = courseId
+      query['courses.courseStatus'] = 1 // Only active enrollments
+    }
+
     const students = await Student.find(query)
-    res.status(200).json(students)
+      .select('name email contactNo status courses')
+      .populate({
+        path: 'courses.courseId',
+        select: 'name'
+      })
+      .lean()
+
+    // If courseId provided, get the course name
+    let courseName = ''
+    if (courseId) {
+      const course = await Course.findById(courseId).select('name')
+      courseName = course ? course.name : ''
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        courseName,
+        students: students.map(student => ({
+          _id: student._id,
+          name: student.name,
+          email: student.email,
+          contactNo: student.contactNo,
+          status: student.status
+        }))
+      }
+    })
+
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    console.error('Error fetching students:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    })
   }
 }
 

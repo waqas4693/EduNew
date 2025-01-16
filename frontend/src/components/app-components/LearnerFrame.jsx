@@ -446,9 +446,7 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
           }}
         >
           <iframe
-            src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
-              signedUrl
-            )}`}
+            src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true`}
             style={{
               width: '50%',
               height: '100%',
@@ -475,6 +473,51 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
                 style={{
                   maxWidth: '100%',
                   maxHeight: '100%',
+                  objectFit: 'contain',
+                  borderRadius: '8px'
+                }}
+              />
+            </Box>
+          )}
+        </Box>
+      )
+
+    case 'PDF':
+      return (
+        <Box
+          sx={{
+            width: '100%',
+            height: '80vh',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2
+          }}
+        >
+          <iframe
+            src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true`}
+            style={{
+              width: '100%',
+              height: '100%',
+              border: 'none',
+              borderRadius: '8px'
+            }}
+            title="PDF Viewer"
+          />
+          {resource.content.backgroundImage && (
+            <Box
+              sx={{
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}
+            >
+              <img
+                src={signedUrls[resource.content.backgroundImage]}
+                alt="Background"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '300px',
                   objectFit: 'contain',
                   borderRadius: '8px'
                 }}
@@ -518,16 +561,9 @@ const LearnerFrame = () => {
     return () => clearTimeout(timer)
   }, [])
 
-  const getSignedUrl = async fileName => {
-    try {
-      const response = await axios.post(`${url}s3/get`, {
-        fileName
-      })
-      return response.data.signedUrl
-    } catch (error) {
-      console.error('Error fetching signed URL:', error)
-      return null
-    }
+  const getLocalFileUrl = async (fileName, resourceType) => {
+    if (!fileName) return null
+    return `${url}resources/files/${resourceType}/${fileName}`
   }
 
   const fetchAllThumbnails = async () => {
@@ -541,8 +577,9 @@ const LearnerFrame = () => {
         const thumbnailPromises = response.data.resources.map(
           async resource => {
             if (resource.content.thumbnailUrl) {
-              const thumbnailUrl = await getSignedUrl(
-                resource.content.thumbnailUrl
+              const thumbnailUrl = await getLocalFileUrl(
+                resource.content.thumbnailUrl,
+                'THUMBNAILS'
               )
               return {
                 fileName: resource.content.thumbnailUrl,
@@ -550,7 +587,10 @@ const LearnerFrame = () => {
               }
             }
             if (resource.resourceType !== 'TEXT') {
-              const defaultThumbnail = await getSignedUrl(resource.name)
+              const defaultThumbnail = await getLocalFileUrl(
+                resource.content.fileName,
+                resource.resourceType
+              )
               return {
                 fileName: resource.name,
                 url: defaultThumbnail
@@ -575,6 +615,8 @@ const LearnerFrame = () => {
       }
     } catch (error) {
       console.error('Error fetching resources and thumbnails:', error)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -595,7 +637,10 @@ const LearnerFrame = () => {
           resource.content.mcq?.imageUrl &&
           !signedUrls[resource.content.mcq.imageUrl]
         ) {
-          const mcqImageUrl = await getSignedUrl(resource.content.mcq.imageUrl)
+          const mcqImageUrl = await getLocalFileUrl(
+            resource.content.mcq.imageUrl,
+            'MCQ'
+          )
           setSignedUrls(prev => ({
             ...prev,
             [resource.content.mcq.imageUrl]: mcqImageUrl
@@ -607,14 +652,17 @@ const LearnerFrame = () => {
           resource.content.fileName &&
           !signedUrls[resource.content.fileName]
         ) {
-          const signedUrl = await getSignedUrl(resource.content.fileName)
+          const fileUrl = await getLocalFileUrl(
+            resource.content.fileName,
+            resource.resourceType
+          )
           setSignedUrls(prev => ({
             ...prev,
-            [resource.content.fileName]: signedUrl
+            [resource.content.fileName]: fileUrl
           }))
         }
 
-        // Load additional resource-specific content
+        // Load background images
         if (
           (resource.resourceType === 'AUDIO' ||
             resource.resourceType === 'TEXT' ||
@@ -622,20 +670,25 @@ const LearnerFrame = () => {
           resource.content.backgroundImage &&
           !signedUrls[resource.content.backgroundImage]
         ) {
-          const bgUrl = await getSignedUrl(resource.content.backgroundImage)
+          const bgUrl = await getLocalFileUrl(
+            resource.content.backgroundImage,
+            'BACKGROUNDS'
+          )
           setSignedUrls(prev => ({
             ...prev,
             [resource.content.backgroundImage]: bgUrl
           }))
         }
 
+        // Load PPT preview images
         if (
           resource.resourceType === 'PPT' &&
           resource.content.previewImageUrl &&
           !signedUrls[resource.content.previewImageUrl]
         ) {
-          const previewUrl = await getSignedUrl(
-            resource.content.previewImageUrl
+          const previewUrl = await getLocalFileUrl(
+            resource.content.previewImageUrl,
+            'PPT'
           )
           setSignedUrls(prev => ({
             ...prev,

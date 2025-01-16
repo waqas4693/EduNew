@@ -53,7 +53,7 @@ const AddCourse = () => {
       if (response.status === 200) {
         setName(response.data.data.name)
         if (response.data.data.thumbnail) {
-          setThumbnailPreview(`${url}uploads/${response.data.data.thumbnail}`)
+          setThumbnailPreview(`${url}resources/files/THUMBNAILS/${response.data.data.thumbnail}`)
         }
       }
     } catch (error) {
@@ -84,19 +84,16 @@ const AddCourse = () => {
 
       let thumbnailFileName = null
       if (thumbnail) {
-        const fileExtension = thumbnail.name.split('.').pop()
-        thumbnailFileName = `${name}_${Date.now()}.${fileExtension}`
+        const formData = new FormData()
+        formData.append('thumbnail', thumbnail)
 
-        const { data: { signedUrl } } = await axios.post(url + 's3', {
-          fileName: thumbnailFileName,
-          fileType: thumbnail.type
-        })
-
-        await axios.put(signedUrl, thumbnail, {
+        const uploadResponse = await axios.post(`${url}upload/thumbnail`, formData, {
           headers: {
-            'Content-Type': thumbnail.type
+            'Content-Type': 'multipart/form-data'
           }
         })
+
+        thumbnailFileName = uploadResponse.data.fileName
       }
 
       if (editMode) {

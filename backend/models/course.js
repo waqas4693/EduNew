@@ -9,6 +9,10 @@ const courseSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  assessmentInterval: {
+    type: Number,
+    default: null
+  },
   units: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Unit'

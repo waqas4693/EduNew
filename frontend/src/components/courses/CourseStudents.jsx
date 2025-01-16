@@ -39,14 +39,12 @@ const CourseStudents = () => {
   const [dialogTitle, setDialogTitle] = useState('')
 
   useEffect(() => {
-    console.log('Course ID:')
-    console.log(id)
     fetchCourseStudents()
   }, [id])
 
   const fetchCourseStudents = async () => {
     try {
-      const response = await getData(`students/${id}/students`)
+      const response = await getData(`student/course/${id}`)
       if (response.status === 200) {
         const { courseName, students } = response.data.data
         setCourseName(courseName)
@@ -124,9 +122,20 @@ const CourseStudents = () => {
             alignItems: 'center'
           }}
         >
-          <Typography variant='h5' sx={{ fontWeight: 'bold' }}>
-            {courseName} - Enrolled Students
-          </Typography>
+          <Box>
+            <Typography variant='h5' sx={{ fontWeight: 'bold' }}>
+              {courseName}
+            </Typography>
+            <Typography 
+              variant='subtitle2' 
+              sx={{ 
+                color: 'text.secondary',
+                mt: 0.5 
+              }}
+            >
+              Total Enrolled: {students.length} students
+            </Typography>
+          </Box>
           <TextField
             placeholder='Search'
             size='small'

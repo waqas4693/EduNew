@@ -64,9 +64,12 @@ const Sidebar = ({ open, onClose }) => {
       ]
     },
     {
-      text: 'Assessment Review',
+      text: 'Assessment',
       icon: <AssignmentIcon />,
-      path: '/admin/assessment-review'
+      subItems: [
+        { text: 'Submitted', path: '/admin/assessment-review/submitted' },
+        { text: 'Graded', path: '/admin/assessment-review/graded' }
+      ]
     },
     // {
     //   text: 'Resource Analytics',

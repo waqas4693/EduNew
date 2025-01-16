@@ -20,11 +20,13 @@ import Grid from '@mui/material/Grid2'
 import EditIcon from '@mui/icons-material/Edit'
 import GroupIcon from '@mui/icons-material/Group'
 import BlockIcon from '@mui/icons-material/Block'
+import AccessTimeIcon from '@mui/icons-material/AccessTime'
 
 const AdminDashboard = () => {
   const [courses, setCourses] = useState([])
   const [anchorEl, setAnchorEl] = useState(null)
   const [selectedCourse, setSelectedCourse] = useState(null)
+  const [deadlineSettingsOpen, setDeadlineSettingsOpen] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -86,6 +88,13 @@ const AdminDashboard = () => {
       console.error('Error marking course as inactive:', error)
       alert('Error marking course as inactive')
     }
+  }
+
+  const handleSetDeadlines = () => {
+    if (selectedCourse) {
+      navigate(`/admin/courses/${selectedCourse._id}/assessment-deadlines`)
+    }
+    handleMenuClose()
   }
 
   const StatCard = ({ title, value, icon }) => (
@@ -287,6 +296,10 @@ const AdminDashboard = () => {
         <MenuItem onClick={handleViewStudents} sx={{ color: 'info.main' }}>
           <GroupIcon sx={{ mr: 1, fontSize: 20 }} />
           View Students
+        </MenuItem>
+        <MenuItem onClick={handleSetDeadlines} sx={{ color: 'success.main' }}>
+          <AccessTimeIcon sx={{ mr: 1, fontSize: 20 }} />
+          Set Assessment Deadlines
         </MenuItem>
         <MenuItem onClick={handleMarkInactive} sx={{ color: 'error.main' }}>
           <BlockIcon sx={{ mr: 1, fontSize: 20 }} />

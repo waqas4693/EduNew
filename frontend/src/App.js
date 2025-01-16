@@ -23,8 +23,12 @@ import InactiveStudents from './components/students/InactiveStudents'
 import StudentCourses from './components/students/StudentCourses'
 import CourseStudents from './components/courses/CourseStudents'
 import AssessmentReview from './components/assessment/AssessmentReview'
+import GradedAssessments from './components/assessment/GradedAssessments'
 import ResourceAnalytics from './components/admin/ResourceAnalytics'
 import StudentProgress from './components/students/StudentProgress' 
+import AssessmentDeadlineSettings from './components/admin/AssessmentDeadlineSettings'
+import { LocalizationProvider } from '@mui/x-date-pickers'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 
 // Create Redux store
 const store = configureStore({
@@ -52,52 +56,60 @@ function App() {
         <AuthProvider>
           <ThemeProvider>
             <MuiThemeProvider theme={theme}>
-              <CssBaseline />
-              <Routes>
-                <Route path="/" element={<Login />} />
-                
-                {/* Admin Routes */}
-                <Route
-                  path="/admin/*"
-                  element={
-                    <PrivateRoute requiredRole={1}>
-                      <DashboardLayout>
-                        <Routes>
-                          <Route path="/dashboard" element={<AdminDashboard />} />
-                          <Route path="/add-course" element={<AddCourse />} />
-                          <Route path="/invite-student" element={<InviteStudent />} />
-                          <Route path="/inactive-courses" element={<InactiveCourses />} />
-                          <Route path="/active-students" element={<ActiveStudents />} />
-                          <Route path="/inactive-students" element={<InactiveStudents />} />
-                          <Route path="/students/:id/courses" element={<StudentCourses />} />
-                          <Route path="/courses/:id/students" element={<CourseStudents />} />
-                          <Route path="/assessment-review" element={<AssessmentReview />} />
-                          <Route path="/resource-analytics" element={<ResourceAnalytics />} />
-                          <Route path="/students/:id/courses/:courseId/progress" element={<StudentProgress />} />
-                        </Routes>
-                      </DashboardLayout>
-                    </PrivateRoute>
-                  }
-                />
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <CssBaseline />
+                <Routes>
+                  <Route path="/" element={<Login />} />
+                  
+                  {/* Admin Routes */}
+                  <Route
+                    path="/admin/*"
+                    element={
+                      <PrivateRoute requiredRole={1}>
+                        <DashboardLayout>
+                          <Routes>
+                            <Route path="/dashboard" element={<AdminDashboard />} />
+                            <Route path="/add-course" element={<AddCourse />} />
+                            <Route path="/invite-student" element={<InviteStudent />} />
+                            <Route path="/inactive-courses" element={<InactiveCourses />} />
+                            <Route path="/active-students" element={<ActiveStudents />} />
+                            <Route path="/inactive-students" element={<InactiveStudents />} />
+                            <Route path="/students/:id/courses" element={<StudentCourses />} />
+                            <Route path="/courses/:id/students" element={<CourseStudents />} />
+                            <Route path="/assessment-review" element={<AssessmentReview />} />
+                            <Route path="/assessment-review/submitted" element={<AssessmentReview />} />
+                            <Route path="/assessment-review/graded" element={<GradedAssessments />} />
+                            <Route path="/resource-analytics" element={<ResourceAnalytics />} />
+                            <Route path="/students/:id/courses/:courseId/progress" element={<StudentProgress />} />
+                            <Route 
+                              path="/courses/:courseId/assessment-deadlines" 
+                              element={<AssessmentDeadlineSettings />} 
+                            />
+                          </Routes>
+                        </DashboardLayout>
+                      </PrivateRoute>
+                    }
+                  />
 
-                {/* Student Routes */}
-                <Route
-                  path="/*"
-                  element={
-                    <PrivateRoute requiredRole={2}>
-                      <DashboardLayout>
-                        <Routes>
-                          <Route path="/dashboard" element={<StudentDashboard />} />
-                          <Route path="/units/:courseId" element={<Units />} />
-                          <Route path="/units/:courseId/section/:unitId" element={<Section />} />
-                          <Route path="/units/:courseId/section/:unitId/learn/:sectionId" element={<LearnerFrame />} />
-                          <Route path="/units/:courseId/section/:unitId/assessment/:sectionId" element={<ViewAssessment />} />
-                        </Routes>
-                      </DashboardLayout>
-                    </PrivateRoute>
-                  }
-                />
-              </Routes>
+                  {/* Student Routes */}
+                  <Route
+                    path="/*"
+                    element={
+                      <PrivateRoute requiredRole={2}>
+                        <DashboardLayout>
+                          <Routes>
+                            <Route path="/dashboard" element={<StudentDashboard />} />
+                            <Route path="/units/:courseId" element={<Units />} />
+                            <Route path="/units/:courseId/section/:unitId" element={<Section />} />
+                            <Route path="/units/:courseId/section/:unitId/learn/:sectionId" element={<LearnerFrame />} />
+                            <Route path="/units/:courseId/section/:unitId/assessment/:sectionId" element={<ViewAssessment />} />
+                          </Routes>
+                        </DashboardLayout>
+                      </PrivateRoute>
+                    }
+                  />
+                </Routes>
+              </LocalizationProvider>
             </MuiThemeProvider>
           </ThemeProvider>
         </AuthProvider>

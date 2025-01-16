@@ -43,10 +43,11 @@ const InactiveStudents = () => {
     try {
       const response = await getData('student?status=2')
       if (response.status === 200) {
-        setStudents(response.data)
+        setStudents(response.data.data.students || [])
       }
     } catch (error) {
       console.error('Error fetching students:', error)
+      setStudents([])
     }
   }
 
@@ -109,9 +110,20 @@ const InactiveStudents = () => {
     <>
       <Paper elevation={5} sx={{ p: '20px', borderRadius: '16px' }}>
         <Box sx={{ mb: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-            Inactive Students
-          </Typography>
+          <Box>
+            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+              Inactive Students
+            </Typography>
+            <Typography 
+              variant="subtitle2" 
+              sx={{ 
+                color: 'text.secondary',
+                mt: 0.5 
+              }}
+            >
+              Total Inactive: {students.length} students
+            </Typography>
+          </Box>
           <TextField
             placeholder="Search"
             size="small"

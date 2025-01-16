@@ -11,8 +11,6 @@ import { getData } from '../../api/api'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-
-import axios from 'axios'
 import Grid from '@mui/material/Grid2'
 import url from '../config/server-url'
 import Calendar from '../calendar/Calendar'
@@ -21,7 +19,6 @@ import { setCurrentCourse } from '../../redux/slices/courseSlice'
 
 const StudentDashboard = () => {
   const [courses, setCourses] = useState([])
-  const [thumbnailUrls, setThumbnailUrls] = useState({})
   const [loadingImages, setLoadingImages] = useState({})
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -41,7 +38,6 @@ const StudentDashboard = () => {
             response.data.data.forEach(course => {
               if (course.image) {
                 initialLoadingState[course.image] = true
-                fetchThumbnailUrl(course.image)
               }
             })
             setLoadingImages(initialLoadingState)
@@ -55,18 +51,9 @@ const StudentDashboard = () => {
     fetchEnrolledCourses()
   }, [user])
 
-  const fetchThumbnailUrl = async fileName => {
-    try {
-      const response = await axios.post(`${url}s3/get`, {
-        fileName
-      })
-      setThumbnailUrls(prev => ({
-        ...prev,
-        [fileName]: response.data.signedUrl
-      }))
-    } catch (error) {
-      console.error('Error fetching thumbnail URL:', error)
-    }
+  const getThumbnailUrl = (fileName) => {
+    if (!fileName) return ''
+    return `${url}resources/files/THUMBNAILS/${fileName}`
   }
 
   const handleImageLoad = imageKey => {
@@ -80,7 +67,7 @@ const StudentDashboard = () => {
     dispatch(setCurrentCourse({
       id: course.id,
       name: course.name,
-      image: thumbnailUrls[course.image] || course.image
+      image: getThumbnailUrl(course.image)
     }))
     navigate(`/units/${course.id}`)
   }
@@ -126,7 +113,7 @@ const StudentDashboard = () => {
                       <CardMedia
                         height='140'
                         component='img'
-                        image={thumbnailUrls[course.image] || ''}
+                        image={getThumbnailUrl(course.image)}
                         alt={course.name}
                         onLoad={() => handleImageLoad(course.image)}
                         sx={{

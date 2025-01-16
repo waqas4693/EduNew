@@ -5,11 +5,12 @@ import CustomDataGrid from '../reusable-components/CustomDataGrid'
 
 import { getData } from '../../api/api'
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useLocation } from 'react-router-dom'
 import { Box, Chip, Paper, Typography, CircularProgress } from '@mui/material'
 
 const StudentProgress = () => {
   const { id: studentId, courseId } = useParams()
+  const location = useLocation()
 
   const [loading, setLoading] = useState({
     units: false,
@@ -20,8 +21,8 @@ const StudentProgress = () => {
   const [units, setUnits] = useState([])
   const [sections, setSections] = useState([])
   const [resources, setResources] = useState([])
-  const [courseName, setCourseName] = useState('')
-  const [studentName, setStudentName] = useState('')
+  const [courseName, setCourseName] = useState(location.state?.courseName || '')
+  const [studentName, setStudentName] = useState(location.state?.studentName || '')
   const [selectedUnit, setSelectedUnit] = useState(null)
   const [selectedSection, setSelectedSection] = useState(null)
 
@@ -29,18 +30,20 @@ const StudentProgress = () => {
   useEffect(() => {
     const fetchDetails = async () => {
       try {
-        const [studentResponse, courseResponse] = await Promise.all([
-          getData(`student/${studentId}`),
-          getData(`courses/${courseId}`)
-        ])
-        setStudentName(studentResponse.data.name)
-        setCourseName(courseResponse.data.name)
+        if (!studentName || !courseName) {
+          const [studentResponse, courseResponse] = await Promise.all([
+            getData(`student/${studentId}`),
+            getData(`courses/${courseId}`)
+          ])
+          setStudentName(studentResponse.data.name)
+          setCourseName(courseResponse.data.name)
+        }
       } catch (error) {
         console.error('Error fetching details:', error)
       }
     }
     fetchDetails()
-  }, [studentId, courseId])
+  }, [studentId, courseId, studentName, courseName])
 
   // Fetch units when component mounts
   useEffect(() => {
@@ -129,20 +132,17 @@ const StudentProgress = () => {
       )
     },
     {
-      field: 'lastViewed',
-      headerName: 'Last Viewed',
+      field: 'viewedAt',
+      headerName: 'Viewed At',
       flex: 0.7,
       minWidth: 150,
       renderCell: params =>
-        params.row.lastViewed
-          ? new Date(params.row.lastViewed).toLocaleDateString()
-          : '-'
+        params.row.viewedAt
     }
   ]
 
   return (
     <>
-      {/* Units Strip */}
       <Paper
         elevation={5}
         sx={{
@@ -151,16 +151,32 @@ const StudentProgress = () => {
           backgroundColor: 'white'
         }}
       >
-        <Typography
-          variant='h6'
-          sx={{
-            mb: 3,
-            fontSize: '24px',
-            fontWeight: 'bold'
-          }}
-        >
-          {studentName}'s Progress
-        </Typography>
+        <Box sx={{ mb: 3 }}>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 'bold',
+              color: 'primary.main',
+              mb: 1
+            }}
+          >
+            Course Progress
+          </Typography>
+          <Typography
+            variant="subtitle1"
+            sx={{
+              color: 'text.secondary',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5
+            }}
+          >
+            Student: <span style={{ fontWeight: 'bold', color: 'text.primary' }}>{studentName}</span>
+            <span style={{ mx: 1 }}>•</span>
+            Course: <span style={{ fontWeight: 'bold', color: 'text.primary' }}>{courseName}</span>
+          </Typography>
+        </Box>
+
         <Grid container spacing={2}>
           <Grid size={1.5}>
             {selectedUnit && (

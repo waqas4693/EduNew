@@ -97,15 +97,17 @@ export const getCourseById = async (req, res) => {
 export const updateCourse = async (req, res) => {
   try {
     const { id } = req.params
-    const { name, thumbnail } = req.body
+    const { name, thumbnail, assessmentInterval } = req.body
+
+    const updateData = {}
+    if (name) updateData.name = name
+    if (thumbnail) updateData.thumbnail = thumbnail
+    if (assessmentInterval !== undefined) updateData.assessmentInterval = assessmentInterval
+    updateData.updatedAt = Date.now()
 
     const course = await Course.findByIdAndUpdate(
       id,
-      { 
-        name, 
-        thumbnail,
-        updatedAt: Date.now()
-      },
+      updateData,
       { new: true }
     )
 

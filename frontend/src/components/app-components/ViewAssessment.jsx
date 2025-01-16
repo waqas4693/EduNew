@@ -29,13 +29,49 @@ const AssessmentRenderer = ({
   attemptData,
   onAnswerChange,
   onSubmit,
-  onPlayAudio
+  onPlayAudio,
+  attemptStatus,
+  existingAttempt
 }) => {
   const [currentMcqIndex, setCurrentMcqIndex] = useState(0)
   const [flaggedQuestions, setFlaggedQuestions] = useState(new Set())
   const [timeRemaining, setTimeRemaining] = useState(null)
   const [isAssessmentStarted, setIsAssessmentStarted] = useState(false)
   const [isAssessmentEnded, setIsAssessmentEnded] = useState(false)
+
+  const renderAttemptStatus = () => {
+    if (!attemptStatus) return null
+
+    const statusStyles = {
+      PENDING: { color: '#f57c00', bgcolor: '#fff3e0' },
+      SUBMITTED: { color: '#1976d2', bgcolor: '#e3f2fd' },
+      GRADED: { color: '#2e7d32', bgcolor: '#e8f5e9' }
+    }
+
+    const statusMessages = {
+      PENDING: 'Assessment in progress',
+      SUBMITTED: 'Assessment submitted and pending review',
+      GRADED: `Assessment graded - Score: ${existingAttempt?.obtainedMarks}%`
+    }
+
+    return (
+      <Box
+        sx={{
+          p: 2,
+          mb: 2,
+          borderRadius: 1,
+          ...statusStyles[attemptStatus],
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+      >
+        <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
+          {statusMessages[attemptStatus]}
+        </Typography>
+      </Box>
+    )
+  }
 
   useEffect(() => {
     let timer
@@ -53,6 +89,20 @@ const AssessmentRenderer = ({
     }
     return () => clearInterval(timer)
   }, [isAssessmentStarted, timeRemaining])
+
+  if (attemptStatus === 'SUBMITTED' || attemptStatus === 'GRADED') {
+    return (
+      <Box sx={{ p: 3 }}>
+        {renderAttemptStatus()}
+        <Typography variant="h6" sx={{ textAlign: 'center', mt: 2 }}>
+          You have already completed this assessment.
+          {attemptStatus === 'GRADED' && 
+            ` Your score is ${existingAttempt?.obtainedMarks}%.`
+          }
+        </Typography>
+      </Box>
+    )
+  }
 
   const handleStartAssessment = () => {
     setIsAssessmentStarted(true)
@@ -185,6 +235,7 @@ const AssessmentRenderer = ({
     case 'QNA':
       return (
         <Box sx={{ p: 2 }}>
+          {renderAttemptStatus()}
           <form onSubmit={onSubmit}>
             {assessment.content.questions.map((q, index) => (
               <Box key={index} sx={{ mb: '15px' }}>
@@ -212,7 +263,12 @@ const AssessmentRenderer = ({
 
     case 'MCQ':
       if (assessment.isTimeBound && !isAssessmentStarted) {
-        return renderTimerOrStartButton()
+        return (
+          <>
+            {renderAttemptStatus()}
+            {renderTimerOrStartButton()}
+          </>
+        )
       }
 
       if (isAssessmentEnded) {
@@ -240,6 +296,7 @@ const AssessmentRenderer = ({
       const currentMcq = assessment.content.mcqs[currentMcqIndex]
       return (
         <Grid container>
+          {renderAttemptStatus()}
           {renderTimerOrStartButton()}
 
           {/* MCQ Content Area */}
@@ -425,6 +482,7 @@ const AssessmentRenderer = ({
     case 'FILE':
       return (
         <Box sx={{ p: 3 }}>
+          {renderAttemptStatus()}
           <Box sx={{ mb: 4 }}>
             <Typography variant='h6' sx={{ mb: 2 }}>
               Assessment File
@@ -630,7 +688,8 @@ const ViewAssessment = () => {
 
   const fetchAssessments = async () => {
     try {
-      const response = await getData(`assessments/${sectionId}`)
+      console.log('Assessment Fetching With User Id = ', user)
+      const response = await getData(`assessments/${sectionId}?studentId=${user.id}`)
       if (response.status === 200) {
         setAssessments(response.data.assessments)
       }
@@ -710,6 +769,19 @@ const ViewAssessment = () => {
     }
   }
 
+  const handleSelectAssessment = (assessment) => {
+    const attempt = assessment.attempt
+    if (attempt && (attempt.status === 'SUBMITTED' || attempt.status === 'GRADED')) {
+      setSelectedAssessment(assessment)
+      setAttemptData(attempt.content)
+      setExistingAttempt(attempt)
+    } else if (!attempt) {
+      setSelectedAssessment(assessment)
+      setAttemptData({})
+      setExistingAttempt(null)
+    }
+  }
+
   return (
     <Paper
       elevation={5}
@@ -759,16 +831,14 @@ const ViewAssessment = () => {
               {typeAssessments.map((assessment, index) => (
                 <Box
                   key={assessment._id}
-                  onClick={() => setSelectedAssessment(assessment)}
+                  onClick={() => handleSelectAssessment(assessment)}
                   sx={{
                     py: '3px',
                     px: '10px',
                     cursor: 'pointer',
                     borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
-                    bgcolor:
-                      selectedAssessment?._id === assessment._id
-                        ? 'action.selected'
-                        : 'transparent',
+                    bgcolor: selectedAssessment?._id === assessment._id ? 'action.selected' : 'transparent',
+                    opacity: assessment.attempt?.status === 'SUBMITTED' || assessment.attempt?.status === 'GRADED' ? 0.7 : 1,
                     '&:hover': {
                       bgcolor: 'action.hover'
                     }
@@ -776,6 +846,18 @@ const ViewAssessment = () => {
                 >
                   <Typography variant='subtitle1'>
                     Assessment {index + 1}
+                    {assessment.attempt?.status && (
+                      <Box component="span" sx={{ 
+                        ml: 1,
+                        px: 1,
+                        py: 0.5,
+                        borderRadius: 1,
+                        fontSize: '0.75rem',
+                        bgcolor: assessment.attempt.status === 'SUBMITTED' ? 'info.light' : 'success.light'
+                      }}>
+                        {assessment.attempt.status}
+                      </Box>
+                    )}
                   </Typography>
                   <Typography variant='body2' color='text.secondary'>
                     Marks: {assessment.totalMarks} | {assessment.percentage}%
@@ -801,6 +883,8 @@ const ViewAssessment = () => {
               onAnswerChange={handleAnswerChange}
               onSubmit={handleSubmit}
               onPlayAudio={handlePlayAudio}
+              attemptStatus={existingAttempt?.status}
+              existingAttempt={existingAttempt}
             />
           ) : (
             <Box

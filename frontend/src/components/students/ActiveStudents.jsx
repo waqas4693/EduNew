@@ -57,12 +57,13 @@ const ActiveStudents = () => {
 
   const fetchStudents = async () => {
     try {
-      const response = await getData('student?status=1')
+      const response = await getData('student')
       if (response.status === 200) {
-        setStudents(response.data)
+        setStudents(response.data.data.students || [])
       }
     } catch (error) {
       console.error('Error fetching students:', error)
+      setStudents([])
     }
   }
 

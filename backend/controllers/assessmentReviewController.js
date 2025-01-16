@@ -1,12 +1,14 @@
 import AssessmentAttempt from '../models/AssessmentAttempt.js'
 import Assessment from '../models/assessment.js'
 import Unit from '../models/unit.js'
+import Student from '../models/student.js'
 
 export const getAllSubmittedAssessments = async (req, res) => {
   try {
     const submittedAssessments = await AssessmentAttempt.find({
       status: 'SUBMITTED'
     })
+    .populate('assessmentId', 'assessmentType totalMarks content')
     .populate({
       path: 'assessmentId',
       populate: {
@@ -17,12 +19,14 @@ export const getAllSubmittedAssessments = async (req, res) => {
         }
       }
     })
-    .populate('studentId', 'name email')
+    .populate('studentId', 'email')
     .sort({ submittedAt: -1 })
 
-    const assessmentsWithCalculatedMarks = submittedAssessments.map(attempt => {
+    const assessmentsWithCalculatedMarks = await Promise.all(submittedAssessments.map(async attempt => {
       let totalMarks = 0
       let obtainedMarks = 0
+
+      const studentDetails = await Student.findOne({ email: attempt.studentId?.email })
 
       if (attempt.assessmentId.assessmentType === 'MCQ') {
         const mcqs = attempt.assessmentId.content.mcqs
@@ -40,9 +44,10 @@ export const getAllSubmittedAssessments = async (req, res) => {
         ...attempt._doc,
         calculatedMarks: Math.round(obtainedMarks),
         totalPossibleMarks: attempt.assessmentId.totalMarks,
-        percentage: Math.round((obtainedMarks / 100) * 100)
+        percentage: Math.round((obtainedMarks / 100) * 100),
+        studentName: studentDetails?.name || 'N/A'
       }
-    })
+    }))
 
     res.status(200).json({
       success: true,
@@ -163,6 +168,47 @@ export const getUnitProgress = async (req, res) => {
       success: false,
       message: 'Error calculating unit progress',
       error: error.message
+    })
+  }
+}
+
+export const getGradedAssessments = async (req, res) => {
+  try {
+    const gradedAssessments = await AssessmentAttempt.find({
+      status: 'GRADED'
+    })
+    .populate('assessmentId', 'assessmentType totalMarks content')
+    .populate({
+      path: 'assessmentId',
+      populate: {
+        path: 'sectionId',
+        populate: {
+          path: 'unitId',
+          populate: 'courseId'
+        }
+      }
+    })
+    .populate('studentId', 'email')
+    .sort({ updatedAt: -1 })
+
+    const assessmentsWithDetails = await Promise.all(gradedAssessments.map(async attempt => {
+      const studentDetails = await Student.findOne({ email: attempt.studentId?.email })
+      
+      return {
+        ...attempt._doc,
+        studentName: studentDetails?.name || 'N/A'
+      }
+    }))
+
+    res.status(200).json({
+      success: true,
+      data: assessmentsWithDetails
+    })
+  } catch (error) {
+    console.error('Error fetching graded assessments:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching graded assessments'
     })
   }
 } 
