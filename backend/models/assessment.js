@@ -1,6 +1,10 @@
 import mongoose from 'mongoose'
 
 const assessmentSchema = new mongoose.Schema({
+  orderNumber: {
+    type: Number,
+    required: true
+  },
   assessmentType: {
     type: String,
     enum: ['QNA', 'MCQ', 'FILE'],

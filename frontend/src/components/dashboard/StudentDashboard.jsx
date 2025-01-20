@@ -28,12 +28,22 @@ const StudentDashboard = () => {
     const fetchEnrolledCourses = async () => {
       try {
         if (user?.courseIds?.length > 0) {
+          const courseIdList = user.courseIds.map(course => course.courseId)
+
           const response = await getData(
-            `courses/enrolled?courseIds=${user.courseIds.join(',')}`
+            `courses/enrolled?courseIds=${courseIdList.join(',')}`
           )
           if (response.status === 200) {
             setCourses(response.data.data)
-            // Initialize loading state for each course image
+            
+            // Store assessment intervals for each course
+            const assessmentIntervals = {}
+            response.data.data.forEach(course => {
+              assessmentIntervals[course.id] = course.assessmentInterval
+            })
+            localStorage.setItem('assessmentIntervals', JSON.stringify(assessmentIntervals))
+
+            // Initialize loading state for images
             const initialLoadingState = {}
             response.data.data.forEach(course => {
               if (course.image) {

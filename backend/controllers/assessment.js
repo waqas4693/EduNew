@@ -2,10 +2,11 @@ import { handleError } from '../utils/errorHandler.js'
 import Assessment from '../models/assessment.js'
 import Section from '../models/section.js'
 import AssessmentAttempt from '../models/AssessmentAttempt.js'
+import Course from '../models/course.js'
 
 export const createAssessment = async (req, res) => {
   try {
-    const { sectionId, isTimeBound, timeAllowed } = req.body
+    const { sectionId, courseId, isTimeBound, timeAllowed } = req.body
 
     if (req.body.assessmentType === 'MCQ' && isTimeBound) {
       if (!timeAllowed || timeAllowed <= 0) {
@@ -14,6 +15,20 @@ export const createAssessment = async (req, res) => {
           message: 'Time allowed must be a positive number for time-bound assessments'
         })
       }
+    }
+
+    // Get and update course assessment count
+    const course = await Course.findByIdAndUpdate(
+      courseId,
+      { $inc: { totalAssessments: 1 } },
+      { new: true }
+    )
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      })
     }
 
     const existingAssessments = await Assessment.find({ sectionId })
@@ -29,7 +44,11 @@ export const createAssessment = async (req, res) => {
       })
     }
 
-    const assessment = new Assessment(req.body)
+    const assessment = new Assessment({
+      ...req.body,
+      orderNumber: course.totalAssessments
+    })
+    
     const savedAssessment = await assessment.save()
 
     await Section.findByIdAndUpdate(
@@ -43,7 +62,7 @@ export const createAssessment = async (req, res) => {
       assessment: savedAssessment
     })
   } catch (error) {
-    console.log('Error Testing Assessment:', error)
+    console.log('Error Creating Assessment:', error)
     handleError(error, res)
   }
 }

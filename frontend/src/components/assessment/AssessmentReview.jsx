@@ -51,13 +51,18 @@ const AssessmentReview = () => {
     setOpenReviewDialog(true)
   }
 
-  const handleGrade = () => {
+  const handleGrade = (attempt) => {
+    if (attempt) {
+      setSelectedAttempt(attempt)
+    }
     setOpenReviewDialog(false)
     setOpenGradeDialog(true)
   }
 
   const handleSubmitGrade = async () => {
     try {
+      console.log('Selected Attempt:')
+      console.log(selectedAttempt)
       const response = await patchData(`assessment-review/grade/${selectedAttempt._id}`, {
         obtainedMarks: Number(marks)
       })
@@ -336,19 +341,26 @@ const AssessmentReview = () => {
         </Dialog>
 
         {/* Grade Dialog */}
-        <Dialog open={openGradeDialog} onClose={() => setOpenGradeDialog(false)}>
+        <Dialog open={openGradeDialog} onClose={() => {
+          setOpenGradeDialog(false)
+          setSelectedAttempt(null)
+        }}>
           <DialogTitle>Grade Assessment</DialogTitle>
           <DialogContent>
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                Student: {selectedAttempt?.studentId?.name}
-              </Typography>
-              {selectedAttempt?.assessmentId?.assessmentType === 'MCQ' && (
-                <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-                  Calculated Score: {selectedAttempt?.calculatedMarks}/{selectedAttempt?.totalPossibleMarks} ({selectedAttempt?.percentage}%)
+            {selectedAttempt ? (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Student: {selectedAttempt?.studentId?.name}
                 </Typography>
-              )}
-            </Box>
+                {selectedAttempt?.assessmentId?.assessmentType === 'MCQ' && (
+                  <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+                    Calculated Score: {selectedAttempt?.calculatedMarks}/{selectedAttempt?.totalPossibleMarks} ({selectedAttempt?.percentage}%)
+                  </Typography>
+                )}
+              </Box>
+            ) : (
+              <Typography>No assessment selected</Typography>
+            )}
             <TextField
               label={`Marks (out of ${selectedAttempt?.totalPossibleMarks || 100})`}
               type="number"
@@ -364,8 +376,15 @@ const AssessmentReview = () => {
             />
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setOpenGradeDialog(false)}>Cancel</Button>
-            <Button onClick={handleSubmitGrade} variant="contained">
+            <Button onClick={() => {
+              setOpenGradeDialog(false)
+              setSelectedAttempt(null)
+            }}>Cancel</Button>
+            <Button 
+              onClick={handleSubmitGrade} 
+              variant="contained"
+              disabled={!selectedAttempt}
+            >
               Submit Grade
             </Button>
           </DialogActions>

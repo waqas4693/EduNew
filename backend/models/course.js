@@ -13,6 +13,10 @@ const courseSchema = new mongoose.Schema({
     type: Number,
     default: null
   },
+  totalAssessments: {
+    type: Number,
+    default: 0
+  },
   units: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Unit'

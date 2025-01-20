@@ -30,6 +30,7 @@ import AssessmentDeadlineSettings from './components/admin/AssessmentDeadlineSet
 import { LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import StudentAssessments from './components/assessment/StudentAssessments'
+import Profile from './components/profile/Profile'
 
 // Create Redux store
 const store = configureStore({
@@ -90,6 +91,7 @@ function App() {
                               path="/students/:studentId/assessments" 
                               element={<StudentAssessments isAdminView={true} />} 
                             />
+                            <Route path="/profile" element={<Profile />} />
                           </Routes>
                         </DashboardLayout>
                       </PrivateRoute>
@@ -109,6 +111,7 @@ function App() {
                             <Route path="/units/:courseId/section/:unitId/learn/:sectionId" element={<LearnerFrame />} />
                             <Route path="/units/:courseId/section/:unitId/assessment/:sectionId" element={<ViewAssessment />} />
                             <Route path="/assessment" element={<StudentAssessments />} />
+                            <Route path="/profile" element={<Profile />} />
                           </Routes>
                         </DashboardLayout>
                       </PrivateRoute>

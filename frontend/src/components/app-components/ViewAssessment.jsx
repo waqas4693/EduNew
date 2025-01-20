@@ -66,7 +66,7 @@ const AssessmentRenderer = ({
           justifyContent: 'center'
         }}
       >
-        <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
+        <Typography variant='subtitle1' sx={{ fontWeight: 'medium' }}>
           {statusMessages[attemptStatus]}
         </Typography>
       </Box>
@@ -94,11 +94,10 @@ const AssessmentRenderer = ({
     return (
       <Box sx={{ p: 3 }}>
         {renderAttemptStatus()}
-        <Typography variant="h6" sx={{ textAlign: 'center', mt: 2 }}>
+        <Typography variant='h6' sx={{ textAlign: 'center', mt: 2 }}>
           You have already completed this assessment.
-          {attemptStatus === 'GRADED' && 
-            ` Your score is ${existingAttempt?.obtainedMarks}%.`
-          }
+          {attemptStatus === 'GRADED' &&
+            ` Your score is ${existingAttempt?.obtainedMarks}%.`}
         </Typography>
       </Box>
     )
@@ -310,8 +309,7 @@ const AssessmentRenderer = ({
               }}
             >
               <Typography variant='body1'>
-                {currentMcqIndex + 1} /{' '}
-                {assessment.content.mcqs.length}
+                {currentMcqIndex + 1} / {assessment.content.mcqs.length}
               </Typography>
             </Box>
 
@@ -377,7 +375,7 @@ const AssessmentRenderer = ({
                   sx={{
                     display: 'flex',
                     justifyContent: 'space-between',
-                    mt: '10px',
+                    mt: '10px'
                   }}
                 >
                   <IconButton
@@ -561,6 +559,7 @@ const ViewAssessment = () => {
   const [audioPlayer, setAudioPlayer] = useState(null)
   const [audioUrls, setAudioUrls] = useState({})
   const [selectedAssessment, setSelectedAssessment] = useState(null)
+  const [dueDates, setDueDates] = useState({})
 
   // Group assessments by type
   const groupedAssessments = assessments.reduce((groups, assessment) => {
@@ -686,12 +685,58 @@ const ViewAssessment = () => {
     }
   }, [currentIndex, assessments, user])
 
+  const calculateDueDate = (enrollmentDate, interval, orderNumber) => {
+    console.log('Enrollment Date:', enrollmentDate)
+    console.log('Interval:', interval)
+    console.log('Order Number:', orderNumber)
+    const enrollmentDateTime = new Date(enrollmentDate)
+    return new Date(
+      enrollmentDateTime.getTime() +
+        interval * orderNumber * 24 * 60 * 60 * 1000
+    )
+  }
+
+  const getAssessmentStatus = dueDate => {
+    const now = new Date()
+    const dueDateObj = new Date(dueDate)
+    const diffDays = Math.ceil((dueDateObj - now) / (1000 * 60 * 60 * 24))
+
+    if (diffDays < 0) return { label: 'Overdue', color: 'error.light' }
+    if (diffDays === 0) return { label: 'Due Today', color: 'warning.light' }
+    return { label: `Due in ${diffDays} days`, color: 'info.light' }
+  }
+
   const fetchAssessments = async () => {
     try {
-      console.log('Assessment Fetching With User Id = ', user)
-      const response = await getData(`assessments/${sectionId}?studentId=${user.studentId}`)
+      const response = await getData(
+        `assessments/${sectionId}?studentId=${user.studentId}`
+      )
       if (response.status === 200) {
         setAssessments(response.data.assessments)
+        
+        // Get enrollment dates and intervals from localStorage
+        const enrollmentDates = JSON.parse(localStorage.getItem('enrollmentDates'))
+        const assessmentIntervals = JSON.parse(localStorage.getItem('assessmentIntervals'))
+        
+        const courseEnrollmentDate = enrollmentDates[courseId]
+        const assessmentInterval = assessmentIntervals[courseId]
+        
+        if (!courseEnrollmentDate || !assessmentInterval) {
+          console.error('Missing enrollment date or interval for course:', courseId)
+          return
+        }
+
+        // Calculate due dates for each assessment
+        const datesMap = {}
+        response.data.assessments.forEach(assessment => {
+          const dueDate = calculateDueDate(
+            courseEnrollmentDate,
+            assessmentInterval,
+            assessment.orderNumber
+          )
+          datesMap[assessment._id] = dueDate
+        })
+        setDueDates(datesMap)
       }
     } catch (error) {
       console.error('Error fetching assessments:', error)
@@ -769,9 +814,12 @@ const ViewAssessment = () => {
     }
   }
 
-  const handleSelectAssessment = (assessment) => {
+  const handleSelectAssessment = assessment => {
     const attempt = assessment.attempt
-    if (attempt && (attempt.status === 'SUBMITTED' || attempt.status === 'GRADED')) {
+    if (
+      attempt &&
+      (attempt.status === 'SUBMITTED' || attempt.status === 'GRADED')
+    ) {
       setSelectedAssessment(assessment)
       setAttemptData(attempt.content)
       setExistingAttempt(attempt)
@@ -837,8 +885,15 @@ const ViewAssessment = () => {
                     px: '10px',
                     cursor: 'pointer',
                     borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
-                    bgcolor: selectedAssessment?._id === assessment._id ? 'action.selected' : 'transparent',
-                    opacity: assessment.attempt?.status === 'SUBMITTED' || assessment.attempt?.status === 'GRADED' ? 0.7 : 1,
+                    bgcolor:
+                      selectedAssessment?._id === assessment._id
+                        ? 'action.selected'
+                        : 'transparent',
+                    opacity:
+                      assessment.attempt?.status === 'SUBMITTED' ||
+                      assessment.attempt?.status === 'GRADED'
+                        ? 0.7
+                        : 1,
                     '&:hover': {
                       bgcolor: 'action.hover'
                     }
@@ -847,14 +902,20 @@ const ViewAssessment = () => {
                   <Typography variant='subtitle1'>
                     Assessment {index + 1}
                     {assessment.attempt?.status && (
-                      <Box component="span" sx={{ 
-                        ml: 1,
-                        px: 1,
-                        py: 0.5,
-                        borderRadius: 1,
-                        fontSize: '0.75rem',
-                        bgcolor: assessment.attempt.status === 'SUBMITTED' ? 'info.light' : 'success.light'
-                      }}>
+                      <Box
+                        component='span'
+                        sx={{
+                          ml: 1,
+                          px: 1,
+                          py: 0.5,
+                          borderRadius: 1,
+                          fontSize: '0.75rem',
+                          bgcolor:
+                            assessment.attempt.status === 'SUBMITTED'
+                              ? 'info.light'
+                              : 'success.light'
+                        }}
+                      >
                         {assessment.attempt.status}
                       </Box>
                     )}
@@ -862,6 +923,18 @@ const ViewAssessment = () => {
                   <Typography variant='body2' color='text.secondary'>
                     Marks: {assessment.totalMarks} | {assessment.percentage}%
                   </Typography>
+                  {dueDates[assessment._id] && !assessment.attempt?.status && (
+                    <Typography
+                      variant='body2'
+                      sx={{
+                        color: getAssessmentStatus(dueDates[assessment._id])
+                          .color,
+                        fontWeight: 500
+                      }}
+                    >
+                      {getAssessmentStatus(dueDates[assessment._id]).label}
+                    </Typography>
+                  )}
                 </Box>
               ))}
             </Box>

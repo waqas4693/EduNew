@@ -102,6 +102,9 @@ export const getDashboardData = async (req, res) => {
 }
 
 export const getAllStudents = async (req, res) => {
+
+  console.log('Get All Students:', req.params)
+
   try {
     const { courseId } = req.params
     const { status } = req.query  // Get status from query params

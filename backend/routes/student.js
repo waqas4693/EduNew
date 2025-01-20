@@ -1,7 +1,7 @@
 import express from 'express'
-import { 
-  getDashboardData, 
-  newStudent, 
+import {
+  getDashboardData,
+  newStudent,
   getAllStudents,
   updateStudentStatus,
   getStudentCourses,
@@ -16,16 +16,15 @@ const router = express.Router()
 
 router.post('/', newStudent)
 
-router.get('/', getAllStudents)
+router.get('/', verifyToken, getAllStudents)
 router.get('/:id/courses', getStudentCourses)
 router.get('/:id/dashboard', verifyToken, getDashboardData)
-router.get('/course/:courseId', getAllStudents)
+router.get('/course/:courseId', verifyToken, getAllStudents)
 router.get('/:studentId/courses/:courseId/progress', getUnitProgress)
 
 router.patch('/:id/status', updateStudentStatus)
 router.patch('/:id/assign-course', assignCourse)
 
 router.delete('/:id/courses/:courseId', removeCourse)
-
 
 export default router

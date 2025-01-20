@@ -7,7 +7,9 @@ import {
   ListItemText,
   Collapse,
   useTheme,
-  Button
+  Button,
+  Avatar,
+  Typography
 } from '@mui/material'
 import {
   ExpandLess,
@@ -17,7 +19,8 @@ import {
   Logout as LogoutIcon,
   PersonAdd as PersonAddIcon,
   Assignment as AssignmentIcon,
-  Analytics as AnalyticsIcon
+  Analytics as AnalyticsIcon,
+  AccountCircle as ProfileIcon
 } from '@mui/icons-material'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -34,6 +37,7 @@ const Sidebar = ({ open, onClose }) => {
 
   const [openCourses, setOpenCourses] = useState(false)
   const [openStudents, setOpenStudents] = useState(false)
+  const [openAssessment, setOpenAssessment] = useState(false)
 
   const handleLogout = () => {
     logout()
@@ -70,12 +74,7 @@ const Sidebar = ({ open, onClose }) => {
         { text: 'Submitted', path: '/admin/assessment-review/submitted' },
         { text: 'Graded', path: '/admin/assessment-review/graded' }
       ]
-    },
-    // {
-    //   text: 'Resource Analytics',
-    //   icon: <AnalyticsIcon />,
-    //   path: '/admin/resource-analytics'
-    // }
+    }
   ]
 
   const studentMenuItems = [
@@ -83,11 +82,6 @@ const Sidebar = ({ open, onClose }) => {
       text: 'Dashboard',
       icon: <DashboardIcon />,
       path: '/dashboard'
-    },
-    {
-      text: 'Profile',
-      icon: <DashboardIcon />,
-      path: '/profile'
     },
     {
       text: 'Assessment',
@@ -118,6 +112,44 @@ const Sidebar = ({ open, onClose }) => {
       }}
     >
       <Box sx={{ overflow: 'auto', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box 
+          sx={{ 
+            p: 2, 
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 2,
+            borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+            mb: 1,
+            minHeight: 64
+          }}
+        >
+          <Avatar 
+            sx={{ 
+              width: 40,
+              height: 40,
+              bgcolor: 'secondary.main',
+              flexShrink: 0
+            }}
+          >
+            {user?.name ? user.name[0].toUpperCase() : 'U'}
+          </Avatar>
+          {open && (
+            <Typography 
+              sx={{ 
+                color: 'white',
+                fontSize: '1rem',
+                fontWeight: 'medium',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}
+            >
+              {user?.name || 'User'}
+            </Typography>
+          )}
+        </Box>
+
         <List>
           {menuItems.map((item) => (
             <div key={item.text}>
@@ -125,7 +157,11 @@ const Sidebar = ({ open, onClose }) => {
                 <>
                   <ListItem
                     button
-                    onClick={() => item.text === 'Courses' ? setOpenCourses(!openCourses) : setOpenStudents(!openStudents)}
+                    onClick={() => {
+                      if (item.text === 'Courses') setOpenCourses(!openCourses)
+                      else if (item.text === 'Students') setOpenStudents(!openStudents)
+                      else if (item.text === 'Assessment') setOpenAssessment(!openAssessment)
+                    }}
                     sx={{
                       justifyContent: open ? 'initial' : 'center',
                       px: 2.5,
@@ -154,10 +190,17 @@ const Sidebar = ({ open, onClose }) => {
                         }
                       }} 
                     />
-                    {open && (item.text === 'Courses' ? (openCourses ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />) :
-                            (openStudents ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />))}
+                    {open && (
+                      item.text === 'Courses' ? (openCourses ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />) :
+                      item.text === 'Students' ? (openStudents ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />) :
+                      (openAssessment ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />)
+                    )}
                   </ListItem>
-                  <Collapse in={item.text === 'Courses' ? openCourses : openStudents} timeout="auto" unmountOnExit>
+                  <Collapse in={
+                    item.text === 'Courses' ? openCourses :
+                    item.text === 'Students' ? openStudents :
+                    openAssessment
+                  } timeout="auto" unmountOnExit>
                     <List 
                       component="div" 
                       disablePadding
@@ -204,7 +247,6 @@ const Sidebar = ({ open, onClose }) => {
                   component={Link}
                   to={item.path}
                   sx={{
-                    minHeight: 48,
                     justifyContent: open ? 'initial' : 'center',
                     px: 2.5,
                     '&:hover': {
@@ -238,6 +280,46 @@ const Sidebar = ({ open, onClose }) => {
           ))}
         </List>
         
+        <Box sx={{ 
+          borderTop: '1px solid rgba(255, 255, 255, 0.12)',
+          mt: 2
+        }}>
+          <ListItem
+            button
+            component={Link}
+            to={user?.role === ADMIN_ROLE ? '/admin/profile' : '/profile'}
+            sx={{
+              minHeight: 48,
+              justifyContent: open ? 'initial' : 'center',
+              px: 2.5,
+              '&:hover': {
+                bgcolor: 'primary.dark'
+              }
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                minWidth: 0,
+                mr: open ? 3 : 'auto',
+                justifyContent: 'center',
+                color: 'white'
+              }}
+            >
+              <ProfileIcon />
+            </ListItemIcon>
+            <ListItemText 
+              primary="Profile" 
+              sx={{ 
+                opacity: open ? 1 : 0,
+                '& .MuiTypography-root': {
+                  color: 'white',
+                  fontSize: '16px'
+                }
+              }} 
+            />
+          </ListItem>
+        </Box>
+
         <Box sx={{ 
           mt: 'auto', 
           p: 2,

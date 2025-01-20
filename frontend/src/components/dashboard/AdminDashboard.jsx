@@ -21,6 +21,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import GroupIcon from '@mui/icons-material/Group'
 import BlockIcon from '@mui/icons-material/Block'
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
+import url from '../config/server-url'
 
 const AdminDashboard = () => {
   const [courses, setCourses] = useState([])
@@ -95,6 +96,11 @@ const AdminDashboard = () => {
       navigate(`/admin/courses/${selectedCourse._id}/assessment-deadlines`)
     }
     handleMenuClose()
+  }
+
+  const getThumbnailUrl = (fileName) => {
+    if (!fileName) return ''
+    return `${url}resources/files/THUMBNAILS/${fileName}`
   }
 
   const StatCard = ({ title, value, icon }) => (
@@ -229,24 +235,24 @@ const AdminDashboard = () => {
                             backgroundColor: 'white',
                             opacity: 0.9
                           },
-                          boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'  // Optional: adds subtle shadow
+                          boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
                         }}
                         onClick={(e) => handleMenuOpen(e, course)}
                       >
-                        <MoreVertIcon sx={{ transform: 'rotate(90deg)' }} />  {/* Rotates dots to horizontal */}
+                        <MoreVertIcon sx={{ transform: 'rotate(90deg)' }} />
                       </IconButton>
                       <Box
                         sx={{
                           width: '100%',
                           height: '120px',
-                          bgcolor: course.thumbnail ? 'transparent' : 'primary.light',
+                          bgcolor: course.image ? 'transparent' : 'primary.light',
                           borderRadius: '8px',
                           mb: 2
                         }}
                       >
-                        {course.thumbnail ? (
+                        {course.image ? (
                           <img
-                            src={course.thumbnail}
+                            src={getThumbnailUrl(course.image)}
                             alt={course.name}
                             style={{
                               width: '100%',

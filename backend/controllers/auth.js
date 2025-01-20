@@ -35,6 +35,7 @@ export const loginUser = async (req, res) => {
       role: user.role
     }
 
+    // Only fetch student data if user is a student
     if (user.role === 2) {
       const student = await Student.findOne({ email })
       
@@ -47,8 +48,17 @@ export const loginUser = async (req, res) => {
           address: student.address,
           courseIds: student.courses
             .filter(course => course.courseStatus === 1)
-            .map(course => course.courseId)
+            .map(course => ({
+              courseId: course.courseId,
+              enrollmentDate: course.enrollmentDate
+            }))
         }
+      }
+    } else if (user.role === 1) {
+      // For admin users, add name from user model
+      userData = {
+        ...userData,
+        name: user.name || 'Administrator' // Fallback name if not set
       }
     }
 
@@ -68,4 +78,41 @@ export const loginUser = async (req, res) => {
       message: 'Internal server error'
     })
   }
-} 
+}
+
+export const updatePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const isValidPassword = await user.comparePassword(currentPassword);
+    if (!isValidPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password updated successfully'
+    });
+  } catch (error) {
+    console.error('Password update error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}; 

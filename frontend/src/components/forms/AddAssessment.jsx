@@ -523,10 +523,9 @@ const AddAssessment = () => {
       }
 
       const assessmentData = {
-        assessmentType: formData.assessmentType,
-        totalMarks: formData.totalMarks,
-        percentage: formData.percentage,
-        sectionId: sectionId,
+        ...formData,
+        sectionId,
+        courseId,
         isTimeBound: formData.isTimeBound,
         timeAllowed: formData.timeAllowed,
         content: formData.content
@@ -752,26 +751,6 @@ const AddAssessment = () => {
       {renderTimeOptions()}
 
       <Box sx={{ display: 'flex', justifyContent: 'end', alignItems: 'center' }}>
-
-      {/* <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}> */}
-        {/* <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <IconButton
-            sx={{
-              bgcolor: 'primary.main',
-              color: 'white',
-              width: 30,
-              height: 30,
-              '&:hover': {
-                bgcolor: 'primary.dark'
-              }
-            }}
-          >
-            <AddIcon />
-          </IconButton>
-          <Typography sx={{ fontWeight: 'bold', color: 'black' }}>
-            Add Assessment
-          </Typography>
-        </Box> */}
         <Button
           type="submit"
           variant="contained"

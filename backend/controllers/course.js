@@ -51,14 +51,15 @@ export const getEnrolledCourses = async (req, res) => {
       _id: { $in: courseIdArray },
       status: 1 
     })
-    .select('name thumbnail units')
+    .select('name thumbnail units assessmentInterval')
     .lean()
     
     const coursesWithDetails = courses.map(course => ({
       id: course._id,
       name: course.name,
       image: course.thumbnail,
-      units: course.units?.length || 0
+      units: course.units?.length || 0,
+      assessmentInterval: course.assessmentInterval
     }))
 
     res.status(200).json({

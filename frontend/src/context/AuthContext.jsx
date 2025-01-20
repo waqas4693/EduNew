@@ -34,12 +34,22 @@ export const AuthProvider = ({ children }) => {
     }
   }, [navigate])
 
-  const login = (userData) => {
+  const login = (userData, token) => {
     try {
       console.log('Storing user data:', userData)
       
+      // Only store enrollment dates for students
+      if (userData.role === STUDENT_ROLE && userData.courseIds) {
+        const enrollmentDates = {}
+        userData.courseIds.forEach(({ courseId, enrollmentDate }) => {
+          enrollmentDates[courseId] = enrollmentDate
+        })
+        localStorage.setItem('enrollmentDates', JSON.stringify(enrollmentDates))
+      }
+      
       setUser(userData)
       localStorage.setItem('user', JSON.stringify(userData))
+      localStorage.setItem('token', token)
     } catch (error) {
       console.error('Error saving user data:', error)
     }
@@ -49,6 +59,10 @@ export const AuthProvider = ({ children }) => {
     setUser(null)
     localStorage.removeItem('user')
     localStorage.removeItem('token')
+    // Only remove enrollment dates if they exist
+    if (localStorage.getItem('enrollmentDates')) {
+      localStorage.removeItem('enrollmentDates')
+    }
     navigate('/login')
   }
 

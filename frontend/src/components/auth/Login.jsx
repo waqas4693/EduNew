@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { 
-  Box, 
-  TextField, 
-  Button, 
-  Typography, 
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
   Paper,
   Alert,
   IconButton,
@@ -11,7 +11,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
+  DialogActions
 } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import { postData } from '../../api/api'
@@ -34,7 +34,7 @@ const Login = () => {
   const navigate = useNavigate()
   const { login } = useAuth()
 
-  const handleChange = (e) => {
+  const handleChange = e => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
@@ -45,7 +45,7 @@ const Login = () => {
     setShowPassword(!showPassword)
   }
 
-  const handleTabChange = (tab) => {
+  const handleTabChange = tab => {
     setActiveTab(tab)
     setError('')
   }
@@ -54,30 +54,29 @@ const Login = () => {
     setOpenDialog(false)
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault()
     setError('')
 
     try {
-      const response = await postData('/auth', formData)
-      
+      const response = await postData('auth', formData)
+
       if (response.status === 200) {
         const { token, user } = response.data.data
-        
-        // Store token
-        localStorage.setItem('token', token)
-        
-        // Store complete user data including studentId if present
-        const userData = {
-          ...user,  // This includes id, email, role, studentId, name, etc.
+
+        // Only process enrollment dates for students
+        if (user.role === STUDENT_ROLE && user.courseIds) {
+          const enrollmentDates = {}
+          user.courseIds.forEach(({ courseId, enrollmentDate }) => {
+            enrollmentDates[courseId] = enrollmentDate
+          })
+          localStorage.setItem('enrollmentDates', JSON.stringify(enrollmentDates))
         }
-        
-        // Pass the complete userData to login
-        login(userData)
 
-        console.log('User Data:')
-        console.log(userData)
+        // Login with user data and token
+        login(user, token)
 
+        // Navigate based on role
         if (user.role === ADMIN_ROLE) {
           navigate('/admin/dashboard', { replace: true })
         } else if (user.role === STUDENT_ROLE) {
@@ -87,7 +86,9 @@ const Login = () => {
     } catch (error) {
       if (error.status === 403) {
         setDialogTitle('Account Inactive')
-        setError('Your account is currently inactive. Please contact administration.')
+        setError(
+          'Your account is currently inactive. Please contact administration.'
+        )
       } else if (error.status === 404) {
         setDialogTitle('User Not Found')
         setError('User not found with this email.')
@@ -103,126 +104,119 @@ const Login = () => {
   }
 
   return (
-    <Box 
-      sx={{ 
-        height: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundImage: 'url("/background-images/4.jpg")',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center'
-      }}
-    >
-      <Paper 
-        sx={{ 
-          p: '60px',
-          width: '40%',
-          borderRadius: '16px'
+    <>
+      <Box
+        sx={{
+          height: '60px',
+          bgcolor: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1000,
+          boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
         }}
       >
-        <Typography 
-          variant="h4" 
-          component="h1" 
-          sx={{ mb: 3, textAlign: 'center', fontWeight: 500 }}
+        <Typography
+          sx={{
+            color: '#3366CC',
+            fontSize: '16px',
+            fontWeight: 800
+          }}
         >
-          eduSupplements
+          Edu Supplements
         </Typography>
+      </Box>
 
-        {/* <Box sx={{ mb: 4, borderBottom: 1, borderColor: 'divider' }}>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button
+      <Box
+        sx={{
+          height: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundImage: 'url("/background-images/4.jpg")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          pt: '60px'
+        }}
+      >
+        <Paper
+          sx={{
+            p: '60px',
+            width: '40%',
+            borderRadius: '16px'
+          }}
+        >
+          <Typography
+            variant='h5'
+            component='h1'
+            sx={{ mb: 3, fontSize: '24px', textAlign: 'center', fontWeight: 500 }}
+          >
+            Login
+          </Typography>
+          <form onSubmit={handleSubmit}>
+            <TextField
+              fullWidth
+              placeholder='Email'
+              type='email'
+              name='email'
+              value={formData.email}
+              onChange={handleChange}
+              required
               sx={{
-                flex: 1,
-                pb: 1.5,
-                borderBottom: 2,
-                borderColor: activeTab === 'student' ? 'primary.main' : 'transparent',
-                color: activeTab === 'student' ? 'primary.main' : 'text.secondary'
+                mb: 3,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px'
+                }
               }}
-              onClick={() => handleTabChange('student')}
-            >
-              Student
-            </Button>
-            <Button
+              variant='outlined'
+            />
+            <TextField
+              fullWidth
+              placeholder='Password'
+              name='password'
+              type={showPassword ? 'text' : 'password'}
+              value={formData.password}
+              onChange={handleChange}
+              required
               sx={{
-                flex: 1,
-                pb: 1.5,
-                borderBottom: 2,
-                borderColor: activeTab === 'admin' ? 'primary.main' : 'transparent',
-                color: activeTab === 'admin' ? 'primary.main' : 'text.secondary'
+                mb: 3,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px'
+                }
               }}
-              onClick={() => handleTabChange('admin')}
-            >
-              Admin
-            </Button>
-          </Box>
-        </Box> */}
-
-        <form onSubmit={handleSubmit}>
-          <TextField
-            fullWidth
-            placeholder="Email"
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            sx={{
-              mb: 3,
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '8px'
-              }
-            }}
-            variant="outlined"
-          />
-          <TextField
-            fullWidth
-            placeholder="Password"
-            name="password"
-            type={showPassword ? 'text' : 'password'}
-            value={formData.password}
-            onChange={handleChange}
-            required
-            sx={{
-              mb: 3,
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '8px'
-              }
-            }}
-            variant="outlined"
-            slotProps={{
-              input: {
+              variant='outlined'
+              InputProps={{
                 endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={handleClickShowPassword}
-                      edge="end"
-                    >
+                  <InputAdornment position='end'>
+                    <IconButton onClick={handleClickShowPassword} edge='end'>
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
                 )
-              }
-            }}
-          />
-          <Button 
-            type="submit" 
-            size="large"
-            variant="contained"
-            sx={{
-              borderRadius: '8px',
-              fontSize: '16px',
-              textTransform: 'none',
-              display: 'block',
-              mx: 'auto',
-              px: '30px'
-            }}
-          >
-            Log In
-          </Button>
-        </form>
-      </Paper>
+              }}
+            />
+            <Button
+              type='submit'
+              size='large'
+              variant='contained'
+              sx={{
+                borderRadius: '8px',
+                fontSize: '16px',
+                textTransform: 'none',
+                display: 'block',
+                mx: 'auto',
+                px: '30px'
+              }}
+            >
+              Log In
+            </Button>
+          </form>
+        </Paper>
+      </Box>
 
       <Dialog
         open={openDialog}
@@ -234,23 +228,18 @@ const Login = () => {
           }
         }}
       >
-        <DialogTitle sx={{ pb: 2 }}>
-          {dialogTitle}
-        </DialogTitle>
+        <DialogTitle sx={{ pb: 2 }}>{dialogTitle}</DialogTitle>
         <DialogContent>
           <Typography>{error}</Typography>
         </DialogContent>
         <DialogActions>
-          <Button 
-            onClick={handleCloseDialog}
-            variant="contained"
-          >
+          <Button onClick={handleCloseDialog} variant='contained'>
             OK
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </>
   )
 }
 
-export default Login 
+export default Login
