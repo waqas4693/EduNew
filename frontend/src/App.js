@@ -1,36 +1,37 @@
-import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { Provider } from 'react-redux'
-import { configureStore } from '@reduxjs/toolkit'
-import courseReducer from './redux/slices/courseSlice'
+import Login from './components/auth/Login'
+import Profile from './components/profile/Profile'
 import CssBaseline from '@mui/material/CssBaseline'
+import AddCourse from './components/forms/AddCourse'
+import Units from './components/app-components/Units'
+import courseReducer from './redux/slices/courseSlice'
+import Section from './components/app-components/Section'
+import PrivateRoute from './components/routes/PrivateRoute'
+import InviteStudent from './components/forms/InviteStudent'
+import ActiveStudents from './components/students/ActiveStudents'
 import DashboardLayout from './components/layout/DashboardLayout'
 import AdminDashboard from './components/dashboard/AdminDashboard'
-import StudentDashboard from './components/dashboard/StudentDashboard'
-import PrivateRoute from './components/routes/PrivateRoute'
-import Login from './components/auth/Login'
-import AddCourse from './components/forms/AddCourse'
-import { AuthProvider } from './context/AuthContext'
-import { ThemeProvider } from './context/ThemeContext'
-import Units from './components/app-components/Units'
-import Section from './components/app-components/Section'
-import LearnerFrame from './components/app-components/LearnerFrame'
-import ViewAssessment from './components/app-components/ViewAssessment'
-import InviteStudent from './components/forms/InviteStudent'
 import InactiveCourses from './components/courses/InactiveCourses'
-import ActiveStudents from './components/students/ActiveStudents'
+import StudentProgress from './components/students/StudentProgress'
+import LearnerFrame from './components/app-components/LearnerFrame'
+import StudentDashboard from './components/dashboard/StudentDashboard'
+import ViewAssessment from './components/app-components/ViewAssessment'
+
 import InactiveStudents from './components/students/InactiveStudents'
 import StudentCourses from './components/students/StudentCourses'
 import CourseStudents from './components/courses/CourseStudents'
 import AssessmentReview from './components/assessment/AssessmentReview'
 import GradedAssessments from './components/assessment/GradedAssessments'
 import ResourceAnalytics from './components/admin/ResourceAnalytics'
-import StudentProgress from './components/students/StudentProgress' 
-import AssessmentDeadlineSettings from './components/admin/AssessmentDeadlineSettings'
-import { LocalizationProvider } from '@mui/x-date-pickers'
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import StudentAssessments from './components/assessment/StudentAssessments'
-import Profile from './components/profile/Profile'
+
+import { Provider } from 'react-redux'
+import { configureStore } from '@reduxjs/toolkit'
+import { AuthProvider } from './context/AuthContext'
+import { ThemeProvider } from './context/ThemeContext'
+import { LocalizationProvider } from '@mui/x-date-pickers'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles'
 
 // Create Redux store
 const store = configureStore({
@@ -83,10 +84,6 @@ function App() {
                             <Route path="/assessment-review/graded" element={<GradedAssessments />} />
                             <Route path="/resource-analytics" element={<ResourceAnalytics />} />
                             <Route path="/students/:id/courses/:courseId/progress" element={<StudentProgress />} />
-                            <Route 
-                              path="/courses/:courseId/assessment-deadlines" 
-                              element={<AssessmentDeadlineSettings />} 
-                            />
                             <Route 
                               path="/students/:studentId/assessments" 
                               element={<StudentAssessments isAdminView={true} />} 

@@ -9,23 +9,15 @@ const courseSchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  assessmentInterval: {
-    type: Number,
-    default: null
-  },
-  totalAssessments: {
-    type: Number,
-    default: 0
-  },
-  units: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Unit'
-  }],
   status: {
     type: Number,
     enum: [1, 2],
     default: 1
-  }
+  },
+  units: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Unit'
+  }]
 }, { timestamps: false })
 
 const Course = mongoose.model('Course', courseSchema)

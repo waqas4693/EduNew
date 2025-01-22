@@ -685,14 +685,10 @@ const ViewAssessment = () => {
     }
   }, [currentIndex, assessments, user])
 
-  const calculateDueDate = (enrollmentDate, interval, orderNumber) => {
-    console.log('Enrollment Date:', enrollmentDate)
-    console.log('Interval:', interval)
-    console.log('Order Number:', orderNumber)
+  const calculateDueDate = (enrollmentDate, interval) => {
     const enrollmentDateTime = new Date(enrollmentDate)
     return new Date(
-      enrollmentDateTime.getTime() +
-        interval * orderNumber * 24 * 60 * 60 * 1000
+      enrollmentDateTime.getTime() + interval * 24 * 60 * 60 * 1000
     )
   }
 
@@ -714,25 +710,21 @@ const ViewAssessment = () => {
       if (response.status === 200) {
         setAssessments(response.data.assessments)
         
-        // Get enrollment dates and intervals from localStorage
+        // Get enrollment date from localStorage
         const enrollmentDates = JSON.parse(localStorage.getItem('enrollmentDates'))
-        const assessmentIntervals = JSON.parse(localStorage.getItem('assessmentIntervals'))
-        
         const courseEnrollmentDate = enrollmentDates[courseId]
-        const assessmentInterval = assessmentIntervals[courseId]
         
-        if (!courseEnrollmentDate || !assessmentInterval) {
-          console.error('Missing enrollment date or interval for course:', courseId)
+        if (!courseEnrollmentDate) {
+          console.error('Missing enrollment date for course:', courseId)
           return
         }
 
-        // Calculate due dates for each assessment
+        // Calculate due dates for each assessment using its own interval
         const datesMap = {}
         response.data.assessments.forEach(assessment => {
           const dueDate = calculateDueDate(
             courseEnrollmentDate,
-            assessmentInterval,
-            assessment.orderNumber
+            assessment.interval
           )
           datesMap[assessment._id] = dueDate
         })

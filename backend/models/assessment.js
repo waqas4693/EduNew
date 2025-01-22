@@ -1,7 +1,7 @@
 import mongoose from 'mongoose'
 
 const assessmentSchema = new mongoose.Schema({
-  orderNumber: {
+  interval: {
     type: Number,
     required: true
   },

@@ -65,6 +65,7 @@ const CourseProgressCard = memo(({ courseId, studentId }) => {
         onClick={handleCardClick}
         sx={{
           height: '100%',
+          width: '200px',
           p: 2,
           border: '1px solid #3366CC33',
           borderRadius: '12px',

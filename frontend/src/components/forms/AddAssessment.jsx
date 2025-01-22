@@ -30,6 +30,7 @@ const AddAssessment = () => {
     assessmentType: '',
     totalMarks: '',
     percentage: '',
+    interval: '',
     isTimeBound: false,
     timeAllowed: '',
     content: {
@@ -543,8 +544,13 @@ const AddAssessment = () => {
   }
 
   const validateForm = () => {
-    if (!sectionId || !formData.assessmentType || !formData.totalMarks || !formData.percentage) {
+    if (!sectionId || !formData.assessmentType || !formData.totalMarks || !formData.percentage || !formData.interval) {
       alert('Please fill all required fields')
+      return false
+    }
+
+    if (Number(formData.interval) <= 0) {
+      alert('Interval must be greater than 0')
       return false
     }
 
@@ -568,6 +574,7 @@ const AddAssessment = () => {
       assessmentType: '',
       totalMarks: '',
       percentage: '',
+      interval: '',
       isTimeBound: false,
       timeAllowed: '',
       content: {
@@ -728,6 +735,29 @@ const AddAssessment = () => {
           label={`Percentage (Remaining: ${remainingPercentage}%)`}
           value={formData.percentage}
           onChange={e => handleFormChange('percentage', e.target.value)}
+          required
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              borderRadius: '8px',
+              border: '1px solid #20202033',
+              '& fieldset': {
+                border: 'none'
+              }
+            },
+            '& .MuiInputLabel-root': {
+              color: '#8F8F8F',
+              backgroundColor: 'white',
+              padding: '0 4px'
+            }
+          }}
+        />
+        <TextField
+          fullWidth
+          size="small"
+          type="number"
+          label="Interval (days)"
+          value={formData.interval}
+          onChange={e => handleFormChange('interval', e.target.value)}
           required
           sx={{
             '& .MuiOutlinedInput-root': {

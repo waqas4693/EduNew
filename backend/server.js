@@ -70,24 +70,24 @@ app.get('/', function (req, res) {
 })
 
 // app.use('/api/login', loginRoutes)
-app.use('/s3', s3Routes)
-app.use('/auth', authRoutes)
-app.use('/units', unitRoutes)
-app.use('/courses', courseRoutes)
-app.use('/student', studentRoutes)
-app.use('/sections', sectionRoutes)
-app.use('/resources', upload.fields([
+app.use('/api/s3', s3Routes)
+app.use('/api/auth', authRoutes)
+app.use('/api/units', unitRoutes)
+app.use('/api/courses', courseRoutes)
+app.use('/api/student', studentRoutes)
+app.use('/api/sections', sectionRoutes)
+app.use('/api/resources', upload.fields([
   { name: 'file', maxCount: 1 },
   { name: 'thumbnail', maxCount: 1 },
   { name: 'backgroundImage', maxCount: 1 },
   { name: 'mcqImage', maxCount: 1 }
 ]), resourceRoutes)
-app.use('/assessments', assessmentRoutes)
-app.use('/assessment-attempts', assessmentAttemptRoutes)
-app.use('/assessment-review', assessmentReviewRoutes)
-app.use('/resource-views', resourceViewRoutes)
-app.use('/resources/files', express.static(path.join(__dirname, 'ResourceFiles')))
-app.use('/upload', uploadRoutes)
+app.use('/api/assessments', assessmentRoutes)
+app.use('/api/assessment-attempts', assessmentAttemptRoutes)
+app.use('/api/assessment-review', assessmentReviewRoutes)
+app.use('/api/resource-views', resourceViewRoutes)
+app.use('/api/resources/files', express.static(path.join(__dirname, 'ResourceFiles')))
+app.use('/api/upload', uploadRoutes)
 mongoose.set('strictQuery', false)
 
 await mongoose
