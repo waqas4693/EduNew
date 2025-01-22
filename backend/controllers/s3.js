@@ -10,23 +10,26 @@ const s3 = new AWS.S3({
 })
 
 export const getS3SignedUrl = async (req, res) => {
-  const { fileName, fileType } = req.body
+
+
+  res.json({ message : 'Route Working Fine' })
+  // const { fileName, fileType } = req.body
   
-  const params = {
-    Bucket: process.env.S3_BUCKET_NAME,
-    Key: fileName,
-    Expires: 60 * 50,
-    ContentType: fileType
-  }
+  // const params = {
+  //   Bucket: process.env.S3_BUCKET_NAME,
+  //   Key: fileName,
+  //   Expires: 60 * 50,
+  //   ContentType: fileType
+  // }
 
 
-  try {
-    const signedUrl = await s3.getSignedUrlPromise('putObject', params)
-    res.json({ signedUrl })
-  } catch (error) {
-    console.error('Error generating signed URL:', error)
-    res.status(500).json({ error: 'Failed to generate signed URL' })
-  }
+  // try {
+  //   const signedUrl = await s3.getSignedUrlPromise('putObject', params)
+  //   res.json({ signedUrl })
+  // } catch (error) {
+  //   console.error('Error generating signed URL:', error)
+  //   res.status(500).json({ error: 'Failed to generate signed URL' })
+  // }
 }
 
 export const getS3SignedUrlGet = async (req, res) => {
