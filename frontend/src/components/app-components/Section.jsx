@@ -268,8 +268,8 @@ const Section = () => {
                     bottom: 0
                   }}
                 >
-                  <Typography sx={{ fontSize: '16px', fontWeight: 500 }}>
-                    Sec:{index + 1}
+                  <Typography sx={{ fontSize: '16px', fontWeight: 500, p: '20px' }}>
+                    {index + 1}
                   </Typography>
                 </Box>
 

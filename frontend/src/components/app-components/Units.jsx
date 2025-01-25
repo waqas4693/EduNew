@@ -191,9 +191,9 @@ const Units = () => {
             </Box>
           </Box>
 
-          <Typography variant='body2' sx={{ mb: 2 }}>
+          {/* <Typography variant='body2' sx={{ mb: 2 }}>
             Last Visit: 11/11/2024 at 2 am
-          </Typography>
+          </Typography> */}
 
           {loading ? (
             [...Array(3)].map((_, index) => (
@@ -247,8 +247,8 @@ const Units = () => {
                       bottom: 0
                     }}
                   >
-                    <Typography sx={{ fontSize: '16px', fontWeight: 500 }}>
-                      Unit: {index + 1}
+                    <Typography sx={{ fontSize: '16px', fontWeight: 500, p: '20px' }}>
+                      {index + 1}
                     </Typography>
                   </Box>
                   <Box>

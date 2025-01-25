@@ -64,7 +64,6 @@ const AdminDashboard = () => {
 
   const handleViewStudents = () => {
     if (selectedCourse) {
-      console.log('Navigating to:', `/admin/courses/${selectedCourse._id}/students`)
       navigate(`/admin/courses/${selectedCourse._id}/students`)
     }
     handleMenuClose()
@@ -236,14 +235,14 @@ const AdminDashboard = () => {
                         sx={{
                           width: '100%',
                           height: '120px',
-                          bgcolor: course.image ? 'transparent' : 'primary.light',
+                          bgcolor: course.thumbnail ? 'transparent' : 'primary.light',
                           borderRadius: '8px',
                           mb: 2
                         }}
                       >
-                        {course.image ? (
+                        {course.thumbnail ? (
                           <img
-                            src={getThumbnailUrl(course.image)}
+                            src={getThumbnailUrl(course.thumbnail)}
                             alt={course.name}
                             style={{
                               width: '100%',

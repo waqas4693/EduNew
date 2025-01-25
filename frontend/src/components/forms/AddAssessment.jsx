@@ -256,6 +256,8 @@ const AddAssessment = () => {
               <Box key={index} sx={{ display: 'flex', gap: 2, mb: 2 }}>
                 <TextField
                   fullWidth
+                  multiline
+                  rows={4}
                   size="small"
                   label={`Question ${index + 1}`}
                   value={q.question}

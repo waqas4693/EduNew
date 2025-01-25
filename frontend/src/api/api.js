@@ -1,7 +1,7 @@
 import axios from 'axios'
 
-// const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api/'
-const API_URL = 'https://edusupplements.co.uk/api/'
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api/'
+// const API_URL = 'https://edusupplements.co.uk/api/'
 
 export const postData = async (endpoint, data, config = {}) => {
   try {
@@ -26,10 +26,6 @@ export const postData = async (endpoint, data, config = {}) => {
 export const getData = async (endpoint) => {
   try {
     const token = localStorage.getItem('token')
-    console.log('Token from get api:', token)
-
-    console.log('Get EndPoint:', `${API_URL}${endpoint}`)
-
     const response = await axios.get(`${API_URL}${endpoint}`, {
       headers: {
         'Authorization': `Bearer ${token}`

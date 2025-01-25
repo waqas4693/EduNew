@@ -152,6 +152,7 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
         <Box sx={{ position: 'relative', width: '100%', height: '80vh' }}>
           <video
             controls
+            controlsList="nodownload"
             style={{
               position: 'absolute',
               top: 0,
@@ -178,6 +179,7 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
           <img
             src={signedUrl}
             alt={resource.name}
+            onContextMenu={(e) => e.preventDefault()}
             style={{
               maxWidth: '100%',
               maxHeight: '100%',
@@ -264,7 +266,7 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
                       WebkitBoxOrient: 'vertical'
                     }}
                   >
-                    Question {index + 1}: {qa.question}
+                    {qa.question}
                   </Typography>
                 </AccordionSummary>
                 <AccordionDetails
@@ -387,9 +389,9 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
               display: 'flex',
               bgcolor: '#f5f5f5',
               borderRadius: '8px',
+              justifyContent: 'center',
               alignItems: 'center',
-              flexDirection: 'column',
-              justifyContent: 'center'
+              gap: 2
             }}
           >
             <audio
@@ -398,16 +400,22 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
               src={signedUrl}
               style={{ width: '100%', maxWidth: '600px' }}
             />
-            <Typography
-              variant='body1'
-              sx={{
-                textAlign: 'center',
-                color: 'text.primary'
-              }}
-            >
-              This audio will play {resource.content.repeatCount} time
-              {resource.content.repeatCount > 1 ? 's' : ''}
-            </Typography>
+            {playCount > 0 && (
+              <Typography
+                variant='body1'
+                sx={{
+                  color: 'primary.white',
+                  fontWeight: 'medium',
+                  minWidth: '30px',
+                  textAlign: 'center',
+                  p: 1,
+                  borderRadius: 1,
+                  bgcolor: 'primary.light'
+                }}
+              >
+                {resource.content.repeatCount - playCount + 1}
+              </Typography>
+            )}
           </Box>
 
           {resource.content.backgroundImage && (

@@ -913,7 +913,7 @@ const ViewAssessment = () => {
                     )}
                   </Typography>
                   <Typography variant='body2' color='text.secondary'>
-                    Marks: {assessment.totalMarks} | {assessment.percentage}%
+                    Marks: {assessment.totalMarks} | Section Weightage: {assessment.percentage}%
                   </Typography>
                   {dueDates[assessment._id] && !assessment.attempt?.status && (
                     <Typography

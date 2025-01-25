@@ -1,4 +1,10 @@
-import { useState, useEffect } from 'react'
+import axios from 'axios'
+import AddUnit from './AddUnit'
+import AddSection from './AddSection'
+import url from '../config/server-url'
+import AddResource from './AddResource'
+import AddAssessment from './AddAssessment'
+
 import {
   Box,
   TextField,
@@ -9,13 +15,8 @@ import {
   Tab,
   Divider
 } from '@mui/material'
+import { useState, useEffect } from 'react'
 import { postData, getData, putData } from '../../api/api'
-import AddUnit from './AddUnit'
-import AddSection from './AddSection'
-import AddResource from './AddResource'
-import AddAssessment from './AddAssessment'
-import axios from 'axios'
-import url from '../config/server-url'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 const TabPanel = ({ children, value, index }) => (
