@@ -31,7 +31,8 @@ const AssessmentRenderer = ({
   onSubmit,
   onPlayAudio,
   attemptStatus,
-  existingAttempt
+  existingAttempt,
+  renderSubmittedFile
 }) => {
   const [currentMcqIndex, setCurrentMcqIndex] = useState(0)
   const [flaggedQuestions, setFlaggedQuestions] = useState(new Set())
@@ -501,7 +502,7 @@ const AssessmentRenderer = ({
               </Typography>
               <Button
                 variant='outlined'
-                href={assessment.content.supportingFileUrl}
+                href={signedUrl}
                 target='_blank'
               >
                 Download Supporting Material
@@ -539,6 +540,7 @@ const AssessmentRenderer = ({
               Submit Assessment
             </Button>
           </Box>
+          {renderSubmittedFile(attemptData?.submittedFile)}
         </Box>
       )
 
@@ -571,16 +573,10 @@ const ViewAssessment = () => {
     return groups
   }, {})
 
-  const getSignedUrl = async fileName => {
-    try {
-      const response = await axios.post(`${url}s3/get`, {
-        fileName
-      })
-      return response.data.signedUrl
-    } catch (error) {
-      console.error('Error fetching signed URL:', error)
-      return null
-    }
+  const getFileUrl = (fileName, isSubmission = false) => {
+    if (!fileName) return null
+    const folder = isSubmission ? 'ASSESSMENT_SUBMISSIONS' : 'ASSESSMENT_FILES'
+    return `${url}resources/files/${folder}/${fileName}`
   }
 
   const getAudioUrl = async fileName => {
@@ -648,27 +644,20 @@ const ViewAssessment = () => {
   }, [sectionId])
 
   useEffect(() => {
-    const fetchSignedUrl = async () => {
+    const fetchFileUrls = async () => {
       if (assessments[currentIndex]?.assessmentType === 'FILE') {
         const assessment = assessments[currentIndex]
 
-        if (!signedUrls[assessment.content.assessmentFile]) {
-          const signedUrl = await getSignedUrl(
-            assessment.content.assessmentFile
-          )
+        if (assessment.content.assessmentFile) {
+          const fileUrl = getFileUrl(assessment.content.assessmentFile)
           setSignedUrls(prev => ({
             ...prev,
-            [assessment.content.assessmentFile]: signedUrl
+            [assessment.content.assessmentFile]: fileUrl
           }))
         }
 
-        if (
-          assessment.content.supportingFile &&
-          !signedUrls[assessment.content.supportingFile]
-        ) {
-          const supportingUrl = await getSignedUrl(
-            assessment.content.supportingFile
-          )
+        if (assessment.content.supportingFile) {
+          const supportingUrl = getFileUrl(assessment.content.supportingFile)
           setSignedUrls(prev => ({
             ...prev,
             [assessment.content.supportingFile]: supportingUrl
@@ -676,7 +665,7 @@ const ViewAssessment = () => {
         }
       }
     }
-    fetchSignedUrl()
+    fetchFileUrls()
   }, [currentIndex, assessments])
 
   useEffect(() => {
@@ -783,26 +772,51 @@ const ViewAssessment = () => {
     try {
       let finalAttemptData = { ...attemptData }
 
-      if (assessments[currentIndex].assessmentType === 'FILE') {
+      if (selectedAssessment?.assessmentType === 'FILE' && attemptData.submittedFile) {
+        // Check if submittedFile exists and is a File object
+        if (!(attemptData.submittedFile instanceof File)) {
+          throw new Error('Please select a file to submit')
+        }
+
         const formData = new FormData()
         formData.append('file', attemptData.submittedFile)
-        const uploadResponse = await axios.post(`${url}s3/upload`, formData)
-        finalAttemptData.submittedFile = uploadResponse.data.fileName
+        
+        try {
+          // Upload the file first
+          const uploadResponse = await axios.post(
+            `${url}upload/file?type=SUBMISSION`,
+            formData,
+            {
+              headers: {
+                'Content-Type': 'multipart/form-data'
+              }
+            }
+          )
+          
+          // Set only the filename in the finalAttemptData
+          finalAttemptData = {
+            submittedFile: uploadResponse.data.fileName
+          }
+        } catch (error) {
+          console.error('Error uploading file:', error)
+          throw new Error('Failed to upload file. Please try again.')
+        }
       }
 
-      console.log('Student ID:', user.id)
-
-      await axios.post(`${url}assessment-attempts`, {
-        assessmentId: assessments[currentIndex]._id,
+      // Submit the assessment attempt with the file name
+      const response = await axios.post(`${url}assessment-attempts`, {
+        assessmentId: selectedAssessment._id,
         studentId: user.studentId,
         content: finalAttemptData
       })
 
-      alert('Assessment submitted successfully!')
-      fetchExistingAttempt()
+      if (response.status === 201) {
+        alert('Assessment submitted successfully!')
+        fetchExistingAttempt()
+      }
     } catch (error) {
       console.error('Error submitting assessment:', error)
-      alert('Error submitting assessment. Please try again.')
+      alert(error.message || 'Error submitting assessment. Please try again.')
     }
   }
 
@@ -820,6 +834,26 @@ const ViewAssessment = () => {
       setAttemptData({})
       setExistingAttempt(null)
     }
+  }
+
+  // Update the AssessmentRenderer to handle submission files
+  const renderSubmittedFile = (fileName) => {
+    if (!fileName) return null
+    const fileUrl = getFileUrl(fileName, true) // true indicates it's a submission
+    return (
+      <Box sx={{ mt: 2 }}>
+        <Typography variant="subtitle1">Submitted File:</Typography>
+        <Button
+          variant="outlined"
+          href={fileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          sx={{ mt: 1 }}
+        >
+          Download Submitted File
+        </Button>
+      </Box>
+    )
   }
 
   return (
@@ -943,13 +977,18 @@ const ViewAssessment = () => {
           {selectedAssessment ? (
             <AssessmentRenderer
               assessment={selectedAssessment}
-              signedUrl={signedUrls[selectedAssessment.content.assessmentFile]}
+              signedUrl={
+                selectedAssessment.assessmentType === 'FILE'
+                  ? getFileUrl(selectedAssessment.content.assessmentFile)
+                  : null
+              }
               attemptData={attemptData}
               onAnswerChange={handleAnswerChange}
               onSubmit={handleSubmit}
               onPlayAudio={handlePlayAudio}
               attemptStatus={existingAttempt?.status}
               existingAttempt={existingAttempt}
+              renderSubmittedFile={renderSubmittedFile}
             />
           ) : (
             <Box

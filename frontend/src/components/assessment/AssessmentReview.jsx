@@ -21,6 +21,7 @@ import {
   Grid
 } from '@mui/material'
 import { getData, patchData } from '../../api/api'
+import url from '../../components/config/server-url'
 
 const AssessmentReview = () => {
   const [assessments, setAssessments] = useState([])
@@ -192,6 +193,12 @@ const AssessmentReview = () => {
     )
   }
 
+  const getFileUrl = (fileName, isSubmission = false) => {
+    if (!fileName) return ''
+    const folder = isSubmission ? 'ASSESSMENT_SUBMISSIONS' : 'ASSESSMENT_FILES'
+    return `${url}resources/files/${folder}/${fileName}`
+  }
+
   const renderAssessmentContent = (content) => {
     return (
       <Stack spacing={3}>
@@ -232,10 +239,38 @@ const AssessmentReview = () => {
             </Typography>
             <Button 
               variant="outlined" 
-              href={content.submittedFile} 
+              href={getFileUrl(content.submittedFile, true)}
               target="_blank"
+              sx={{
+                textTransform: 'none',
+                '&:hover': {
+                  backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                }
+              }}
             >
-              View Submitted File
+              Download Submitted File
+            </Button>
+          </Box>
+        )}
+
+        {/* Assessment File (if it exists) */}
+        {selectedAttempt?.assessmentId?.content?.assessmentFile && (
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Assessment File
+            </Typography>
+            <Button 
+              variant="outlined" 
+              href={getFileUrl(selectedAttempt.assessmentId.content.assessmentFile, false)}
+              target="_blank"
+              sx={{
+                textTransform: 'none',
+                '&:hover': {
+                  backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                }
+              }}
+            >
+              Download Assessment File
             </Button>
           </Box>
         )}

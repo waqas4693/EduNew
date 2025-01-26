@@ -51,7 +51,14 @@ const StudentProgress = () => {
       setLoading(prev => ({ ...prev, units: true }))
       try {
         const response = await getData(`units/${courseId}`)
-        setUnits(response.data.units || [])
+        const unitsData = response.data.units || []
+        setUnits(unitsData)
+        
+        // Select first unit by default if available
+        if (unitsData.length > 0) {
+          setSelectedUnit(unitsData[0])
+          fetchSections(unitsData[0]._id)
+        }
       } catch (error) {
         console.error('Error fetching units:', error)
       } finally {
@@ -61,21 +68,33 @@ const StudentProgress = () => {
     fetchUnits()
   }, [courseId])
 
-  // Fetch sections when unit is selected
-  const handleUnitClick = async unit => {
-    setSelectedUnit(unit)
-    setSelectedSection(null)
-    setResources([])
+  // Fetch sections for a unit
+  const fetchSections = async (unitId) => {
     setLoading(prev => ({ ...prev, sections: true }))
     try {
-      const response = await getData(`sections/${unit._id}`)
-      setSections(response.data.sections || [])
+      const response = await getData(`sections/${unitId}`)
+      const sectionsData = response.data.sections || []
+      setSections(sectionsData)
+      
+      // Select first section by default if available
+      if (sectionsData.length > 0) {
+        setSelectedSection(sectionsData[0])
+        handleSectionClick(sectionsData[0])
+      }
     } catch (error) {
       console.error('Error fetching sections:', error)
       setSections([])
     } finally {
       setLoading(prev => ({ ...prev, sections: false }))
     }
+  }
+
+  // Modified unit click handler
+  const handleUnitClick = async unit => {
+    setSelectedUnit(unit)
+    setSelectedSection(null)
+    setResources([])
+    await fetchSections(unit._id)
   }
 
   // Fetch resources when section is selected
@@ -185,20 +204,14 @@ const StudentProgress = () => {
                   <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                     <CircularProgress size={24} />
                   </Box>
-                ) : (
-                  <Box
-                    sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
-                  >
+                ) : sections.length > 0 && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {sections.map(section => (
                       <Chip
                         key={section._id}
                         label={section.name}
                         onClick={() => handleSectionClick(section)}
-                        color={
-                          selectedSection?._id === section._id
-                            ? 'primary'
-                            : 'default'
-                        }
+                        color={selectedSection?._id === section._id ? 'primary' : 'default'}
                         sx={{
                           '&:hover': { color: 'white', bgcolor: 'primary.main' }
                         }}
@@ -213,23 +226,27 @@ const StudentProgress = () => {
             <Box sx={{ display: 'flex', gap: 1 }}>
               {loading.units ? (
                 <CircularProgress size={24} />
-              ) : (
+              ) : units.length > 0 ? (
                 units.map(unit => (
                   <Chip
                     key={unit._id}
                     label={unit.name}
                     onClick={() => handleUnitClick(unit)}
-                    color={
-                      selectedUnit?._id === unit._id ? 'primary' : 'default'
-                    }
+                    color={selectedUnit?._id === unit._id ? 'primary' : 'default'}
                     sx={{
                       '&:hover': { bgcolor: 'primary.light' }
                     }}
                   />
                 ))
+              ) : (
+                <Box sx={{ width: '100%', textAlign: 'center', mt: 4 }}>
+                  <Typography color="text.secondary" variant="h6">
+                    No units found in this course
+                  </Typography>
+                </Box>
               )}
             </Box>
-            {selectedSection && (
+            {selectedSection ? (
               <Box sx={{ pt: '20px', pl: '20px' }}>
                 {loading.resources ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center' }}>
@@ -243,6 +260,20 @@ const StudentProgress = () => {
                     disableRowSelectionOnClick
                   />
                 )}
+              </Box>
+            ) : selectedUnit && (
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  height: '300px',
+                  width: '100%'
+                }}
+              >
+                <Typography color="text.secondary" variant="h6">
+                  There are no sections for the selected unit
+                </Typography>
               </Box>
             )}
           </Grid>

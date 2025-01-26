@@ -46,7 +46,8 @@ const resourceSchema = new mongoose.Schema({
           return this.resourceType === 'MCQ'
         }
       },
-      imageUrl: String
+      imageFile: String,
+      audioFile: String
     }
   },
   status: {

@@ -247,6 +247,27 @@ const AddAssessment = () => {
     }
   }
 
+  const handleFileUpload = async (file, type) => {
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      
+      const response = await axios.post(`${url}upload/file`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+
+      if (response.status === 200) {
+        return response.data.fileName
+      }
+      throw new Error('File upload failed')
+    } catch (error) {
+      console.error('Error uploading file:', error)
+      throw error
+    }
+  }
+
   const renderAssessmentTypeFields = () => {
     switch (formData.assessmentType) {
       case 'QNA':
@@ -525,13 +546,26 @@ const AddAssessment = () => {
         return
       }
 
-      const assessmentData = {
+      let assessmentData = {
         ...formData,
         sectionId,
         courseId,
         isTimeBound: formData.isTimeBound,
         timeAllowed: formData.timeAllowed,
-        content: formData.content
+        content: { ...formData.content }
+      }
+
+      // Handle file uploads for FILE type assessment
+      if (formData.assessmentType === 'FILE') {
+        if (formData.content.assessmentFile) {
+          const assessmentFileName = await handleFileUpload(formData.content.assessmentFile)
+          assessmentData.content.assessmentFile = assessmentFileName
+        }
+        
+        if (formData.content.supportingFile) {
+          const supportingFileName = await handleFileUpload(formData.content.supportingFile)
+          assessmentData.content.supportingFile = supportingFileName
+        }
       }
 
       const response = await postData('assessments', assessmentData)

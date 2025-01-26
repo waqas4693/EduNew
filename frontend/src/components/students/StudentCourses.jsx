@@ -62,7 +62,6 @@ const CourseProgressCard = memo(({ courseId, studentId }) => {
   return (
     <>
       <Card 
-        onClick={handleCardClick}
         sx={{
           height: '100%',
           width: '200px',
@@ -70,13 +69,32 @@ const CourseProgressCard = memo(({ courseId, studentId }) => {
           border: '1px solid #3366CC33',
           borderRadius: '12px',
           boxShadow: '0px 14px 42px 0px #080F340F',
-          cursor: 'pointer',
-          transition: 'transform 0.2s',
-          '&:hover': {
-            transform: 'scale(1.02)'
-          }
+          position: 'relative'
         }}
       >
+        <IconButton
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpenDialog(true);
+          }}
+          sx={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            backgroundColor: 'white',
+            width: '32px',
+            height: '32px',
+            '&:hover': {
+              backgroundColor: 'white',
+              opacity: 0.9
+            },
+            boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+            zIndex: 1
+          }}
+        >
+          <AssessmentIcon sx={{ color: 'primary.main' }} />
+        </IconButton>
+
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
             <CircularProgress />
@@ -237,12 +255,24 @@ const getThumbnailUrl = (fileName) => {
 }
 
 // Course Row Component
-const CourseRow = ({ course, onRemove, studentId }) => {
+const CourseRow = ({ course, onRemove, studentId, studentName }) => {
+  const navigate = useNavigate()
+
+  const handleCourseClick = () => {
+    navigate(`/admin/students/${studentId}/courses/${course._id}/progress`, {
+      state: {
+        courseName: course.name,
+        studentName: studentName
+      }
+    })
+  }
+
   return (
     <Grid container spacing={2} sx={{ mb: 2 }}>
       {/* Course Card */}
       <Grid xs={4}>
         <Card
+          onClick={handleCourseClick}
           sx={{
             height: '100%',
             width: '200px',
@@ -250,11 +280,18 @@ const CourseRow = ({ course, onRemove, studentId }) => {
             border: '1px solid #3366CC33',
             borderRadius: '12px',
             boxShadow: '0px 14px 42px 0px #080F340F',
-            position: 'relative'
+            position: 'relative',
+            cursor: 'pointer',
+            '&:hover': {
+              boxShadow: '0px 14px 42px 0px #080F3422'
+            }
           }}
         >
           <IconButton
-            onClick={() => onRemove(course)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(course);
+            }}
             sx={{
               position: 'absolute',
               top: 8,
@@ -395,6 +432,7 @@ const StudentCourses = () => {
               course={course}
               onRemove={handleRemoveCourse}
               studentId={id}
+              studentName={studentName}
             />
           ))}
         </Box>
@@ -413,6 +451,7 @@ const StudentCourses = () => {
                 course={course}
                 onRemove={handleRemoveCourse}
                 studentId={id}
+                studentName={studentName}
               />
             ))}
           </Box>

@@ -12,7 +12,6 @@ import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 
 // import loginRoutes from './routes/login.js'
-import s3Routes from './routes/s3.js'
 import authRoutes from './routes/auth.js'
 import unitRoutes from './routes/unit.js'
 import courseRoutes from './routes/course.js'
@@ -70,7 +69,6 @@ app.get('/api/', function (req, res) {
 })
 
 // app.use('/api/login', loginRoutes)
-app.use('/api/s3', s3Routes)
 app.use('/api/auth', authRoutes)
 app.use('/api/units', unitRoutes)
 app.use('/api/courses', courseRoutes)
@@ -80,7 +78,8 @@ app.use('/api/resources', upload.fields([
   { name: 'file', maxCount: 1 },
   { name: 'thumbnail', maxCount: 1 },
   { name: 'backgroundImage', maxCount: 1 },
-  { name: 'mcqImage', maxCount: 1 }
+  { name: 'mcqImage', maxCount: 1 },
+  { name: 'mcqAudio', maxCount: 1 }
 ]), resourceRoutes)
 app.use('/api/assessments', assessmentRoutes)
 app.use('/api/assessment-attempts', assessmentAttemptRoutes)
@@ -88,6 +87,7 @@ app.use('/api/assessment-review', assessmentReviewRoutes)
 app.use('/api/resource-views', resourceViewRoutes)
 app.use('/api/resources/files', express.static(path.join(__dirname, 'ResourceFiles')))
 app.use('/api/upload', uploadRoutes)
+app.use('/api/resources/files/ASSESSMENT_SUBMISSIONS', express.static(path.join(__dirname, 'ResourceFiles/ASSESSMENT_SUBMISSIONS')))
 mongoose.set('strictQuery', false)
 
 await mongoose

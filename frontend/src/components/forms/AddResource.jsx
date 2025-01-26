@@ -269,12 +269,6 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
       contentData.fileName = resource.content.file.name
     }
 
-    // Handle thumbnail upload
-    if (resource.content.thumbnail) {
-      formData.append('thumbnail', resource.content.thumbnail)
-      contentData.thumbnailUrl = resource.content.thumbnail.name
-    }
-
     // Handle background image for PPT, AUDIO and TEXT
     if ((resource.resourceType === 'PPT' || 
          resource.resourceType === 'AUDIO' || 
@@ -282,6 +276,24 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         resource.content.backgroundImage) {
       formData.append('backgroundImage', resource.content.backgroundImage)
       contentData.backgroundImage = resource.content.backgroundImage.name
+    }
+
+    // Handle MCQ files
+    if (resource.resourceType === 'MCQ') {
+      if (resource.content.mcq?.imageFile) {
+        formData.append('mcqImage', resource.content.mcq.imageFile)
+        contentData.mcq = {
+          ...contentData.mcq,
+          imageFile: resource.content.mcq.imageFile.name
+        }
+      }
+      if (resource.content.mcq?.audioFile) {
+        formData.append('mcqAudio', resource.content.mcq.audioFile)
+        contentData.mcq = {
+          ...contentData.mcq,
+          audioFile: resource.content.mcq.audioFile.name
+        }
+      }
     }
 
     // Add other data
@@ -543,16 +555,13 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                   </FormControl>
                 </Box>
 
-                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                  <UploadButton
-                    label='Choose Thumbnail'
-                    value={resource.content.thumbnail}
-                    accept='image/*'
-                    onChange={e =>
-                      handleContentChange(index, 'thumbnail', e.target.files[0])
-                    }
-                  />
-
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    gap: 2,
+                    mb: resource.resourceType ? 2 : 0
+                  }}
+                >
                   {resource.resourceType === 'VIDEO' && (
                     <UploadButton
                       label='Choose Video'
@@ -586,28 +595,6 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                           )
                         }
                       />
-                      {/* <TextField
-                        fullWidth
-                        size='small'
-                        type='number'
-                        label='Repeat Count'
-                        value={resource.content.repeatCount || 1}
-                        onChange={e =>
-                          handleContentChange(
-                            index,
-                            'repeatCount',
-                            parseInt(e.target.value)
-                          )
-                        }
-                        slotProps={{
-                          input: { min: 1, max: 11 }
-                        }}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            borderRadius: '8px'
-                          }
-                        }}
-                      /> */}
                     </>
                   )}
 
@@ -674,17 +661,30 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                   )}
 
                   {resource.resourceType === 'MCQ' && (
-                    <UploadButton
-                      label='Choose Question Image'
-                      value={resource.content.mcq?.imageFile}
-                      accept='image/*'
-                      onChange={e =>
-                        handleContentChange(index, 'mcq', {
-                          ...resource.content.mcq,
-                          imageFile: e.target.files[0]
-                        })
-                      }
-                    />
+                    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                      <UploadButton
+                        label='Choose Question Image'
+                        value={resource.content.mcq?.imageFile}
+                        accept='image/*'
+                        onChange={e =>
+                          handleContentChange(index, 'mcq', {
+                            ...resource.content.mcq,
+                            imageFile: e.target.files[0]
+                          })
+                        }
+                      />
+                      <UploadButton
+                        label='Choose Audio'
+                        value={resource.content.mcq?.audioFile}
+                        accept='audio/*'
+                        onChange={e =>
+                          handleContentChange(index, 'mcq', {
+                            ...resource.content.mcq,
+                            audioFile: e.target.files[0]
+                          })
+                        }
+                      />
+                    </Box>
                   )}
                 </Box>
 

@@ -37,6 +37,27 @@ export const createResource = async (req, res) => {
       content.backgroundImage = bgImageName
     }
 
+    // Handle MCQ files
+    if (resourceType === 'MCQ') {
+      if (req.files.mcqImage) {
+        const mcqImageName = await uploadFile(
+          req.files.mcqImage[0],
+          'MCQ_IMAGES',
+          req.files.mcqImage[0].originalname
+        )
+        content.mcq.imageFile = mcqImageName
+      }
+      
+      if (req.files.mcqAudio) {
+        const mcqAudioName = await uploadFile(
+          req.files.mcqAudio[0],
+          'MCQ_AUDIO',
+          req.files.mcqAudio[0].originalname
+        )
+        content.mcq.audioFile = mcqAudioName
+      }
+    }
+
     const resource = new Resource({
       name,
       resourceType,

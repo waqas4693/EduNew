@@ -1,4 +1,3 @@
-import axios from 'axios'
 import url from '../config/server-url'
 import Grid from '@mui/material/Grid2'
 
@@ -39,6 +38,7 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
   const [hasSubmitted, setHasSubmitted] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
   const audioRef = useRef(null)
+  const mcqAudioRef = useRef(null)
   const [playCount, setPlayCount] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
 
@@ -144,6 +144,99 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
       return { bgcolor: '#4CAF50', color: 'white' }
     }
     return { border: '1px solid #ddd' }
+  }
+
+  const renderMCQ = () => {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          {resource.content.mcq.question}
+        </Typography>
+
+        {/* MCQ Image */}
+        {resource.content.mcq?.imageFile && signedUrls[resource.content.mcq.imageFile] && (
+          <Box sx={{ mb: 2, maxWidth: '100%', overflow: 'hidden' }}>
+            <img
+              src={signedUrls[resource.content.mcq.imageFile]}
+              alt="Question"
+              style={{ maxWidth: '100%', height: 'auto' }}
+            />
+          </Box>
+        )}
+
+        {/* MCQ Audio Player */}
+        {resource.content.mcq?.audioFile && signedUrls[resource.content.mcq.audioFile] && (
+          <Box sx={{ mb: 2 }}>
+            <audio
+              ref={mcqAudioRef}
+              controls
+              style={{ width: '100%' }}
+              src={signedUrls[resource.content.mcq.audioFile]}
+            >
+              Your browser does not support the audio element.
+            </audio>
+          </Box>
+        )}
+
+        {/* Options */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {resource.content.mcq.options.map((option, index) => (
+            <Paper
+              key={index}
+              sx={{
+                p: 2,
+                cursor: hasSubmitted ? 'default' : 'pointer',
+                bgcolor: hasSubmitted
+                  ? resource.content.mcq.correctAnswers.includes(option)
+                    ? '#e8f5e9'
+                    : selectedAnswers.includes(option)
+                    ? '#ffebee'
+                    : 'white'
+                  : selectedAnswers.includes(option)
+                  ? '#e3f2fd'
+                  : 'white',
+                '&:hover': {
+                  bgcolor: hasSubmitted
+                    ? resource.content.mcq.correctAnswers.includes(option)
+                      ? '#e8f5e9'
+                      : selectedAnswers.includes(option)
+                      ? '#ffebee'
+                      : 'white'
+                    : '#f5f5f5'
+                }
+              }}
+              onClick={() => handleAnswerSelect(option)}
+            >
+              <Typography>{option}</Typography>
+            </Paper>
+          ))}
+        </Box>
+
+        {!hasSubmitted ? (
+          <Button
+            variant="contained"
+            onClick={handleSubmit}
+            sx={{ mt: 2 }}
+            disabled={selectedAnswers.length !== resource.content.mcq.numberOfCorrectAnswers}
+          >
+            Submit
+          </Button>
+        ) : (
+          <Box sx={{ mt: 2 }}>
+            <Alert severity={isCorrect ? 'success' : 'error'}>
+              {isCorrect ? 'Correct!' : 'Incorrect. Try again!'}
+            </Alert>
+            <Button
+              variant="outlined"
+              onClick={handleReset}
+              sx={{ mt: 1 }}
+            >
+              Try Again
+            </Button>
+          </Box>
+        )}
+      </Box>
+    )
   }
 
   switch (resource.resourceType) {
@@ -293,85 +386,7 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
       )
 
     case 'MCQ':
-      return (
-        <Box sx={{ p: 3, maxWidth: '800px', mx: 'auto' }}>
-          {resource.content.mcq.imageUrl && (
-            <Box sx={{ mb: 3, textAlign: 'center' }}>
-              <img
-                src={signedUrls[resource.content.mcq.imageUrl]}
-                alt='Question'
-                style={{ maxWidth: '100%', maxHeight: '300px' }}
-              />
-            </Box>
-          )}
-
-          <Typography variant='h6' sx={{ mb: 2, color: '#000' }}>
-            {resource.content.mcq.question}
-          </Typography>
-
-          {hasSubmitted && (
-            <Alert severity={isCorrect ? 'success' : 'error'} sx={{ mb: 2 }}>
-              {isCorrect
-                ? 'Correct! Well done!'
-                : `Incorrect. Expected ${resource.content.mcq.numberOfCorrectAnswers} correct answer(s).`}
-            </Alert>
-          )}
-
-          <Typography variant='body2' sx={{ mb: 2, color: 'text.secondary' }}>
-            Select {resource.content.mcq.numberOfCorrectAnswers} answer
-            {resource.content.mcq.numberOfCorrectAnswers > 1 ? 's' : ''}.
-          </Typography>
-
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {resource.content.mcq.options.map((option, index) => (
-              <Box
-                key={index}
-                onClick={() => handleAnswerSelect(option)}
-                sx={{
-                  p: 2,
-                  borderRadius: '8px',
-                  cursor: hasSubmitted ? 'default' : 'pointer',
-                  transition: 'all 0.2s',
-                  display: 'flex',
-                  alignItems: 'center',
-                  ...getOptionStyle(option),
-                  '&:hover': {
-                    bgcolor: hasSubmitted ? undefined : 'rgba(0,0,0,0.04)'
-                  }
-                }}
-              >
-                <Checkbox
-                  checked={selectedAnswers.includes(option)}
-                  disabled={hasSubmitted}
-                  sx={{ mr: 1 }}
-                />
-                <Typography sx={{ color: '#000' }}>{option}</Typography>
-              </Box>
-            ))}
-          </Box>
-
-          <Box
-            sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'center' }}
-          >
-            {!hasSubmitted ? (
-              <Button
-                variant='contained'
-                onClick={handleSubmit}
-                disabled={
-                  selectedAnswers.length !==
-                  resource.content.mcq.numberOfCorrectAnswers
-                }
-              >
-                Submit Answer
-              </Button>
-            ) : (
-              <Button variant='outlined' onClick={handleReset}>
-                Try Again
-              </Button>
-            )}
-          </Box>
-        </Box>
-      )
+      return renderMCQ()
 
     case 'AUDIO':
       return (
@@ -639,20 +654,24 @@ const LearnerFrame = () => {
       if (resources[currentIndex]) {
         const resource = resources[currentIndex]
 
-        // For MCQ type, fetch the question image if it exists
-        if (
-          resource.resourceType === 'MCQ' &&
-          resource.content.mcq?.imageUrl &&
-          !signedUrls[resource.content.mcq.imageUrl]
-        ) {
-          const mcqImageUrl = await getLocalFileUrl(
-            resource.content.mcq.imageUrl,
-            'MCQ'
-          )
-          setSignedUrls(prev => ({
-            ...prev,
-            [resource.content.mcq.imageUrl]: mcqImageUrl
-          }))
+        if (resource.resourceType === 'MCQ') {
+          // Fetch MCQ image if exists
+          if (resource.content.mcq?.imageFile && !signedUrls[resource.content.mcq.imageFile]) {
+            const mcqImageUrl = await getLocalFileUrl(resource.content.mcq.imageFile, 'MCQ_IMAGES')
+            setSignedUrls(prev => ({
+              ...prev,
+              [resource.content.mcq.imageFile]: mcqImageUrl
+            }))
+          }
+          
+          // Fetch MCQ audio if exists
+          if (resource.content.mcq?.audioFile && !signedUrls[resource.content.mcq.audioFile]) {
+            const mcqAudioUrl = await getLocalFileUrl(resource.content.mcq.audioFile, 'MCQ_AUDIO')
+            setSignedUrls(prev => ({
+              ...prev,
+              [resource.content.mcq.audioFile]: mcqAudioUrl
+            }))
+          }
         }
 
         // Load main resource content if not already loaded
@@ -936,146 +955,6 @@ const LearnerFrame = () => {
                   signedUrls={signedUrls}
                 />
               )}
-            </Box>
-
-            {/* Thumbnails Carousel */}
-            <Box
-              sx={{
-                bgcolor: '#f5f5f5',
-                p: 2,
-                position: 'relative',
-                width: '100%',
-                overflow: 'hidden'
-              }}
-            >
-              {/* Left Arrow */}
-              <IconButton
-                sx={{
-                  position: 'absolute',
-                  left: 10,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  bgcolor: 'primary.main',
-                  color: 'white',
-                  height: '100px',
-                  width: '24px',
-                  borderRadius: '6px',
-                  '&:hover': {
-                    bgcolor: 'primary.dark'
-                  },
-                  '&.Mui-disabled': {
-                    bgcolor: 'primary.light',
-                    color: 'rgba(255, 255, 255, 0.5)'
-                  }
-                }}
-                onClick={() => {
-                  const carousel = document.getElementById('thumbnail-carousel')
-                  carousel.scrollBy({ left: -200, behavior: 'smooth' })
-                }}
-              >
-                <ChevronLeft />
-              </IconButton>
-
-              <Box
-                id='thumbnail-carousel'
-                sx={{
-                  display: 'flex',
-                  gap: 2,
-                  overflowX: 'auto',
-                  scrollBehavior: 'smooth',
-                  px: 4,
-                  mx: 4,
-                  '&::-webkit-scrollbar': { display: 'none' },
-                  msOverflowStyle: 'none',
-                  scrollbarWidth: 'none',
-                  width: 'calc(100% - 8px)',
-                  position: 'relative'
-                }}
-              >
-                {resources.map((resource, index) => (
-                  <Box
-                    key={index}
-                    onClick={() => setCurrentIndex(index)}
-                    sx={{
-                      minWidth: '150px',
-                      height: '100px',
-                      bgcolor: 'white',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      border:
-                        currentIndex === index
-                          ? '2px solid primary.main'
-                          : '1px solid #ddd',
-                      overflow: 'hidden',
-                      position: 'relative'
-                    }}
-                  >
-                    {/* Use thumbnail if available, otherwise fall back to type-specific content */}
-                    {resource.content.thumbnailUrl ? (
-                      <img
-                        src={signedUrls[resource.content.thumbnailUrl]}
-                        alt={resource.name}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover'
-                        }}
-                      />
-                    ) : (
-                      getThumbnailContent(
-                        resource,
-                        signedUrls[resource.content.fileName]
-                      )
-                    )}
-
-                    {/* Resource Type Label */}
-                    <Typography
-                      sx={{
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        bgcolor: 'rgba(0,0,0,0.6)',
-                        color: 'white',
-                        fontSize: '12px',
-                        p: 0.5,
-                        textAlign: 'center'
-                      }}
-                    >
-                      {resource.resourceType}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-
-              {/* Right Arrow */}
-              <IconButton
-                sx={{
-                  position: 'absolute',
-                  right: 10,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  bgcolor: 'primary.main',
-                  color: 'white',
-                  height: '100px',
-                  width: '24px',
-                  borderRadius: '6px',
-
-                  '&:hover': {
-                    bgcolor: 'primary.dark'
-                  },
-                  '&.Mui-disabled': {
-                    bgcolor: 'primary.light',
-                    color: 'rgba(255, 255, 255, 0.5)'
-                  }
-                }}
-                onClick={() => {
-                  const carousel = document.getElementById('thumbnail-carousel')
-                  carousel.scrollBy({ left: 200, behavior: 'smooth' })
-                }}
-              >
-                <ChevronRight />
-              </IconButton>
             </Box>
           </Box>
         </Paper>
