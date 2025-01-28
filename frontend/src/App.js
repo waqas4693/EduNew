@@ -32,6 +32,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles'
+import SplashScreen from './components/splash/SplashScreen'
 
 // Create Redux store
 const store = configureStore({
@@ -62,7 +63,8 @@ function App() {
               <LocalizationProvider dateAdapter={AdapterDayjs}>
                 <CssBaseline />
                 <Routes>
-                  <Route path="/" element={<Login />} />
+                  <Route path="/" element={<SplashScreen />} />
+                  <Route path="/login" element={<Login />} />
                   
                   {/* Admin Routes */}
                   <Route
