@@ -84,9 +84,9 @@ const Profile = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Paper elevation={5} sx={{ p: 4, borderRadius: '16px', maxWidth: 600, mx: 'auto' }}>
-        <Stack spacing={3} alignItems="center">
+    <Box sx={{ p: 1 }}>
+      <Paper elevation={5} sx={{ p: 4, borderRadius: '16px' }}>
+        <Stack spacing={2} alignItems="center">
           <Avatar
             sx={{
               width: 100,
@@ -98,58 +98,88 @@ const Profile = () => {
             {user?.name ? user.name[0].toUpperCase() : 'U'}
           </Avatar>
 
-          <Typography variant="h5" fontWeight="bold">
-            {user?.name || 'User Profile'}
-          </Typography>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="h5" fontWeight="bold" sx={{ mb: 0.5 }}>
+              {user?.name || 'User Profile'}
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              {user?.email}
+            </Typography>
+          </Box>
 
-          <Typography variant="body1" color="text.secondary">
-            {user?.email}
-          </Typography>
-
-          <Divider sx={{ width: '100%' }} />
+          {/* <Divider sx={{ width: '100%' }} /> */}
 
           <Typography variant="h6" sx={{ alignSelf: 'flex-start' }}>
             Change Password
           </Typography>
 
           <form onSubmit={handleSubmit} style={{ width: '100%' }}>
-            <Stack spacing={3}>
-              {error && <Alert severity="error">{error}</Alert>}
-              {success && <Alert severity="success">{success}</Alert>}
+            <Stack spacing={1.5} alignItems="center">
+              {error && <Alert severity="error" sx={{ width: '100%' }}>{error}</Alert>}
+              {success && <Alert severity="success" sx={{ width: '100%' }}>{success}</Alert>}
 
-              <TextField
-                label="Current Password"
-                type="password"
-                value={passwords.currentPassword}
-                onChange={handleChange('currentPassword')}
-                required
-                fullWidth
-              />
+              <Box sx={{ 
+                display: 'flex', 
+                gap: 2,
+                width: '100%'
+              }}>
+                <TextField
+                  label="Current Password"
+                  type="password"
+                  value={passwords.currentPassword}
+                  onChange={handleChange('currentPassword')}
+                  required
+                  size="small"
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '8px'
+                    }
+                  }}
+                />
 
-              <TextField
-                label="New Password"
-                type="password"
-                value={passwords.newPassword}
-                onChange={handleChange('newPassword')}
-                required
-                fullWidth
-              />
+                <TextField
+                  label="New Password"
+                  type="password"
+                  value={passwords.newPassword}
+                  onChange={handleChange('newPassword')}
+                  required
+                  size="small"
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '8px'
+                    }
+                  }}
+                />
 
-              <TextField
-                label="Confirm New Password"
-                type="password"
-                value={passwords.confirmPassword}
-                onChange={handleChange('confirmPassword')}
-                required
-                fullWidth
-              />
+                <TextField
+                  label="Confirm New Password"
+                  type="password"
+                  value={passwords.confirmPassword}
+                  onChange={handleChange('confirmPassword')}
+                  required
+                  size="small"
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '8px'
+                    }
+                  }}
+                />
+              </Box>
 
               <Button
                 type="submit"
                 variant="contained"
                 disabled={loading}
                 startIcon={<LockResetIcon />}
-                sx={{ mt: 2 }}
+                sx={{ 
+                  mt: 2,
+                  px: 3,
+                  alignSelf: 'end'
+                }}
+                // size="small"
               >
                 Update Password
               </Button>

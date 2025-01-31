@@ -88,7 +88,11 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         backgroundImage: '',
         file: null,
         thumbnail: null,
-        externalLink: '',
+        externalLinks: [
+          { name: '', url: '' },
+          { name: '', url: '' },
+          { name: '', url: '' }
+        ],
         mcq: {
           question: '',
           options: ['', '', '', ''],
@@ -186,7 +190,11 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
               previewImage: resource.content?.previewImage || '',
               file: null,
               thumbnail: null,
-              externalLink: resource.content?.externalLink || '',
+              externalLinks: resource.content?.externalLinks || [
+                { name: '', url: '' },
+                { name: '', url: '' },
+                { name: '', url: '' }
+              ],
               mcq: resource.content?.mcq || {
                 question: '',
                 options: ['', '', '', ''],
@@ -221,7 +229,11 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
           previewImage: '',
           file: null,
           thumbnail: null,
-          externalLink: '',
+          externalLinks: [
+            { name: '', url: '' },
+            { name: '', url: '' },
+            { name: '', url: '' }
+          ],
           mcq: {
             question: '',
             options: ['', '', '', ''],
@@ -263,10 +275,21 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
     let contentData = { ...resource.content }
     const formData = new FormData()
 
+    // Function to generate unique filename with just timestamp and extension
+    const generateUniqueFilename = (originalName) => {
+      const timestamp = Date.now()
+      const extension = originalName.split('.').pop()
+      return `${timestamp}.${extension}`
+    }
+
     // Handle main file upload
     if (resource.content.file) {
-      formData.append('file', resource.content.file)
-      contentData.fileName = resource.content.file.name
+      const uniqueFileName = generateUniqueFilename(resource.content.file.name)
+      const renamedFile = new File([resource.content.file], uniqueFileName, {
+        type: resource.content.file.type
+      })
+      formData.append('file', renamedFile)
+      contentData.fileName = uniqueFileName
     }
 
     // Handle background image for PPT, AUDIO and TEXT
@@ -274,24 +297,36 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
          resource.resourceType === 'AUDIO' || 
          resource.resourceType === 'TEXT') && 
         resource.content.backgroundImage) {
-      formData.append('backgroundImage', resource.content.backgroundImage)
-      contentData.backgroundImage = resource.content.backgroundImage.name
+      const uniqueBgName = generateUniqueFilename(resource.content.backgroundImage.name)
+      const renamedBgFile = new File([resource.content.backgroundImage], uniqueBgName, {
+        type: resource.content.backgroundImage.type
+      })
+      formData.append('backgroundImage', renamedBgFile)
+      contentData.backgroundImage = uniqueBgName
     }
 
     // Handle MCQ files
     if (resource.resourceType === 'MCQ') {
       if (resource.content.mcq?.imageFile) {
-        formData.append('mcqImage', resource.content.mcq.imageFile)
+        const uniqueMcqImageName = generateUniqueFilename(resource.content.mcq.imageFile.name)
+        const renamedMcqImage = new File([resource.content.mcq.imageFile], uniqueMcqImageName, {
+          type: resource.content.mcq.imageFile.type
+        })
+        formData.append('mcqImage', renamedMcqImage)
         contentData.mcq = {
           ...contentData.mcq,
-          imageFile: resource.content.mcq.imageFile.name
+          imageFile: uniqueMcqImageName
         }
       }
       if (resource.content.mcq?.audioFile) {
-        formData.append('mcqAudio', resource.content.mcq.audioFile)
+        const uniqueMcqAudioName = generateUniqueFilename(resource.content.mcq.audioFile.name)
+        const renamedMcqAudio = new File([resource.content.mcq.audioFile], uniqueMcqAudioName, {
+          type: resource.content.mcq.audioFile.type
+        })
+        formData.append('mcqAudio', renamedMcqAudio)
         contentData.mcq = {
           ...contentData.mcq,
-          audioFile: resource.content.mcq.audioFile.name
+          audioFile: uniqueMcqAudioName
         }
       }
     }
@@ -353,7 +388,11 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             previewImage: '',
             file: null,
             thumbnail: null,
-            externalLink: '',
+            externalLinks: [
+              { name: '', url: '' },
+              { name: '', url: '' },
+              { name: '', url: '' }
+            ],
             mcq: {
               question: '',
               options: ['', '', '', ''],
@@ -987,30 +1026,70 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                 )}
                 {/* End here */}
 
-                <TextField
-                  fullWidth
-                  size='small'
-                  label='External Link (Optional)'
-                  value={resource.content.externalLink}
-                  onChange={e =>
-                    handleContentChange(index, 'externalLink', e.target.value)
-                  }
-                  sx={{
-                    mb: 2,
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '8px',
-                      border: '1px solid #20202033',
-                      '& fieldset': {
-                        border: 'none'
-                      }
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: '#8F8F8F',
-                      backgroundColor: 'white',
-                      padding: '0 4px'
-                    }
-                  }}
-                />
+                {/* External Links Section */}
+                <Box sx={{ mb: 2 }}>
+                  {resource.content.externalLinks.map((link, linkIndex) => (
+                    <Box 
+                      key={linkIndex} 
+                      sx={{ 
+                        display: 'flex', 
+                        gap: 2, 
+                        mb: linkIndex < 2 ? 2 : 0 
+                      }}
+                    >
+                      <TextField
+                        fullWidth
+                        size='small'
+                        label={`Link ${linkIndex + 1} Name`}
+                        value={link.name}
+                        onChange={e => {
+                          const newLinks = [...resource.content.externalLinks]
+                          newLinks[linkIndex] = { ...newLinks[linkIndex], name: e.target.value }
+                          handleContentChange(index, 'externalLinks', newLinks)
+                        }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: '8px',
+                            border: '1px solid #20202033',
+                            '& fieldset': {
+                              border: 'none'
+                            }
+                          },
+                          '& .MuiInputLabel-root': {
+                            color: '#8F8F8F',
+                            backgroundColor: 'white',
+                            padding: '0 4px'
+                          }
+                        }}
+                      />
+                      <TextField
+                        fullWidth
+                        size='small'
+                        label={`External Link ${linkIndex + 1}`}
+                        value={link.url}
+                        onChange={e => {
+                          const newLinks = [...resource.content.externalLinks]
+                          newLinks[linkIndex] = { ...newLinks[linkIndex], url: e.target.value }
+                          handleContentChange(index, 'externalLinks', newLinks)
+                        }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: '8px',
+                            border: '1px solid #20202033',
+                            '& fieldset': {
+                              border: 'none'
+                            }
+                          },
+                          '& .MuiInputLabel-root': {
+                            color: '#8F8F8F',
+                            backgroundColor: 'white',
+                            padding: '0 4px'
+                          }
+                        }}
+                      />
+                    </Box>
+                  ))}
+                </Box>
               </Box>
             </AccordionDetails>
           </Accordion>

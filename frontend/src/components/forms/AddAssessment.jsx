@@ -206,45 +206,21 @@ const AddAssessment = () => {
     }))
   }
 
-  const handleMCQAudioChange = async (index, file) => {
-    try {
-      if (file) {
-        const fileExtension = file.name.split('.').pop()
-        const fileName = `mcq_audio_${Date.now()}_${index}.${fileExtension}`
-
-        // Get signed URL from S3
-        const { data: { signedUrl } } = await axios.post(url + 's3', {
-          fileName,
-          fileType: file.type
-        })
-
-        // Upload to S3
-        await axios.put(signedUrl, file, {
-          headers: {
-            'Content-Type': file.type
-          }
-        })
-
-        // Update form state with the filename
-        setFormData(prev => {
-          const newMCQs = [...prev.content.mcqs]
-          newMCQs[index] = {
-            ...newMCQs[index],
-            audioFile: fileName
-          }
-          return {
-            ...prev,
-            content: {
-              ...prev.content,
-              mcqs: newMCQs
-            }
-          }
-        })
+  const handleMCQAudioChange = (index, file) => {
+    setFormData(prev => {
+      const newMCQs = [...prev.content.mcqs]
+      newMCQs[index] = {
+        ...newMCQs[index],
+        audioFile: file
       }
-    } catch (error) {
-      console.error('Error uploading audio:', error)
-      alert('Error uploading audio file')
-    }
+      return {
+        ...prev,
+        content: {
+          ...prev.content,
+          mcqs: newMCQs
+        }
+      }
+    })
   }
 
   const handleFileUpload = async (file, type) => {
@@ -351,7 +327,7 @@ const AddAssessment = () => {
                       }
                     }}
                   >
-                    {mcq.audioFile ? 'Change Audio' : 'Add Audio'}
+                    {mcq.audioFile ? mcq.audioFile.name : 'Add Audio'}
                     <input
                       type="file"
                       hidden
@@ -412,7 +388,7 @@ const AddAssessment = () => {
 
                 {mcq.audioFile && (
                   <Typography variant="caption" sx={{ display: 'block', mb: 1, color: 'success.main' }}>
-                    Audio file uploaded: {mcq.audioFile}
+                    Audio file uploaded: {mcq.audioFile.name}
                   </Typography>
                 )}
 
@@ -566,6 +542,34 @@ const AddAssessment = () => {
           const supportingFileName = await handleFileUpload(formData.content.supportingFile)
           assessmentData.content.supportingFile = supportingFileName
         }
+      }
+
+      // Handle MCQ audio file uploads
+      if (formData.assessmentType === 'MCQ') {
+        const mcqsWithAudio = await Promise.all(
+          formData.content.mcqs.map(async (mcq, index) => {
+            if (mcq.audioFile) {
+              const audioFormData = new FormData()
+              audioFormData.append('file', mcq.audioFile)
+              
+              const response = await postData('upload/file?type=ASSESSMENT', audioFormData, {
+                headers: {
+                  'Content-Type': 'multipart/form-data'
+                }
+              })
+              
+              if (response.data && response.data.fileName) {
+                return {
+                  ...mcq,
+                  audioFile: response.data.fileName
+                }
+              }
+            }
+            return mcq
+          })
+        )
+        
+        assessmentData.content.mcqs = mcqsWithAudio
       }
 
       const response = await postData('assessments', assessmentData)

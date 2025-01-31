@@ -23,7 +23,10 @@ const resourceSchema = new mongoose.Schema({
     }],
     backgroundImage: String,
     thumbnailUrl: String,
-    externalLink: String,
+    externalLinks: [{
+      name: String,
+      url: String
+    }],
     repeatCount: {
       type: Number,
       min: 1,

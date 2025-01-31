@@ -1,28 +1,27 @@
-import express from 'express'
-import bodyParser from 'body-parser'
 import cors from 'cors'
+import path from 'path'
 import dotenv from 'dotenv'
 import helmet from 'helmet'
 import morgan from 'morgan'
-import mongoose from 'mongoose'
 import multer from 'multer'
-import path from 'path'
+import express from 'express'
+import mongoose from 'mongoose'
+import bodyParser from 'body-parser'
 
-import { fileURLToPath } from 'url'
 import { dirname } from 'path'
+import { fileURLToPath } from 'url'
 
-// import loginRoutes from './routes/login.js'
 import authRoutes from './routes/auth.js'
 import unitRoutes from './routes/unit.js'
+import uploadRoutes from './routes/upload.js'
 import courseRoutes from './routes/course.js'
 import studentRoutes from './routes/student.js'
 import sectionRoutes from './routes/section.js'
 import resourceRoutes from './routes/resource.js'
 import assessmentRoutes from './routes/assessment.js'
+import resourceViewRoutes from './routes/resourceView.js'
 import assessmentReviewRoutes from './routes/assessmentReview.js'
 import assessmentAttemptRoutes from './routes/assessmentAttempt.js'
-import resourceViewRoutes from './routes/resourceView.js'
-import uploadRoutes from './routes/upload.js'
 
 /* CONFIGURATION */
 dotenv.config()
@@ -68,7 +67,6 @@ app.get('/api/', function (req, res) {
   res.json('Server Running')
 })
 
-// app.use('/api/login', loginRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/units', unitRoutes)
 app.use('/api/courses', courseRoutes)
@@ -88,6 +86,7 @@ app.use('/api/resource-views', resourceViewRoutes)
 app.use('/api/resources/files', express.static(path.join(__dirname, 'ResourceFiles')))
 app.use('/api/upload', uploadRoutes)
 app.use('/api/resources/files/ASSESSMENT_SUBMISSIONS', express.static(path.join(__dirname, 'ResourceFiles/ASSESSMENT_SUBMISSIONS')))
+app.use('/api/resources/files/ASSESSMENT_FILES', express.static(path.join(__dirname, 'ResourceFiles/ASSESSMENT_FILES')))
 mongoose.set('strictQuery', false)
 
 await mongoose

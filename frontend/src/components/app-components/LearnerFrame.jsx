@@ -744,13 +744,25 @@ const LearnerFrame = () => {
     switch (resource.resourceType) {
       case 'VIDEO':
       case 'IMAGE':
-      case 'AUDIO':
       case 'PDF':
         return (
           <Box sx={{ width: '100%', height: '100%', bgcolor: '#000' }}>
             {resource.content.fileName && (
               <img
                 src={signedUrl}
+                alt={resource.name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            )}
+          </Box>
+        )
+      
+      case 'AUDIO':
+        return (
+          <Box sx={{ width: '100%', height: '100%', bgcolor: '#000' }}>
+            {resource.content.backgroundImage && (
+              <img
+                src={signedUrls[resource.content.backgroundImage]}
                 alt={resource.name}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
@@ -878,45 +890,46 @@ const LearnerFrame = () => {
                 {resources[currentIndex]?.name}
               </Typography>
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                {resources[currentIndex]?.content?.externalLink && (
-                  <Box
-                    component='span'
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1
-                    }}
-                  >
-                    <IconButton
-                      href={formatExternalUrl(
-                        resources[currentIndex].content.externalLink
-                      )}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                      component='a'
+                {resources[currentIndex]?.content?.externalLinks?.map((link, index) => (
+                  link.url && (
+                    <Box
+                      key={index}
+                      component='span'
                       sx={{
-                        color: 'white',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 1,
-                        '&:hover': {
-                          bgcolor: 'rgba(255, 255, 255, 0.1)'
-                        }
+                        gap: 1
                       }}
                     >
-                      <Launch />
-                      <Typography
-                        variant='body2'
+                      <IconButton
+                        href={formatExternalUrl(link.url)}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        component='a'
                         sx={{
-                          fontSize: '14px',
-                          display: { xs: 'none', sm: 'block' }
+                          color: 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          '&:hover': {
+                            bgcolor: 'rgba(255, 255, 255, 0.1)'
+                          }
                         }}
                       >
-                        External Link
-                      </Typography>
-                    </IconButton>
-                  </Box>
-                )}
+                        <Launch />
+                        <Typography
+                          variant='body2'
+                          sx={{
+                            fontSize: '14px',
+                            display: { xs: 'none', sm: 'block' }
+                          }}
+                        >
+                          {link.name || 'External Link'}
+                        </Typography>
+                      </IconButton>
+                    </Box>
+                  )
+                ))}
                 <IconButton
                   onClick={handlePrevious}
                   disabled={currentIndex === 0}

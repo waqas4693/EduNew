@@ -249,83 +249,148 @@ const CourseRow = ({ course, studentId }) => {
   }
 
   return (
-    <Grid container spacing={2} sx={{ mb: 2 }}>
-      {/* Course Card */}
-      <Grid xs={4}>
-        <Card
-          onClick={handleCourseClick}
-          sx={{
-            height: '100%',
-            p: 2,
-            border: '1px solid #3366CC33',
-            borderRadius: '12px',
-            boxShadow: '0px 14px 42px 0px #080F340F',
-            cursor: 'pointer',
-            transition: 'transform 0.2s',
-            '&:hover': {
-              transform: 'scale(1.02)'
-            }
-          }}
-        >
-          <Box
+    <Box sx={{ 
+      '&:not(:last-child)': {
+        borderBottom: '1px solid #E0E0E0',
+        pb: 2,
+        mb: 2
+      }
+    }}>
+      <Grid container spacing={2}>
+        {/* Course Card */}
+        <Grid xs={4}>
+          <Card
+            onClick={handleCourseClick}
             sx={{
-              width: '100%',
-              height: '120px',
-              bgcolor: course.image ? 'transparent' : 'primary.light',
-              borderRadius: '8px',
-              mb: 2
+              height: '100%',
+              p: 2,
+              border: '1px solid #3366CC33',
+              borderRadius: '12px',
+              boxShadow: '0px 14px 42px 0px #080F340F',
+              cursor: 'pointer',
+              transition: 'transform 0.2s',
+              '&:hover': {
+                transform: 'scale(1.02)'
+              }
             }}
           >
-            {course.image ? (
-              <img
-                src={getThumbnailUrl(course.image)}
-                alt={course.name}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  borderRadius: '8px'
-                }}
-              />
-            ) : (
-              <Box
-                sx={{
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <MenuBookOutlinedIcon sx={{ fontSize: 40, color: 'primary.main' }} />
-              </Box>
-            )}
-          </Box>
+            <Box
+              sx={{
+                width: '100%',
+                height: '120px',
+                bgcolor: course.image ? 'transparent' : 'primary.light',
+                borderRadius: '8px',
+                mb: 2
+              }}
+            >
+              {course.image ? (
+                <img
+                  src={getThumbnailUrl(course.image)}
+                  alt={course.name}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    borderRadius: '8px'
+                  }}
+                />
+              ) : (
+                <Box
+                  sx={{
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <MenuBookOutlinedIcon sx={{ fontSize: 40, color: 'primary.main' }} />
+                </Box>
+              )}
+            </Box>
 
-          <Typography variant="h6" sx={{ mb: 1, fontSize: '14px' }}>
-            {course.name}
-          </Typography>
-          <Typography color="text.secondary" sx={{ fontSize: '12px' }}>
-            {course.units} Units
-          </Typography>
-        </Card>
-      </Grid>
+            <Typography variant="h6" sx={{ mb: 1, fontSize: '14px' }}>
+              {course.name}
+            </Typography>
+            <Typography color="text.secondary" sx={{ fontSize: '12px' }}>
+              {course.units} Units
+            </Typography>
+          </Card>
+        </Grid>
 
-      {/* Progress Card */}
-      <Grid xs={4}>
-        <CourseProgressCard courseId={course.id} studentId={studentId} />
-      </Grid>
+        {/* Progress Card */}
+        <Grid xs={4}>
+          <CourseProgressCard courseId={course.id} studentId={studentId} />
+        </Grid>
 
-      {/* Decorative Card */}
-      <Grid xs={4}>
-        <DecorativeCard />
+        {/* Decorative Card */}
+        <Grid xs={4}>
+          <DecorativeCard />
+        </Grid>
       </Grid>
-    </Grid>
+    </Box>
   )
 }
 
 const StudentDashboard = () => {
   const [courses, setCourses] = useState([])
+  const [assessmentDueDates, setAssessmentDueDates] = useState({})
   const { user } = useAuth()
+
+  const calculateDueDate = (enrollmentDate, intervalDays) => {
+    const dueDate = new Date(enrollmentDate)
+    dueDate.setDate(dueDate.getDate() + parseInt(intervalDays))
+    return dueDate
+  }
+
+  const fetchAssessmentDueDates = async (courseId, enrollmentDate) => {
+    try {
+      // Fetch units for the course
+      const unitsResponse = await getData(`units/${courseId}`)
+      if (unitsResponse.status === 200) {
+        const units = unitsResponse.data.units
+        
+        // Fetch sections for each unit
+        const sectionsPromises = units.map(unit => 
+          getData(`sections/${unit._id}`)
+        )
+        const sectionsResponses = await Promise.all(sectionsPromises)
+        
+        // Fetch assessments for each section
+        const assessmentPromises = sectionsResponses.flatMap(sectionRes => {
+          if (sectionRes.status === 200) {
+            return sectionRes.data.sections.map(section =>
+              getData(`assessments/${section._id}`)
+            )
+          }
+          return []
+        })
+        
+        const assessmentResponses = await Promise.all(assessmentPromises)
+        
+        // Calculate due dates for each assessment
+        const dueDates = {}
+        assessmentResponses.forEach(assessmentRes => {
+          if (assessmentRes.status === 200) {
+            assessmentRes.data.assessments.forEach(assessment => {
+              dueDates[assessment._id] = {
+                dueDate: calculateDueDate(enrollmentDate, assessment.interval),
+                name: assessment.name,
+                courseId: courseId,
+                unitId: assessment.unitId,
+                sectionId: assessment.sectionId,
+                type: assessment.assessmentType
+              }
+            })
+          }
+        })
+        
+        return dueDates
+      }
+    } catch (error) {
+      console.error('Error fetching assessment due dates:', error)
+      return {}
+    }
+  }
 
   useEffect(() => {
     const fetchEnrolledCourses = async () => {
@@ -337,11 +402,21 @@ const StudentDashboard = () => {
           if (response.status === 200) {
             setCourses(response.data.data)
             
-            const assessmentIntervals = {}
-            response.data.data.forEach(course => {
-              assessmentIntervals[course.id] = course.assessmentInterval
-            })
-            localStorage.setItem('assessmentIntervals', JSON.stringify(assessmentIntervals))
+            // Fetch due dates for all courses
+            const allDueDates = {}
+            await Promise.all(
+              user.courseIds.map(async (course) => {
+                const courseDueDates = await fetchAssessmentDueDates(
+                  course.courseId,
+                  course.enrollmentDate
+                )
+                Object.assign(allDueDates, courseDueDates)
+              })
+            )
+            
+            // Store in localStorage and state
+            localStorage.setItem('assessmentDueDates', JSON.stringify(allDueDates))
+            setAssessmentDueDates(allDueDates)
           }
         }
       } catch (error) {
@@ -383,11 +458,8 @@ const StudentDashboard = () => {
         </Paper>
       </Grid>
       <Grid size={4}>
-        <Paper
-          elevation={5}
-          sx={{ backgroundColor: 'transparent', borderRadius: 2 }}
-        >
-          <Calendar />
+        <Paper elevation={5} sx={{ backgroundColor: 'transparent', borderRadius: 2 }}>
+          <Calendar assessmentDueDates={assessmentDueDates} />
         </Paper>
       </Grid>
     </Grid>

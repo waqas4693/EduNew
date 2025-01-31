@@ -268,100 +268,108 @@ const CourseRow = ({ course, onRemove, studentId, studentName }) => {
   }
 
   return (
-    <Grid container spacing={2} sx={{ mb: 2 }}>
-      {/* Course Card */}
-      <Grid xs={4}>
-        <Card
-          onClick={handleCourseClick}
-          sx={{
-            height: '100%',
-            width: '200px',
-            p: 2,
-            border: '1px solid #3366CC33',
-            borderRadius: '12px',
-            boxShadow: '0px 14px 42px 0px #080F340F',
-            position: 'relative',
-            cursor: 'pointer',
-            '&:hover': {
-              boxShadow: '0px 14px 42px 0px #080F3422'
-            }
-          }}
-        >
-          <IconButton
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove(course);
-            }}
+    <Box sx={{ 
+      '&:not(:last-child)': {
+        borderBottom: '1px solid #E0E0E0',
+        pb: 2,
+        mb: 2
+      }
+    }}>
+      <Grid container spacing={2}>
+        {/* Course Card */}
+        <Grid xs={4}>
+          <Card
+            onClick={handleCourseClick}
             sx={{
-              position: 'absolute',
-              top: 8,
-              right: 8,
-              backgroundColor: 'white',
-              width: '32px',
-              height: '32px',
+              height: '100%',
+              width: '200px',
+              p: 2,
+              border: '1px solid #3366CC33',
+              borderRadius: '12px',
+              boxShadow: '0px 14px 42px 0px #080F340F',
+              position: 'relative',
+              cursor: 'pointer',
               '&:hover': {
+                boxShadow: '0px 14px 42px 0px #080F3422'
+              }
+            }}
+          >
+            <IconButton
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove(course);
+              }}
+              sx={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
                 backgroundColor: 'white',
-                opacity: 0.9
-              },
-              boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
-            }}
-          >
-            <RemoveCircleOutlineIcon sx={{ color: 'error.main' }} />
-          </IconButton>
+                width: '32px',
+                height: '32px',
+                '&:hover': {
+                  backgroundColor: 'white',
+                  opacity: 0.9
+                },
+                boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
+              }}
+            >
+              <RemoveCircleOutlineIcon sx={{ color: 'error.main' }} />
+            </IconButton>
 
-          <Box
-            sx={{
-              width: '100%',
-              height: '120px',
-              bgcolor: course.image ? 'transparent' : 'primary.light',
-              borderRadius: '8px',
-              mb: 2
-            }}
-          >
-            {course.image ? (
-              <img
-                src={getThumbnailUrl(course.image)}
-                alt={course.name}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  borderRadius: '8px'
-                }}
-              />
-            ) : (
-              <Box
-                sx={{
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <MenuBookOutlinedIcon sx={{ fontSize: 40, color: 'primary.main' }} />
-              </Box>
-            )}
-          </Box>
+            <Box
+              sx={{
+                width: '100%',
+                height: '120px',
+                bgcolor: course.image ? 'transparent' : 'primary.light',
+                borderRadius: '8px',
+                mb: 2
+              }}
+            >
+              {course.image ? (
+                <img
+                  src={getThumbnailUrl(course.image)}
+                  alt={course.name}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    borderRadius: '8px'
+                  }}
+                />
+              ) : (
+                <Box
+                  sx={{
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <MenuBookOutlinedIcon sx={{ fontSize: 40, color: 'primary.main' }} />
+                </Box>
+              )}
+            </Box>
 
-          <Typography variant="h6" sx={{ mb: 1, fontSize: '14px' }}>
-            {course.name}
-          </Typography>
-          <Typography color="text.secondary" sx={{ fontSize: '12px' }}>
-            {course.units?.length || 0} Units
-          </Typography>
-        </Card>
+            <Typography variant="h6" sx={{ mb: 1, fontSize: '14px' }}>
+              {course.name}
+            </Typography>
+            <Typography color="text.secondary" sx={{ fontSize: '12px' }}>
+              {course.units?.length || 0} Units
+            </Typography>
+          </Card>
+        </Grid>
+
+        {/* Progress Card */}
+        <Grid xs={4}>
+          <CourseProgressCard courseId={course._id} studentId={studentId} />
+        </Grid>
+
+        {/* Decorative Card */}
+        <Grid xs={4}>
+          <DecorativeCard />
+        </Grid>
       </Grid>
-
-      {/* Progress Card */}
-      <Grid xs={4}>
-        <CourseProgressCard courseId={course._id} studentId={studentId} />
-      </Grid>
-
-      {/* Decorative Card */}
-      <Grid xs={4}>
-        <DecorativeCard />
-      </Grid>
-    </Grid>
+    </Box>
   )
 }
 

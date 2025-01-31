@@ -316,24 +316,25 @@ const AssessmentRenderer = ({
 
             <Box>
               <Box sx={{ mb: '15px' }}>
-                <Typography
-                  variant='h6'
-                  sx={{ fontWeight: 'bold', mb: '10px' }}
-                >
-                  {currentMcq.question}
-                </Typography>
-
-                {currentMcq.audioFile && (
-                  <IconButton
-                    onClick={() => onPlayAudio(currentMcq.audioFile)}
-                    sx={{
-                      color: 'primary.main',
-                      '&:hover': { bgcolor: 'primary.light' }
-                    }}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography
+                    variant='h6'
+                    sx={{ fontWeight: 'bold' }}
                   >
-                    <PlayCircleOutlineIcon />
-                  </IconButton>
-                )}
+                    {currentMcq.question}
+                  </Typography>
+                  {currentMcq.audioFile && (
+                    <IconButton
+                      onClick={() => onPlayAudio(currentMcq.audioFile)}
+                      sx={{
+                        color: 'primary.main',
+                        '&:hover': { bgcolor: 'primary.light' }
+                      }}
+                    >
+                      <PlayCircleOutlineIcon />
+                    </IconButton>
+                  )}
+                </Box>
 
                 <Box>
                   {currentMcq.options.map((option, optIndex) => (
@@ -579,29 +580,10 @@ const ViewAssessment = () => {
     return `${url}resources/files/${folder}/${fileName}`
   }
 
-  const getAudioUrl = async fileName => {
-    try {
-      // Check if URL already exists
-      if (audioUrls[fileName]) {
-        return audioUrls[fileName]
-      }
-
-      // Fetch new URL
-      const response = await axios.post(`${url}s3/get`, {
-        fileName
-      })
-
-      // Store and return URL
-      const signedUrl = response.data.signedUrl
-      setAudioUrls(prev => ({
-        ...prev,
-        [fileName]: signedUrl
-      }))
-      return signedUrl
-    } catch (error) {
-      console.error('Error fetching audio URL:', error)
-      return null
-    }
+  const getAudioUrl = audioFileName => {
+    if (!audioFileName) return null
+    // Ensure we're using the correct path to access the audio file
+    return `${url}resources/files/ASSESSMENT_FILES/${encodeURIComponent(audioFileName)}`
   }
 
   const handlePlayAudio = async audioFileName => {
@@ -612,16 +594,29 @@ const ViewAssessment = () => {
         audioPlayer.currentTime = 0
       }
 
-      // Get audio URL
-      const audioUrl = await getAudioUrl(audioFileName)
+      const audioUrl = getAudioUrl(audioFileName)
       if (!audioUrl) {
-        alert('Error loading audio file')
+        console.error('No audio URL available')
         return
       }
 
       // Create and play new audio
       const newPlayer = new Audio(audioUrl)
-      newPlayer.play()
+      
+      // Add error handling for the audio player
+      newPlayer.onerror = (e) => {
+        console.error('Error loading audio:', e)
+        alert('Error loading audio file')
+      }
+
+      // Add loading handler
+      newPlayer.oncanplaythrough = () => {
+        newPlayer.play().catch(error => {
+          console.error('Error playing audio:', error)
+          alert('Error playing audio file')
+        })
+      }
+
       setAudioPlayer(newPlayer)
     } catch (error) {
       console.error('Error playing audio:', error)

@@ -11,7 +11,7 @@ import {
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 
-const Calendar = () => {
+const Calendar = ({ assessmentDueDates }) => {
   const [currentDate, setCurrentDate] = useState(new Date())
 
   const daysOfWeek = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
@@ -59,9 +59,37 @@ const Calendar = () => {
     return date.getMonth() === currentDate.getMonth()
   }
 
-  const isSelected = date => {
-    // Add your selection logic here
-    return false
+  const getAssessmentsForDate = date => {
+    if (!assessmentDueDates) return []
+    
+    const dateString = date.toDateString()
+    return Object.entries(assessmentDueDates).filter(([_, assessment]) => {
+      const dueDate = new Date(assessment.dueDate)
+      return dueDate.toDateString() === dateString
+    })
+  }
+
+  const hasAssessments = date => {
+    return getAssessmentsForDate(date).length > 0
+  }
+
+  const getUpcomingAssessments = () => {
+    if (!assessmentDueDates) return []
+    
+    const today = new Date()
+    return Object.entries(assessmentDueDates)
+      .filter(([_, assessment]) => {
+        const dueDate = new Date(assessment.dueDate)
+        return dueDate >= today
+      })
+      .sort((a, b) => new Date(a[1].dueDate) - new Date(b[1].dueDate))
+      .slice(0, 3) // Show only next 3 upcoming assessments
+  }
+
+  const getAssessmentUrl = (assessment) => {
+    // Since we don't have unitId and sectionId in the assessmentDueDates,
+    // we'll need to store them when creating the dueDates object in StudentDashboard
+    return `/units/${assessment.courseId}/section/${assessment.unitId}/assessment/${assessment.sectionId}`
   }
 
   return (
@@ -136,14 +164,22 @@ const Calendar = () => {
                   sx={{
                     p: 1,
                     textAlign: 'center',
-                    color: isCurrentMonth(date) ? 'black' : '#ccc',
-                    bgcolor: isSelected(date) ? '#4169e1' : 'transparent',
+                    color: hasAssessments(date) 
+                      ? 'white' 
+                      : isCurrentMonth(date) 
+                        ? 'black' 
+                        : '#ccc',
+                    bgcolor: hasAssessments(date) ? 'primary.main' : 'transparent',
+                    position: 'relative',
                     '&:hover': {
-                      bgcolor: '#e8eaf6',
+                      bgcolor: hasAssessments(date) 
+                        ? 'primary.dark'
+                        : '#e8eaf6',
                       cursor: 'pointer'
                     },
                     borderRadius: 1,
-                    m: 0.2
+                    m: 0.2,
+                    transition: 'background-color 0.2s ease'
                   }}
                 >
                   {date.getDate()}
@@ -162,86 +198,88 @@ const Calendar = () => {
             fontWeight: 'bold'
           }}
         >
-          Upcoming Dates
+          Upcoming Assessments
         </Typography>
 
         <List>
-          <ListItem
-            sx={{
-              pl: '80px',
-              bgcolor: 'white',
-              borderRadius: '16px',
-              boxShadow: '0px 1px 3px rgba(0,0,0,0.1)'
-            }}
-          >
-            <Box
-              sx={{
-                mr: 2,
-                color: 'white',
-                minWidth: '70px',
-                bgcolor: '#4169e1',
-                textAlign: 'center',
-                borderTopLeftRadius: '16px',
-                borderBottomLeftRadius: '16px',
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                position: 'absolute',
-                left: 0,
-                top: 0,
-                bottom: 0
-              }}
-            >
-              <Typography sx={{ fontSize: '16px', fontWeight: 500 }}>
-                Nov
-              </Typography>
-              <Typography sx={{ fontSize: '24px', fontWeight: 600 }}>
-                5<sup style={{ fontSize: '12px' }}>th</sup>
-              </Typography>
-            </Box>
-            <Box>
-              <Typography
+          {getUpcomingAssessments().map(([id, assessment]) => {
+            const dueDate = new Date(assessment.dueDate)
+            return (
+              <ListItem
+                key={id}
                 sx={{
-                  fontSize: '14px',
-                  overflow: 'hidden',
-                  WebkitLineClamp: 2,
-                  display: '-webkit-box',
-                  textOverflow: 'ellipsis',
-                  WebkitBoxOrient: 'vertical'
+                  pl: '80px',
+                  bgcolor: 'white',
+                  borderRadius: '16px',
+                  boxShadow: '0px 1px 3px rgba(0,0,0,0.1)',
+                  mb: 1
                 }}
               >
-                <Box component='span' sx={{ fontWeight: 500 }}>
-                  GROUP B Unit:
-                </Box>{' '}
                 <Box
-                  component='span'
                   sx={{
-                    color: 'text.secondary'
+                    mr: 2,
+                    color: 'white',
+                    minWidth: '70px',
+                    bgcolor: '#4169e1',
+                    textAlign: 'center',
+                    borderTopLeftRadius: '16px',
+                    borderBottomLeftRadius: '16px',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    bottom: 0
                   }}
                 >
-                  Understanding and using inclusive learning and teaching
-                  approaches in education and training is due.
+                  <Typography sx={{ fontSize: '16px', fontWeight: 500 }}>
+                    {dueDate.toLocaleString('default', { month: 'short' })}
+                  </Typography>
+                  <Typography sx={{ fontSize: '24px', fontWeight: 600 }}>
+                    {dueDate.getDate()}
+                    <sup style={{ fontSize: '12px' }}>th</sup>
+                  </Typography>
                 </Box>
-              </Typography>
-              <Link
-                href='#'
-                sx={{
-                  mt: 1,
-                  color: '#4169e1',
-                  fontSize: '16px',
-                  textDecoration: 'none',
-                  display: 'inline-block',
-                  '&:hover': {
-                    textDecoration: 'underline'
-                  }
-                }}
-              >
-                Go to Course
-              </Link>
-            </Box>
-          </ListItem>
+                <Box>
+                  <Typography
+                    sx={{
+                      fontSize: '14px',
+                      overflow: 'hidden',
+                      WebkitLineClamp: 2,
+                      display: '-webkit-box',
+                      textOverflow: 'ellipsis',
+                      WebkitBoxOrient: 'vertical'
+                    }}
+                  >
+                    <Box component='span' sx={{ fontWeight: 500 }}>
+                      {assessment.type}:
+                    </Box>{' '}
+                    <Box component='span' sx={{ color: 'text.secondary' }}>
+                      {assessment.name} is due.
+                    </Box>
+                  </Typography>
+                  <Link
+                    href={getAssessmentUrl(assessment)}
+                    sx={{
+                      mt: 1,
+                      color: '#4169e1',
+                      fontSize: '16px',
+                      textDecoration: 'none',
+                      display: 'inline-block',
+                      '&:hover': {
+                        textDecoration: 'underline'
+                      }
+                    }}
+                  >
+                    Go to Assessment
+                  </Link>
+                </Box>
+              </ListItem>
+            )
+          })}
         </List>
       </Box>
     </Box>
