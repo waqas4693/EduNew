@@ -1,7 +1,7 @@
 import axios from 'axios'
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api/'
-// const API_URL = 'https://edusupplements.co.uk/api/'
+// const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api/'
+const API_URL = 'https://edusupplements.co.uk/api/'
 
 export const postData = async (endpoint, data, config = {}) => {
   try {
