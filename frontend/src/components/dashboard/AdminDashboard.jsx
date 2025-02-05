@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Box,
   Card,
@@ -6,10 +6,10 @@ import {
   IconButton,
   Typography,
   Menu,
-  MenuItem
+  MenuItem,
+  Tooltip
 } from '@mui/material'
 import { getData, patchData } from '../../api/api'
-import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined'
@@ -21,6 +21,106 @@ import EditIcon from '@mui/icons-material/Edit'
 import GroupIcon from '@mui/icons-material/Group'
 import BlockIcon from '@mui/icons-material/Block'
 import url from '../config/server-url'
+
+const getThumbnailUrl = (fileName) => {
+  if (!fileName) return ''
+  return `${url}resources/files/THUMBNAILS/${fileName}`
+}
+
+const AdminCourseCard = ({ course, onMenuOpen }) => {
+  const [imageError, setImageError] = useState(false)
+  return (
+    <Card
+      sx={{
+        p: 2,
+        height: '100%',
+        width: '200px',
+        display: 'flex',
+        flexDirection: 'column',
+        borderRadius: '12px',
+        border: '1px solid #3366CC33',
+        position: 'relative',
+        boxShadow: '0px 14px 42px 0px #080F340F',
+        transition: 'transform 0.2s',
+        '&:hover': {
+          transform: 'scale(1.02)',
+          cursor: 'pointer'
+        }
+      }}
+    >
+      <IconButton
+        size="small"
+        sx={{
+          position: 'absolute',
+          top: 8,
+          right: 8,
+          backgroundColor: 'white',
+          width: '32px',
+          height: '32px',
+          '&:hover': {
+            backgroundColor: 'white',
+            opacity: 0.9
+          },
+          boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
+        }}
+        onClick={(e) => onMenuOpen(e, course)}
+      >
+        <MoreVertIcon sx={{ transform: 'rotate(90deg)' }} />
+      </IconButton>
+      <Box
+        sx={{
+          width: '100%',
+          height: '120px',
+          bgcolor: course.thumbnail && !imageError ? 'transparent' : 'primary.light',
+          borderRadius: '8px',
+          mb: 2
+        }}
+      >
+        {course.thumbnail && !imageError ? (
+          <img
+            src={getThumbnailUrl(course.thumbnail)}
+            alt={course.name}
+            onError={() => setImageError(true)}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              borderRadius: '8px'
+            }}
+          />
+        ) : (
+          <Box
+            sx={{
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <MenuBookOutlinedIcon sx={{ fontSize: 40, color: 'primary.main' }} />
+          </Box>
+        )}
+      </Box>
+      <Tooltip title={course.name}>
+        <Typography
+          variant="h6"
+          sx={{
+            mb: 1,
+            fontSize: '14px',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }}
+        >
+          {course.name.length > 15 ? `${course.name.substring(0, 10)}...` : course.name}
+        </Typography>
+      </Tooltip>
+      <Typography color="text.secondary" sx={{ fontSize: '12px' }}>
+        {course.units?.length || 0} Units
+      </Typography>
+    </Card>
+  )
+}
 
 const AdminDashboard = () => {
   const [courses, setCourses] = useState([])
@@ -75,7 +175,7 @@ const AdminDashboard = () => {
         const response = await patchData(`courses/${selectedCourse._id}/status`, {
           status: 2
         })
-        
+
         if (response.status === 200) {
           fetchCourses()
           alert('Course marked as inactive successfully')
@@ -86,11 +186,6 @@ const AdminDashboard = () => {
       console.error('Error marking course as inactive:', error)
       alert('Error marking course as inactive')
     }
-  }
-
-  const getThumbnailUrl = (fileName) => {
-    if (!fileName) return ''
-    return `${url}resources/files/THUMBNAILS/${fileName}`
   }
 
   const StatCard = ({ title, value, icon }) => (
@@ -120,11 +215,11 @@ const AdminDashboard = () => {
             justifyContent: 'center'
           }}
         >
-          {React.cloneElement(icon, { 
-            sx: { 
+          {React.cloneElement(icon, {
+            sx: {
               color: '#3366CC',
               fontSize: '24px'
-            } 
+            }
           })}
         </Box>
         <Typography variant="body2" color="text.secondary">
@@ -139,10 +234,10 @@ const AdminDashboard = () => {
 
   return (
     <Box sx={{ p: 1 }}>
-      <Paper 
-        elevation={5} 
-        sx={{ 
-          p: 3, 
+      <Paper
+        elevation={5}
+        sx={{
+          p: 3,
           borderRadius: '16px',
           backgroundColor: 'white'
         }}
@@ -150,32 +245,16 @@ const AdminDashboard = () => {
         <Grid container spacing={3}>
           {/* Stats Section */}
           <Grid size={3}>
-            <StatCard
-              title="Total Courses"
-              value="12"
-              icon={<MenuBookOutlinedIcon />}
-            />
+            <StatCard title="Total Courses" value="12" icon={<MenuBookOutlinedIcon />} />
           </Grid>
           <Grid size={3}>
-            <StatCard
-              title="Total Students"
-              value="12"
-              icon={<GroupOutlinedIcon />}
-            />
+            <StatCard title="Total Students" value="12" icon={<GroupOutlinedIcon />} />
           </Grid>
           <Grid size={3}>
-            <StatCard
-              title="Total Active Courses"
-              value="12"
-              icon={<PersonOutlineOutlinedIcon />}
-            />
+            <StatCard title="Total Active Courses" value="12" icon={<PersonOutlineOutlinedIcon />} />
           </Grid>
           <Grid size={3}>
-            <StatCard
-              title="Total Active Students"
-              value="12"
-              icon={<ArchiveOutlinedIcon />}
-            />
+            <StatCard title="Total Active Students" value="12" icon={<ArchiveOutlinedIcon />} />
           </Grid>
 
           {/* Courses Section */}
@@ -194,83 +273,7 @@ const AdminDashboard = () => {
               <Grid container spacing={2}>
                 {courses.map((course) => (
                   <Grid key={course._id} xs={12} sm={6} md={4} lg={3}>
-                    <Card
-                      sx={{
-                        p: 2,
-                        height: '100%',
-                        width: '200px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        borderRadius: '12px',
-                        border: '1px solid #3366CC33',
-                        position: 'relative',
-                        boxShadow: '0px 14px 42px 0px #080F340F',
-                        transition: 'transform 0.2s',
-                        '&:hover': {
-                          transform: 'scale(1.02)',
-                          cursor: 'pointer'
-                        }
-                      }}
-                    >
-                      <IconButton
-                        size="small"
-                        sx={{ 
-                          position: 'absolute', 
-                          top: 8, 
-                          right: 8,
-                          backgroundColor: 'white',
-                          width: '32px',
-                          height: '32px',
-                          '&:hover': {
-                            backgroundColor: 'white',
-                            opacity: 0.9
-                          },
-                          boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
-                        }}
-                        onClick={(e) => handleMenuOpen(e, course)}
-                      >
-                        <MoreVertIcon sx={{ transform: 'rotate(90deg)' }} />
-                      </IconButton>
-                      <Box
-                        sx={{
-                          width: '100%',
-                          height: '120px',
-                          bgcolor: course.thumbnail ? 'transparent' : 'primary.light',
-                          borderRadius: '8px',
-                          mb: 2
-                        }}
-                      >
-                        {course.thumbnail ? (
-                          <img
-                            src={getThumbnailUrl(course.thumbnail)}
-                            alt={course.name}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover',
-                              borderRadius: '8px'
-                            }}
-                          />
-                        ) : (
-                          <Box
-                            sx={{
-                              height: '100%',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}
-                          >
-                            <MenuBookOutlinedIcon sx={{ fontSize: 40, color: 'primary.main' }} />
-                          </Box>
-                        )}
-                      </Box>
-                      <Typography variant="h6" sx={{ mb: 1, fontSize: '14px' }}>
-                        {course.name}
-                      </Typography>
-                      <Typography color="text.secondary" sx={{ fontSize: '12px' }}>
-                        {course.units?.length || 0} Units
-                      </Typography>
-                    </Card>
+                    <AdminCourseCard course={course} onMenuOpen={handleMenuOpen} />
                   </Grid>
                 ))}
               </Grid>
@@ -280,11 +283,7 @@ const AdminDashboard = () => {
       </Paper>
 
       {/* Menu component remains outside the Paper */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-      >
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
         <MenuItem onClick={handleEdit} sx={{ color: 'primary.main' }}>
           <EditIcon sx={{ mr: 1, fontSize: 20 }} />
           Edit

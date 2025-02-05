@@ -18,12 +18,24 @@ import {
   TextField,
   Stack,
   Divider,
-  Grid
+  Grid,
+  RadioGroup,
+  Radio,
+  FormControlLabel,
+  IconButton,
+  Tooltip
 } from '@mui/material'
-import { getData, patchData } from '../../api/api'
-import url from '../../components/config/server-url'
+import { 
+  CloudUpload as UploadIcon,
+  History as HistoryIcon,
+  Download as DownloadIcon 
+} from '@mui/icons-material'
+import { getData, patchData, postData } from '../../api/api'
+import { useAuth } from '../../context/AuthContext'
+import url from '../config/server-url'
 
 const AssessmentReview = () => {
+  const { user } = useAuth()
   const [assessments, setAssessments] = useState([])
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
@@ -31,6 +43,12 @@ const AssessmentReview = () => {
   const [openReviewDialog, setOpenReviewDialog] = useState(false)
   const [selectedAttempt, setSelectedAttempt] = useState(null)
   const [marks, setMarks] = useState('')
+  const [openFeedbackDialog, setOpenFeedbackDialog] = useState(false)
+  const [openDecisionDialog, setOpenDecisionDialog] = useState(false)
+  const [openHistoryDialog, setOpenHistoryDialog] = useState(false)
+  const [feedbackFile, setFeedbackFile] = useState(null)
+  const [decision, setDecision] = useState('')
+  const [comments, setComments] = useState('')
 
   useEffect(() => {
     fetchAssessments()
@@ -38,7 +56,7 @@ const AssessmentReview = () => {
 
   const fetchAssessments = async () => {
     try {
-      const response = await getData('assessment-review/submitted')
+      const response = await getData(`assessment-review/submitted?role=${user.role}`)
       if (response.status === 200) {
         setAssessments(response.data.data)
       }
@@ -62,11 +80,16 @@ const AssessmentReview = () => {
 
   const handleSubmitGrade = async () => {
     try {
-      console.log('Selected Attempt:')
-      console.log(selectedAttempt)
+      if (!marks || marks < 0 || marks > selectedAttempt?.assessmentId?.totalMarks) {
+        // Add error handling/notification here
+        return
+      }
+
       const response = await patchData(`assessment-review/grade/${selectedAttempt._id}`, {
-        obtainedMarks: Number(marks)
+        obtainedMarks: Number(marks),
+        userId: user.id
       })
+
       if (response.status === 200) {
         fetchAssessments()
         setOpenGradeDialog(false)
@@ -75,6 +98,255 @@ const AssessmentReview = () => {
       }
     } catch (error) {
       console.error('Error grading assessment:', error)
+    }
+  }
+
+  const handleStatusUpdate = async (attemptId, newStatus) => {
+    try {
+      await patchData(`assessment-review/status/${attemptId}`, {
+        status: newStatus,
+        comments: `Status updated to ${newStatus}`,
+        userId: user.id
+      })
+      fetchAssessments()
+    } catch (error) {
+      console.error('Error updating status:', error)
+    }
+  }
+
+  const handleFeedbackUpload = async () => {
+    if (!feedbackFile || !selectedAttempt) return
+
+    const formData = new FormData()
+    formData.append('feedbackFile', feedbackFile)
+    formData.append('userId', user.id)
+
+    try {
+      const response = await postData(
+        `assessment-review/feedback/${selectedAttempt._id}`, 
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data' // Important for file upload
+          }
+        }
+      )
+
+      if (response.status === 200) {
+        setOpenFeedbackDialog(false)
+        setFeedbackFile(null)
+        fetchAssessments()
+      }
+    } catch (error) {
+      console.error('Error uploading feedback:', error)
+    }
+  }
+
+  const handleDecisionSubmit = async () => {
+    if (!selectedAttempt || !decision) return
+
+    try {
+      const endpoint = user.role === 4 ? 'moderate' : 'verify'
+      await postData(`assessment-review/${endpoint}/${selectedAttempt._id}`, {
+        status: decision,
+        comments,
+        userId: user.id
+      })
+      setOpenDecisionDialog(false)
+      setDecision('')
+      setComments('')
+      fetchAssessments()
+    } catch (error) {
+      console.error('Error submitting decision:', error)
+    }
+  }
+
+  const renderHistoryItem = (history, index) => {
+    const isDecision = history.decision !== undefined
+    const getDecisionColor = (decision) => {
+      if (!decision) return 'text.secondary'
+      return decision === 'SATISFIED' ? 'success.main' : 'error.main'
+    }
+
+    return (
+      <Box key={index} sx={{ mb: 2 }}>
+        <Typography variant="subtitle1">
+          {history.status}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          By: {history.changedBy?.name}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {new Date(history.timestamp).toLocaleString()}
+        </Typography>
+        {isDecision && (
+          <Typography variant="body2" color={getDecisionColor(history.decision)} sx={{ mt: 1 }}>
+            Decision: {history.decision}
+          </Typography>
+        )}
+        {history.comments && (
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            Comments: {history.comments}
+          </Typography>
+        )}
+        {index !== selectedAttempt.statusHistory.length - 1 && (
+          <Divider sx={{ mt: 2 }} />
+        )}
+      </Box>
+    )
+  }
+
+  const renderActionButtons = (attempt) => {
+    switch (user.role) {
+      case 3: // Assessor
+        return (
+          <Stack direction="row" spacing={1}>
+            {attempt.status === 'SUBMITTED' && (
+              <Button 
+                variant="outlined" 
+                onClick={() => handleStatusUpdate(attempt._id, 'PLAGIARISM_CHECK')}
+              >
+                Start Plagiarism Check
+              </Button>
+            )}
+            {attempt.status === 'PLAGIARISM_CHECK' && (
+              <Button 
+                variant="outlined" 
+                onClick={() => handleStatusUpdate(attempt._id, 'MARKING')}
+              >
+                Start Marking
+              </Button>
+            )}
+            {(attempt.status === 'MARKING' || attempt.status === 'MARKING_REVISION') && (
+              <Stack direction="row" spacing={1}>
+                <Button 
+                  variant="outlined"
+                  onClick={() => handleGrade(attempt)}
+                >
+                  {attempt.obtainedMarks ? 'Update Grade' : 'Grade Assessment'}
+                </Button>
+                <Button 
+                  variant="outlined"
+                  onClick={() => {
+                    setSelectedAttempt(attempt)
+                    setOpenFeedbackDialog(true)
+                  }}
+                  disabled={!attempt.obtainedMarks}
+                >
+                  {attempt.status === 'MARKING_REVISION' ? 'Re-upload Feedback' : 'Upload Feedback'}
+                </Button>
+                {attempt.feedbackFile && (
+                  <Button
+                    variant="outlined"
+                    startIcon={<DownloadIcon />}
+                    onClick={() => {
+                      const link = document.createElement('a')
+                      link.href = `${url}resources/files/ASSESSMENT_FEEDBACK/${attempt.feedbackFile}`
+                      link.download = attempt.feedbackFile
+                      document.body.appendChild(link)
+                      link.click()
+                      document.body.removeChild(link)
+                    }}
+                  >
+                    Download Feedback
+                  </Button>
+                )}
+                {attempt.obtainedMarks && attempt.feedbackFile && (
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={() => handleStatusUpdate(attempt._id, 'MARKED')}
+                  >
+                    Submit for Moderation
+                  </Button>
+                )}
+              </Stack>
+            )}
+          </Stack>
+        )
+
+      case 4: // Moderator
+        return (
+          <Stack direction="row" spacing={1}>
+            <Stack>
+              {attempt.verifierDecision?.status === 'NOT_SATISFIED' && (
+                <Typography variant="body2" color="error" sx={{ mb: 1 }}>
+                  Verifier Comments: {attempt.verifierDecision.comments}
+                </Typography>
+              )}
+              <Stack direction="row" spacing={1}>
+                <Button 
+                  variant="outlined"
+                  onClick={() => {
+                    setSelectedAttempt(attempt)
+                    setOpenDecisionDialog(true)
+                  }}
+                >
+                  Moderate
+                </Button>
+                {attempt.feedbackFile && (
+                  <Button
+                    variant="outlined"
+                    startIcon={<DownloadIcon />}
+                    onClick={() => {
+                      const link = document.createElement('a')
+                      link.href = `${url}resources/files/ASSESSMENT_FEEDBACK/${attempt.feedbackFile}`
+                      link.download = attempt.feedbackFile
+                      document.body.appendChild(link)
+                      link.click()
+                      document.body.removeChild(link)
+                    }}
+                  >
+                    Download Feedback
+                  </Button>
+                )}
+              </Stack>
+            </Stack>
+          </Stack>
+        )
+
+      case 5: // Verifier
+        return (
+          <Stack direction="row" spacing={1}>
+            <Stack>
+              {attempt.moderatorDecision?.status && (
+                <Typography variant="body2" color="info.main" sx={{ mb: 1 }}>
+                  Moderator Comments: {attempt.moderatorDecision.comments}
+                </Typography>
+              )}
+              <Stack direction="row" spacing={1}>
+                <Button 
+                  variant="outlined"
+                  onClick={() => {
+                    setSelectedAttempt(attempt)
+                    setOpenDecisionDialog(true)
+                  }}
+                >
+                  Verify
+                </Button>
+                {attempt.feedbackFile && (
+                  <Button
+                    variant="outlined"
+                    startIcon={<DownloadIcon />}
+                    onClick={() => {
+                      const link = document.createElement('a')
+                      link.href = `${url}resources/files/ASSESSMENT_FEEDBACK/${attempt.feedbackFile}`
+                      link.download = attempt.feedbackFile
+                      document.body.appendChild(link)
+                      link.click()
+                      document.body.removeChild(link)
+                    }}
+                  >
+                    Download Feedback
+                  </Button>
+                )}
+              </Stack>
+            </Stack>
+          </Stack>
+        )
+
+      default:
+        return null
     }
   }
 
@@ -291,12 +563,14 @@ const AssessmentReview = () => {
               <TableRow>
                 <TableCell>Student Name</TableCell>
                 <TableCell>Email</TableCell>
+                <TableCell>Assessor</TableCell>
+                <TableCell>Moderator</TableCell>
+                <TableCell>Verifier</TableCell>
                 <TableCell>Course</TableCell>
                 <TableCell>Unit</TableCell>
-                <TableCell>Submitted Date</TableCell>
-                <TableCell>Marks</TableCell>
                 <TableCell>Status</TableCell>
-                <TableCell align="center">Action</TableCell>
+                <TableCell>Submitted Date</TableCell>
+                <TableCell align="center">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -306,30 +580,34 @@ const AssessmentReview = () => {
                   <TableRow key={attempt._id}>
                     <TableCell>{attempt.studentName}</TableCell>
                     <TableCell>{attempt.studentId?.email || 'N/A'}</TableCell>
+                    <TableCell>{attempt.assessorName || 'N/A'}</TableCell>
+                    <TableCell>{attempt.moderatorName || 'N/A'}</TableCell>
+                    <TableCell>{attempt.verifierName || 'N/A'}</TableCell>
                     <TableCell>{attempt.assessmentId?.sectionId?.unitId?.courseId?.name}</TableCell>
                     <TableCell>{attempt.assessmentId?.sectionId?.unitId?.name}</TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {attempt.status}
+                        <Tooltip title="View History">
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setSelectedAttempt(attempt)
+                              setOpenHistoryDialog(true)
+                            }}
+                          >
+                            <HistoryIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </TableCell>
                     <TableCell>
                       {new Date(attempt.submittedAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      {attempt.assessmentId.assessmentType === 'MCQ' && 
-                        `${attempt.calculatedMarks}/${attempt.totalPossibleMarks} (${attempt.percentage}%)`
-                      }
-                    </TableCell>
-                    <TableCell>{attempt.status}</TableCell>
-                    <TableCell>
-                      <Stack direction="row" spacing={1} justifyContent="center">
-                        <Button variant="outlined" onClick={() => handleReview(attempt)}>
-                          Review
-                        </Button>
-                        <Button
-                          variant="contained"
-                          onClick={() => handleGrade(attempt)}
-                          disabled={attempt.status === 'GRADED'}
-                        >
-                          Grade
-                        </Button>
-                      </Stack>
+                      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                        {renderActionButtons(attempt)}
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -422,6 +700,109 @@ const AssessmentReview = () => {
             >
               Submit Grade
             </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Feedback Upload Dialog */}
+        <Dialog open={openFeedbackDialog} onClose={() => setOpenFeedbackDialog(false)}>
+          <DialogTitle>Upload Feedback</DialogTitle>
+          <DialogContent>
+            <Box sx={{ mt: 2 }}>
+              <input
+                type="file"
+                onChange={(e) => {
+                  if (e.target.files) {
+                    setFeedbackFile(e.target.files[0])
+                  }
+                }}
+                style={{ display: 'none' }}
+                id="feedback-file-input"
+              />
+              <label htmlFor="feedback-file-input">
+                <Button
+                  variant="outlined"
+                  component="span"
+                  startIcon={<UploadIcon />}
+                >
+                  Choose File
+                </Button>
+              </label>
+              {feedbackFile && (
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  Selected: {feedbackFile.name}
+                </Typography>
+              )}
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenFeedbackDialog(false)}>Cancel</Button>
+            <Button 
+              onClick={handleFeedbackUpload}
+              variant="contained"
+              disabled={!feedbackFile}
+            >
+              Upload
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Decision Dialog */}
+        <Dialog open={openDecisionDialog} onClose={() => setOpenDecisionDialog(false)}>
+          <DialogTitle>
+            {user.role === 4 ? 'Moderation Decision' : 'Verification Decision'}
+          </DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ mt: 2 }}>
+              <RadioGroup
+                value={decision}
+                onChange={(e) => setDecision(e.target.value)}
+              >
+                <FormControlLabel 
+                  value="SATISFIED" 
+                  control={<Radio />} 
+                  label="Satisfied" 
+                />
+                <FormControlLabel 
+                  value="NOT_SATISFIED" 
+                  control={<Radio />} 
+                  label="Not Satisfied" 
+                />
+              </RadioGroup>
+              <TextField
+                label="Comments"
+                multiline
+                rows={4}
+                value={comments}
+                onChange={(e) => setComments(e.target.value)}
+                fullWidth
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenDecisionDialog(false)}>Cancel</Button>
+            <Button 
+              onClick={handleDecisionSubmit}
+              variant="contained"
+              disabled={!decision}
+            >
+              Submit Decision
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* History Dialog */}
+        <Dialog 
+          open={openHistoryDialog} 
+          onClose={() => setOpenHistoryDialog(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>Status History</DialogTitle>
+          <DialogContent>
+            {selectedAttempt?.statusHistory.map((history, index) => renderHistoryItem(history, index))}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenHistoryDialog(false)}>Close</Button>
           </DialogActions>
         </Dialog>
       </Paper>

@@ -139,7 +139,7 @@ const Units = () => {
             </Typography>
           </Box>
 
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+          {/* <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
             <Box
               sx={{
                 border: '1px solid',
@@ -189,7 +189,7 @@ const Units = () => {
               </Box>
               Resume Learning
             </Box>
-          </Box>
+          </Box> */}
 
           {/* <Typography variant='body2' sx={{ mb: 2 }}>
             Last Visit: 11/11/2024 at 2 am

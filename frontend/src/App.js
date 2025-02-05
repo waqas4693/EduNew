@@ -23,6 +23,7 @@ import AssessmentReview from './components/assessment/AssessmentReview'
 import GradedAssessments from './components/assessment/GradedAssessments'
 import ResourceAnalytics from './components/admin/ResourceAnalytics'
 import StudentAssessments from './components/assessment/StudentAssessments'
+import CreateUser from './components/users/CreateUser'
 
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
@@ -66,31 +67,118 @@ function App() {
                   <Route path="/" element={<SplashScreen />} />
                   <Route path="/login" element={<Login />} />
                   
-                  {/* Admin Routes */}
+                  {/* Admin & Assessment Roles Routes */}
                   <Route
                     path="/admin/*"
                     element={
-                      <PrivateRoute requiredRole={1}>
+                      <PrivateRoute requiredRole={[1, 3, 4, 5]}>
                         <DashboardLayout>
                           <Routes>
-                            <Route path="/dashboard" element={<AdminDashboard />} />
-                            <Route path="/add-course" element={<AddCourse />} />
-                            <Route path="/invite-student" element={<InviteStudent />} />
-                            <Route path="/inactive-courses" element={<InactiveCourses />} />
-                            <Route path="/active-students" element={<ActiveStudents />} />
-                            <Route path="/inactive-students" element={<InactiveStudents />} />
-                            <Route path="/students/:id/courses" element={<StudentCourses />} />
-                            <Route path="/courses/:id/students" element={<CourseStudents />} />
+                            {/* Admin only routes */}
+                            <Route 
+                              path="/dashboard" 
+                              element={
+                                <PrivateRoute requiredRole={[1]}>
+                                  <AdminDashboard />
+                                </PrivateRoute>
+                              } 
+                            />
+                            <Route 
+                              path="/add-course" 
+                              element={
+                                <PrivateRoute requiredRole={[1]}>
+                                  <AddCourse />
+                                </PrivateRoute>
+                              } 
+                            />
+                            <Route 
+                              path="/invite-student" 
+                              element={
+                                <PrivateRoute requiredRole={[1]}>
+                                  <InviteStudent />
+                                </PrivateRoute>
+                              } 
+                            />
+                            <Route 
+                              path="/inactive-courses" 
+                              element={
+                                <PrivateRoute requiredRole={[1]}>
+                                  <InactiveCourses />
+                                </PrivateRoute>
+                              } 
+                            />
+                            <Route 
+                              path="/active-students" 
+                              element={
+                                <PrivateRoute requiredRole={[1]}>
+                                  <ActiveStudents />
+                                </PrivateRoute>
+                              } 
+                            />
+                            <Route 
+                              path="/inactive-students" 
+                              element={
+                                <PrivateRoute requiredRole={[1]}>
+                                  <InactiveStudents />
+                                </PrivateRoute>
+                              } 
+                            />
+                            <Route 
+                              path="/create-user" 
+                              element={
+                                <PrivateRoute requiredRole={[1]}>
+                                  <CreateUser />
+                                </PrivateRoute>
+                              } 
+                            />
+
+                            {/* Shared routes for Admin & Assessment roles */}
                             <Route path="/assessment-review" element={<AssessmentReview />} />
                             <Route path="/assessment-review/submitted" element={<AssessmentReview />} />
                             <Route path="/assessment-review/graded" element={<GradedAssessments />} />
-                            <Route path="/resource-analytics" element={<ResourceAnalytics />} />
-                            <Route path="/students/:id/courses/:courseId/progress" element={<StudentProgress />} />
+                            <Route path="/profile" element={<Profile />} />
+
+                            {/* Admin only routes continued */}
+                            <Route 
+                              path="/resource-analytics" 
+                              element={
+                                <PrivateRoute requiredRole={[1]}>
+                                  <ResourceAnalytics />
+                                </PrivateRoute>
+                              } 
+                            />
+                            <Route 
+                              path="/students/:id/courses" 
+                              element={
+                                <PrivateRoute requiredRole={[1]}>
+                                  <StudentCourses />
+                                </PrivateRoute>
+                              } 
+                            />
+                            <Route 
+                              path="/courses/:id/students" 
+                              element={
+                                <PrivateRoute requiredRole={[1]}>
+                                  <CourseStudents />
+                                </PrivateRoute>
+                              } 
+                            />
+                            <Route 
+                              path="/students/:id/courses/:courseId/progress" 
+                              element={
+                                <PrivateRoute requiredRole={[1]}>
+                                  <StudentProgress />
+                                </PrivateRoute>
+                              } 
+                            />
                             <Route 
                               path="/students/:studentId/assessments" 
-                              element={<StudentAssessments isAdminView={true} />} 
+                              element={
+                                <PrivateRoute requiredRole={[1]}>
+                                  <StudentAssessments isAdminView={true} />
+                                </PrivateRoute>
+                              } 
                             />
-                            <Route path="/profile" element={<Profile />} />
                           </Routes>
                         </DashboardLayout>
                       </PrivateRoute>
@@ -101,7 +189,7 @@ function App() {
                   <Route
                     path="/*"
                     element={
-                      <PrivateRoute requiredRole={2}>
+                      <PrivateRoute requiredRole={[2]}>
                         <DashboardLayout>
                           <Routes>
                             <Route path="/dashboard" element={<StudentDashboard />} />

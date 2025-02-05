@@ -28,10 +28,25 @@ const assessmentSchema = new mongoose.Schema({
     default: false
   },
   timeAllowed: {
-    type: Number, // Time in minutes
+    type: Number,
     required: function() {
       return this.isTimeBound
     }
+  },
+  assessor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  moderator: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  verifier: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
   content: {
     questions: [{

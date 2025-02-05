@@ -15,7 +15,8 @@ import {
   CircularProgress,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
+  LinearProgress
 } from '@mui/material'
 import {
   ChevronLeft,
@@ -149,7 +150,7 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
   const renderMCQ = () => {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography variant="h6" gutterBottom>
+        <Typography variant="h6" gutterBottom sx={{ color: '#000' }}>
           {resource.content.mcq.question}
         </Typography>
 
@@ -575,6 +576,7 @@ const LearnerFrame = () => {
   const navigate = useNavigate()
   const { courseId, unitId, sectionId } = useParams()
   const { user } = useAuth()
+  const [sectionProgress, setSectionProgress] = useState(0)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -819,6 +821,56 @@ const LearnerFrame = () => {
     }
   }, [currentIndex, resources])
 
+  useEffect(() => {
+    const fetchSectionProgress = async () => {
+      if (!user?.studentId || !sectionId || !resources?.length) {
+        setSectionProgress(0)
+        return
+      }
+
+      try {
+        const response = await getData(`resource-views/student/${user.studentId}`)
+        if (response.status === 200) {
+          const allViews = response.data.data
+          
+          // Filter views for the current section
+          const currentSectionViews = allViews.filter(view => 
+            view.sectionId?._id?.toString() === sectionId.toString()
+          )
+
+          // Get unique viewed resource IDs in current section
+          const viewedResourceIds = new Set()
+          currentSectionViews.forEach(view => {
+            const resourceId = view.resourceId?._id?.toString() || view.resourceId?.toString()
+            if (resourceId) {
+              viewedResourceIds.add(resourceId)
+            }
+          })
+
+          // Calculate progress
+          const totalResourcesInSection = resources.length
+          const viewedResourcesCount = viewedResourceIds.size
+          
+          console.log('Progress Calculation:', {
+            totalResourcesInSection,
+            viewedResourcesCount,
+            viewedResourceIds: Array.from(viewedResourceIds),
+            resourceIds: resources.map(r => r._id.toString())
+          })
+
+          const calculatedProgress = (viewedResourcesCount / totalResourcesInSection) * 100
+          setSectionProgress(calculatedProgress)
+        }
+      } catch (error) {
+        console.error('Error calculating section progress:', error)
+        setSectionProgress(0)
+      }
+    }
+
+    // Fetch progress whenever resources change or when a new resource view is recorded
+    fetchSectionProgress()
+  }, [user?.studentId, sectionId, resources, currentIndex])  // Added currentIndex to refresh on resource change
+
   if (isLoading) {
     return (
       <Paper
@@ -969,6 +1021,12 @@ const LearnerFrame = () => {
                 />
               )}
             </Box>
+          </Box>
+          <Box sx={{ mt: 2, px: 2, pb: 2 }}>
+            <Typography variant='body2' gutterBottom>
+              Section Progress: {Math.round(sectionProgress)}%
+            </Typography>
+            <LinearProgress variant='determinate' value={sectionProgress} />
           </Box>
         </Paper>
       </Grid>

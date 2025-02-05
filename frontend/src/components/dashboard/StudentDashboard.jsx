@@ -238,6 +238,7 @@ const DecorativeCard = () => {
 const CourseRow = ({ course, studentId }) => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  const [imageError, setImageError] = useState(false)
 
   const handleCourseClick = () => {
     dispatch(setCurrentCourse({
@@ -257,7 +258,6 @@ const CourseRow = ({ course, studentId }) => {
       }
     }}>
       <Grid container spacing={2}>
-        {/* Course Card */}
         <Grid xs={4}>
           <Card
             onClick={handleCourseClick}
@@ -277,16 +277,18 @@ const CourseRow = ({ course, studentId }) => {
             <Box
               sx={{
                 width: '100%',
+                minWidth: '150px',
                 height: '120px',
-                bgcolor: course.image ? 'transparent' : 'primary.light',
+                bgcolor: imageError || !course.image ? 'primary.light' : 'transparent',
                 borderRadius: '8px',
                 mb: 2
               }}
             >
-              {course.image ? (
+              {course.image && !imageError ? (
                 <img
                   src={getThumbnailUrl(course.image)}
                   alt={course.name}
+                  onError={() => setImageError(true)}
                   style={{
                     width: '100%',
                     height: '100%',
@@ -308,8 +310,18 @@ const CourseRow = ({ course, studentId }) => {
               )}
             </Box>
 
-            <Typography variant="h6" sx={{ mb: 1, fontSize: '14px' }}>
-              {course.name}
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                mb: 1, 
+                fontSize: '14px',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}
+              title={course.name}
+            >
+              {course.name.length > 15 ? `${course.name.substring(0, 10)}...` : course.name}
             </Typography>
             <Typography color="text.secondary" sx={{ fontSize: '12px' }}>
               {course.units} Units
@@ -317,12 +329,10 @@ const CourseRow = ({ course, studentId }) => {
           </Card>
         </Grid>
 
-        {/* Progress Card */}
         <Grid xs={4}>
           <CourseProgressCard courseId={course.id} studentId={studentId} />
         </Grid>
 
-        {/* Decorative Card */}
         <Grid xs={4}>
           <DecorativeCard />
         </Grid>

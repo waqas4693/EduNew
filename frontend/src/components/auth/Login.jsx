@@ -20,6 +20,9 @@ import { useAuth } from '../../context/AuthContext'
 
 const ADMIN_ROLE = 1
 const STUDENT_ROLE = 2
+const ASSESSOR_ROLE = 3
+const MODERATOR_ROLE = 4
+const VERIFIER_ROLE = 5
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -77,10 +80,21 @@ const Login = () => {
         login(user, token)
 
         // Navigate based on role
-        if (user.role === ADMIN_ROLE) {
-          navigate('/admin/dashboard', { replace: true })
-        } else if (user.role === STUDENT_ROLE) {
-          navigate('/dashboard', { replace: true })
+        switch(user.role) {
+          case ADMIN_ROLE:
+            navigate('/admin/dashboard', { replace: true })
+            break
+          case STUDENT_ROLE:
+            navigate('/dashboard', { replace: true })
+            break
+          case ASSESSOR_ROLE:
+          case MODERATOR_ROLE:
+          case VERIFIER_ROLE:
+            navigate('/admin/assessment-review/submitted', { replace: true })
+            break
+          default:
+            setError('Invalid user role')
+            break
         }
       }
     } catch (error) {
@@ -123,7 +137,7 @@ const Login = () => {
         <Typography
           sx={{
             color: '#3366CC',
-            fontSize: '16px',
+            fontSize: '24px',
             fontWeight: 800
           }}
         >
@@ -153,7 +167,7 @@ const Login = () => {
           <Typography
             variant='h5'
             component='h1'
-            sx={{ mb: 3, fontSize: '24px', textAlign: 'center', fontWeight: 500 }}
+            sx={{ mb: 3, fontSize: '20px', textAlign: 'center', fontWeight: 500 }}
           >
             Login
           </Typography>

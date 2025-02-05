@@ -8,13 +8,23 @@ const assessmentAttemptSchema = new mongoose.Schema({
   },
   studentId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'Student',
     required: true
   },
   status: {
     type: String,
-    enum: ['PENDING', 'SUBMITTED', 'GRADED'],
-    default: 'PENDING'
+    enum: [
+      'SUBMITTED',
+      'PLAGIARISM_CHECK',
+      'MARKING',
+      'MARKED',
+      'MODERATION',
+      'MARKING_REVISION',
+      'VERIFICATION',
+      'MODERATION_REVISION',
+      'GRADED'
+    ],
+    default: 'SUBMITTED'
   },
   obtainedMarks: {
     type: Number,
@@ -31,6 +41,37 @@ const assessmentAttemptSchema = new mongoose.Schema({
     }],
     submittedFile: String
   },
+  feedbackFile: {
+    type: String
+  },
+  moderatorDecision: {
+    status: {
+      type: String,
+      enum: ['SATISFIED', 'NOT_SATISFIED']
+    },
+    comments: String,
+    decidedAt: Date
+  },
+  verifierDecision: {
+    status: {
+      type: String,
+      enum: ['SATISFIED', 'NOT_SATISFIED']
+    },
+    comments: String,
+    decidedAt: Date
+  },
+  statusHistory: [{
+    status: String,
+    changedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    comments: String,
+    timestamp: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   submittedAt: {
     type: Date
   }

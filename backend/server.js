@@ -17,6 +17,7 @@ import uploadRoutes from './routes/upload.js'
 import courseRoutes from './routes/course.js'
 import studentRoutes from './routes/student.js'
 import sectionRoutes from './routes/section.js'
+import userRoutes from './routes/userRoutes.js'
 import resourceRoutes from './routes/resource.js'
 import assessmentRoutes from './routes/assessment.js'
 import resourceViewRoutes from './routes/resourceView.js'
@@ -87,6 +88,7 @@ app.use('/api/resources/files', express.static(path.join(__dirname, 'ResourceFil
 app.use('/api/upload', uploadRoutes)
 app.use('/api/resources/files/ASSESSMENT_SUBMISSIONS', express.static(path.join(__dirname, 'ResourceFiles/ASSESSMENT_SUBMISSIONS')))
 app.use('/api/resources/files/ASSESSMENT_FILES', express.static(path.join(__dirname, 'ResourceFiles/ASSESSMENT_FILES')))
+app.use('/api/users', userRoutes)
 mongoose.set('strictQuery', false)
 
 await mongoose

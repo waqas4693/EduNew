@@ -28,6 +28,9 @@ import { useState } from 'react'
 
 const ADMIN_ROLE = 1
 const STUDENT_ROLE = 2
+const ASSESSOR_ROLE = 3
+const MODERATOR_ROLE = 4
+const VERIFIER_ROLE = 5
 
 const Sidebar = ({ open, onClose }) => {
   const theme = useTheme()
@@ -38,6 +41,7 @@ const Sidebar = ({ open, onClose }) => {
   const [openCourses, setOpenCourses] = useState(false)
   const [openStudents, setOpenStudents] = useState(false)
   const [openAssessment, setOpenAssessment] = useState(false)
+  const [openAccounts, setOpenAccounts] = useState(false)
 
   const handleLogout = () => {
     logout()
@@ -68,6 +72,13 @@ const Sidebar = ({ open, onClose }) => {
       ]
     },
     {
+      text: 'Accounts',
+      icon: <PersonAddIcon />,
+      subItems: [
+        { text: 'Create Account', path: '/admin/create-user' }
+      ]
+    },
+    {
       text: 'Assessment',
       icon: <AssignmentIcon />,
       subItems: [
@@ -90,7 +101,50 @@ const Sidebar = ({ open, onClose }) => {
     }
   ]
 
-  const menuItems = user?.role === ADMIN_ROLE ? adminMenuItems : studentMenuItems
+  const assessmentMenuItems = [
+    {
+      text: 'Assessment',
+      icon: <AssignmentIcon />,
+      subItems: [
+        { text: 'Submitted', path: '/admin/assessment-review/submitted' },
+        { text: 'Graded', path: '/admin/assessment-review/graded' }
+      ]
+    }
+  ]
+
+  const getMenuItems = () => {
+    switch(user?.role) {
+      case ADMIN_ROLE:
+        return adminMenuItems
+      case STUDENT_ROLE:
+        return studentMenuItems
+      case ASSESSOR_ROLE:
+      case MODERATOR_ROLE:
+      case VERIFIER_ROLE:
+        return assessmentMenuItems
+      default:
+        return []
+    }
+  }
+
+  const menuItems = getMenuItems()
+
+  const getRoleName = (roleId) => {
+    switch(roleId) {
+      case ADMIN_ROLE:
+        return 'Administrator'
+      case STUDENT_ROLE:
+        return 'Student'
+      case ASSESSOR_ROLE:
+        return 'Assessor'
+      case MODERATOR_ROLE:
+        return 'Moderator'
+      case VERIFIER_ROLE:
+        return 'Verifier'
+      default:
+        return 'User'
+    }
+  }
 
   return (
     <Drawer
@@ -112,41 +166,36 @@ const Sidebar = ({ open, onClose }) => {
       }}
     >
       <Box sx={{ overflow: 'auto', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <Box 
-          sx={{ 
-            p: 2, 
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 2,
-            borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
-            mb: 1,
-            minHeight: 64
-          }}
-        >
-          <Avatar 
-            sx={{ 
-              width: 40,
-              height: 40,
-              bgcolor: 'secondary.main',
-              flexShrink: 0
-            }}
-          >
-            {user?.name ? user.name[0].toUpperCase() : 'U'}
+        <Box sx={{ 
+          p: 2, 
+          display: 'flex', 
+          alignItems: 'center',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.12)'
+        }}>
+          <Avatar sx={{ bgcolor: 'primary.dark', mr: open ? 2 : 0 }}>
+            {user?.name?.charAt(0).toUpperCase()}
           </Avatar>
           {open && (
-            <Typography 
-              sx={{ 
-                color: 'white',
-                fontSize: '1rem',
-                fontWeight: 'medium',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}
-            >
-              {user?.name || 'User'}
-            </Typography>
+            <Box sx={{ overflow: 'hidden' }}>
+              <Typography 
+                sx={{ 
+                  color: 'white',
+                  fontSize: '16px',
+                  fontWeight: 'bold'
+                }}
+              >
+                {getRoleName(user?.role)}
+              </Typography>
+              <Typography 
+                sx={{ 
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: '14px',
+                  lineHeight: 1
+                }}
+              >
+                {user?.name}
+              </Typography>
+            </Box>
           )}
         </Box>
 
@@ -158,9 +207,22 @@ const Sidebar = ({ open, onClose }) => {
                   <ListItem
                     button
                     onClick={() => {
-                      if (item.text === 'Courses') setOpenCourses(!openCourses)
-                      else if (item.text === 'Students') setOpenStudents(!openStudents)
-                      else if (item.text === 'Assessment') setOpenAssessment(!openAssessment)
+                      switch (item.text) {
+                        case 'Courses':
+                          setOpenCourses(!openCourses)
+                          break
+                        case 'Students':
+                          setOpenStudents(!openStudents)
+                          break
+                        case 'Assessment':
+                          setOpenAssessment(!openAssessment)
+                          break
+                        case 'Accounts':
+                          setOpenAccounts(!openAccounts)
+                          break
+                        default:
+                          break
+                      }
                     }}
                     sx={{
                       justifyContent: open ? 'initial' : 'center',
@@ -193,14 +255,22 @@ const Sidebar = ({ open, onClose }) => {
                     {open && (
                       item.text === 'Courses' ? (openCourses ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />) :
                       item.text === 'Students' ? (openStudents ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />) :
-                      (openAssessment ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />)
+                      item.text === 'Assessment' ? (openAssessment ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />) :
+                      item.text === 'Accounts' ? (openAccounts ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />) :
+                      null
                     )}
                   </ListItem>
-                  <Collapse in={
-                    item.text === 'Courses' ? openCourses :
-                    item.text === 'Students' ? openStudents :
-                    openAssessment
-                  } timeout="auto" unmountOnExit>
+                  <Collapse 
+                    in={
+                      item.text === 'Courses' ? openCourses :
+                      item.text === 'Students' ? openStudents :
+                      item.text === 'Assessment' ? openAssessment :
+                      item.text === 'Accounts' ? openAccounts :
+                      false
+                    } 
+                    timeout="auto" 
+                    unmountOnExit
+                  >
                     <List 
                       component="div" 
                       disablePadding
@@ -287,7 +357,7 @@ const Sidebar = ({ open, onClose }) => {
           <ListItem
             button
             component={Link}
-            to={user?.role === ADMIN_ROLE ? '/admin/profile' : '/profile'}
+            to={user?.role === STUDENT_ROLE ? '/profile' : '/admin/profile'}
             sx={{
               minHeight: 48,
               justifyContent: open ? 'initial' : 'center',

@@ -5,6 +5,9 @@ const AuthContext = createContext(null)
 
 const ADMIN_ROLE = 1
 const STUDENT_ROLE = 2
+const ASSESSOR_ROLE = 3
+const MODERATOR_ROLE = 4
+const VERIFIER_ROLE = 5
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
@@ -19,10 +22,20 @@ export const AuthProvider = ({ children }) => {
         setUser(userData)
         
         if (window.location.pathname === '/login') {
-          if (userData.role === ADMIN_ROLE) {
-            navigate('/admin/dashboard')
-          } else if (userData.role === STUDENT_ROLE) {
-            navigate('/dashboard')
+          switch(userData.role) {
+            case ADMIN_ROLE:
+              navigate('/admin/dashboard')
+              break
+            case STUDENT_ROLE:
+              navigate('/dashboard')
+              break
+            case ASSESSOR_ROLE:
+            case MODERATOR_ROLE:
+            case VERIFIER_ROLE:
+              navigate('/admin/assessment-review/submitted')
+              break
+            default:
+              break
           }
         }
       }

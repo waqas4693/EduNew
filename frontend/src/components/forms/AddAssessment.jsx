@@ -33,6 +33,9 @@ const AddAssessment = () => {
     interval: '',
     isTimeBound: false,
     timeAllowed: '',
+    assessor: null,
+    moderator: null,
+    verifier: null,
     content: {
       questions: [],
       mcqs: [],
@@ -49,6 +52,9 @@ const AddAssessment = () => {
   const [sections, setSections] = useState([])
   const [existingAssessments, setExistingAssessments] = useState([])
   const [remainingPercentage, setRemainingPercentage] = useState(100)
+  const [assessors, setAssessors] = useState([])
+  const [moderators, setModerators] = useState([])
+  const [verifiers, setVerifiers] = useState([])
 
   useEffect(() => {
     fetchCourses()
@@ -71,6 +77,10 @@ const AddAssessment = () => {
       fetchExistingAssessments()
     }
   }, [sectionId])
+
+  useEffect(() => {
+    fetchUsers()
+  }, [])
 
   const fetchCourses = async () => {
     try {
@@ -114,6 +124,20 @@ const AddAssessment = () => {
       }
     } catch (error) {
       console.error('Error fetching assessments:', error)
+    }
+  }
+
+  const fetchUsers = async () => {
+    try {
+      const response = await getData('users/assessment-users')
+      if (response.status === 200) {
+        const { assessors, moderators, verifiers } = response.data.data
+        setAssessors(assessors)
+        setModerators(moderators)
+        setVerifiers(verifiers)
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error)
     }
   }
 
@@ -515,6 +539,91 @@ const AddAssessment = () => {
     )
   }
 
+  const renderRoleSelections = () => (
+    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+      <Autocomplete
+        fullWidth
+        size="small"
+        options={assessors}
+        getOptionLabel={(option) => option.name}
+        onChange={(_, newValue) => handleFormChange('assessor', newValue?._id)}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            label="Select Assessor"
+            required
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px',
+                border: '1px solid #20202033',
+                '& fieldset': { border: 'none' }
+              },
+              '& .MuiInputLabel-root': {
+                color: '#8F8F8F',
+                backgroundColor: 'white',
+                padding: '0 4px'
+              }
+            }}
+          />
+        )}
+      />
+
+      <Autocomplete
+        fullWidth
+        size="small"
+        options={moderators}
+        getOptionLabel={(option) => option.name}
+        onChange={(_, newValue) => handleFormChange('moderator', newValue?._id)}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            label="Select Moderator"
+            required
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px',
+                border: '1px solid #20202033',
+                '& fieldset': { border: 'none' }
+              },
+              '& .MuiInputLabel-root': {
+                color: '#8F8F8F',
+                backgroundColor: 'white',
+                padding: '0 4px'
+              }
+            }}
+          />
+        )}
+      />
+
+      <Autocomplete
+        fullWidth
+        size="small"
+        options={verifiers}
+        getOptionLabel={(option) => option.name}
+        onChange={(_, newValue) => handleFormChange('verifier', newValue?._id)}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            label="Select Verifier"
+            required
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px',
+                border: '1px solid #20202033',
+                '& fieldset': { border: 'none' }
+              },
+              '& .MuiInputLabel-root': {
+                color: '#8F8F8F',
+                backgroundColor: 'white',
+                padding: '0 4px'
+              }
+            }}
+          />
+        )}
+      />
+    </Box>
+  )
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
@@ -617,6 +726,9 @@ const AddAssessment = () => {
       interval: '',
       isTimeBound: false,
       timeAllowed: '',
+      assessor: null,
+      moderator: null,
+      verifier: null,
       content: {
         questions: [],
         mcqs: [],
@@ -720,6 +832,8 @@ const AddAssessment = () => {
           )}
         />
       </Box>
+
+      {renderRoleSelections()}
 
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
         <FormControl fullWidth size="small">
