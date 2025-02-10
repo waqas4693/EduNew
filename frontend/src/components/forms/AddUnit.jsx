@@ -4,21 +4,26 @@ import {
   TextField,
   Button,
   Typography,
-  Paper,
   Autocomplete,
   Divider,
   IconButton,
+  Alert
 } from '@mui/material'
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material'
 import { postData, getData, putData } from '../../api/api'
 
 const AddUnit = ({ courseId, editMode }) => {
-  const [units, setUnits] = useState([{
-    name: '',
-    courseId: null
-  }])
+  const [units, setUnits] = useState([
+    {
+      name: '',
+      number: null,
+      courseId: null
+    }
+  ])
   const [courses, setCourses] = useState([])
   const [selectedCourse, setSelectedCourse] = useState(null)
+  const [error, setError] = useState('')
+  const [nextNumber, setNextNumber] = useState(1)
 
   const fetchCourses = async () => {
     try {
@@ -33,88 +38,109 @@ const AddUnit = ({ courseId, editMode }) => {
       }
     } catch (error) {
       console.error('Error fetching courses:', error)
+      setError('Failed to fetch courses')
     }
   }
 
-  const fetchUnits = async () => {
-    if (editMode && courseId) {
-      try {
-        const response = await getData(`units/${courseId}`)
-        if (response.status === 200 && response.data.units) {
-
-          console.log('Units Fetched In Edit Mode = ')
-          console.log(response.data.units)
-
-          setUnits(response.data.units.map(unit => ({
-            name: unit.name,
-            courseId: courseId,
-            _id: unit._id
-          })))
-        }
-      } catch (error) {
-        console.error('Error fetching units:', error)
+  const fetchNextNumber = async selectedCourseId => {
+    try {
+      const response = await getData(`units/latest-number/${selectedCourseId}`)
+      if (response.status === 200) {
+        setNextNumber(response.data.nextNumber)
+        // Update the first unit's number
+        setUnits(prev => [
+          {
+            ...prev[0],
+            number: response.data.nextNumber
+          }
+        ])
       }
+    } catch (error) {
+      console.error('Error fetching next number:', error)
+      setError('Failed to fetch next unit number')
     }
   }
 
   useEffect(() => {
     fetchCourses()
-    fetchUnits()
   }, [courseId, editMode])
 
   const addNewUnit = () => {
-    setUnits(prev => [...prev, { name: '', courseId: prev[0].courseId }])
+    setUnits(prev => [
+      ...prev,
+      {
+        name: '',
+        number: nextNumber + prev.length,
+        courseId: prev[0].courseId
+      }
+    ])
   }
 
-  const removeUnit = (indexToRemove) => {
-    setUnits(prev => prev.filter((_, index) => index !== indexToRemove))
+  const removeUnit = indexToRemove => {
+    setUnits(prev => {
+      const filtered = prev.filter((_, index) => index !== indexToRemove)
+      // Recalculate numbers for remaining units
+      return filtered.map((unit, index) => ({
+        ...unit,
+        number: nextNumber + index
+      }))
+    })
   }
 
   const handleUnitChange = (index, field, value) => {
-    setUnits(prev => {
-      const newUnits = [...prev]
-      newUnits[index] = {
-        ...newUnits[index],
-        [field]: value
-      }
-      if (field === 'courseId') {
-        newUnits.forEach(unit => unit.courseId = value)
-      }
-      return newUnits
-    })
+    if (field === 'courseId') {
+      // When course changes, fetch new number sequence
+      fetchNextNumber(value)
+      setUnits(prev =>
+        prev.map((unit, idx) => ({
+          ...unit,
+          courseId: value,
+          number: nextNumber + idx
+        }))
+      )
+    } else {
+      setUnits(prev => {
+        const newUnits = [...prev]
+        newUnits[index] = {
+          ...newUnits[index],
+          [field]: value
+        }
+        return newUnits
+      })
+    }
   }
 
   const handleSubmit = async e => {
     e.preventDefault()
+    setError('')
+
     try {
-      if (editMode) {
-        const updatePromises = units.map(unit => 
-          putData(`units/${unit._id}`, { 
-            name: unit.name,
-            courseId: unit.courseId 
-          })
-        )
-        
-        await Promise.all(updatePromises)
-        alert('Units updated successfully')
-      } else {
-        const response = await postData('units', { units })
-        if (response.status === 201) {
-          setUnits([{ name: '', courseId: null }])
-          alert('Units added successfully')
-        }
+      const response = await postData('units', { units })
+      if (response.status === 201) {
+        // Reset form
+        setUnits([
+          {
+            name: '',
+            number: nextNumber,
+            courseId: selectedCourse?._id
+          }
+        ])
       }
     } catch (error) {
-      console.error('Error handling units:', error)
-      alert('Error updating units')
+      console.error('Error creating units:', error)
+      setError(error.response?.data?.message || 'Failed to create units')
     }
   }
 
   return (
     <form onSubmit={handleSubmit}>
+      {error && (
+        <Alert severity='error' sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
       <Autocomplete
-        fullWidth
-        size='small'
         options={courses}
         value={selectedCourse}
         disabled={editMode}
@@ -124,20 +150,52 @@ const AddUnit = ({ courseId, editMode }) => {
           handleUnitChange(0, 'courseId', newValue?._id)
         }}
         renderInput={params => (
-          <TextField {...params} label='Select Course' required sx={{
-            '& .MuiOutlinedInput-root': {
-              borderRadius: '8px'
-            }
-          }}/>
+          <TextField
+            {...params}
+            label='Select Course'
+            required
+            size='small'
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px'
+              }
+            }}
+          />
         )}
         sx={{ mb: 2 }}
       />
 
       {units.map((unit, index) => (
         <Box key={index}>
-          {index > 0 && !editMode && (
-            <>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <Typography
+              sx={{
+                width: '150px',
+                padding: '8px 14px',
+                bgcolor: '#f5f5f5',
+                borderRadius: '8px',
+                border: '1px solid #20202033'
+              }}
+            >
+              Unit No: {unit.number}
+            </Typography>
+
+            <TextField
+              fullWidth
+              size='small'
+              label='Unit Name'
+              value={unit.name}
+              onChange={e => handleUnitChange(index, 'name', e.target.value)}
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px'
+                }
+              }}
+            />
+
+            {index > 0 && !editMode && (
+              <>
                 <IconButton
                   onClick={() => removeUnit(index)}
                   sx={{
@@ -147,32 +205,22 @@ const AddUnit = ({ courseId, editMode }) => {
                 >
                   <DeleteIcon />
                 </IconButton>
-              </Box>
-              <Divider sx={{ my: 4 }} />
-            </>
-          )}
-          
-          <TextField
-            fullWidth
-            size='small'
-            label='Unit Name'
-            value={unit.name}
-            onChange={e => handleUnitChange(index, 'name', e.target.value)}
-            required
-            sx={{
-              mb: 2,
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '8px'
-              }
-            }}
-          />
+              </>
+            )}
+          </Box>
         </Box>
       ))}
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}
+      >
         {!editMode && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <IconButton 
+            <IconButton
               onClick={addNewUnit}
               sx={{
                 bgcolor: 'primary.main',
@@ -187,10 +235,10 @@ const AddUnit = ({ courseId, editMode }) => {
             </Typography>
           </Box>
         )}
-        <Button 
-          type='submit' 
+        <Button
+          type='submit'
           variant='contained'
-          sx={{ 
+          sx={{
             bgcolor: editMode ? 'success.main' : 'primary.main',
             '&:hover': {
               bgcolor: editMode ? 'success.dark' : 'primary.dark'

@@ -13,7 +13,6 @@ import {
   Backdrop,
   LinearProgress,
   IconButton,
-  Divider,
   Checkbox,
   Accordion,
   AccordionSummary,
@@ -62,7 +61,11 @@ const UploadButton = ({ label, onChange, value, accept }) => (
         textTransform: 'none'
       }}
     >
-      {value ? (value.name.length > 20 ? `${value.name.slice(0, 20)}...` : value.name) : label}
+      {value
+        ? value.name.length > 20
+          ? `${value.name.slice(0, 20)}...`
+          : value.name
+        : label}
     </Typography>
     <input type='file' hidden accept={accept} onChange={onChange} />
   </Button>
@@ -77,6 +80,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
   const [resources, setResources] = useState([
     {
       name: '',
+      number: null,
       resourceType: '',
       content: {
         fileName: '',
@@ -111,6 +115,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
   const [sections, setSections] = useState([])
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [nextNumber, setNextNumber] = useState(1)
 
   useEffect(() => {
     fetchCourses()
@@ -212,11 +217,38 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
     }
   }
 
+  const fetchNextNumber = async selectedSectionId => {
+    try {
+      const response = await getData(
+        `resources/latest-number/${selectedSectionId}`
+      )
+      if (response.status === 200) {
+        setNextNumber(response.data.nextNumber)
+        setResources(prev =>
+          prev.map((resource, index) => ({
+            ...resource,
+            number: response.data.nextNumber + index
+          }))
+        )
+      }
+    } catch (error) {
+      console.error('Error fetching next number:', error)
+    }
+  }
+
+  const handleSectionSelect = newSection => {
+    setSectionId(newSection?._id)
+    if (newSection?._id) {
+      fetchNextNumber(newSection._id)
+    }
+  }
+
   const addNewResource = () => {
     setResources(prev => [
       ...prev,
       {
         name: '',
+        number: nextNumber + prev.length,
         resourceType: '',
         content: {
           fileName: '',
@@ -275,14 +307,12 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
     let contentData = { ...resource.content }
     const formData = new FormData()
 
-    // Function to generate unique filename with just timestamp and extension
-    const generateUniqueFilename = (originalName) => {
+    const generateUniqueFilename = originalName => {
       const timestamp = Date.now()
       const extension = originalName.split('.').pop()
       return `${timestamp}.${extension}`
     }
 
-    // Handle main file upload
     if (resource.content.file) {
       const uniqueFileName = generateUniqueFilename(resource.content.file.name)
       const renamedFile = new File([resource.content.file], uniqueFileName, {
@@ -292,26 +322,38 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
       contentData.fileName = uniqueFileName
     }
 
-    // Handle background image for PPT, AUDIO and TEXT
-    if ((resource.resourceType === 'PPT' || 
-         resource.resourceType === 'AUDIO' || 
-         resource.resourceType === 'TEXT') && 
-        resource.content.backgroundImage) {
-      const uniqueBgName = generateUniqueFilename(resource.content.backgroundImage.name)
-      const renamedBgFile = new File([resource.content.backgroundImage], uniqueBgName, {
-        type: resource.content.backgroundImage.type
-      })
+    if (
+      (resource.resourceType === 'PPT' ||
+        resource.resourceType === 'AUDIO' ||
+        resource.resourceType === 'TEXT') &&
+      resource.content.backgroundImage
+    ) {
+      const uniqueBgName = generateUniqueFilename(
+        resource.content.backgroundImage.name
+      )
+      const renamedBgFile = new File(
+        [resource.content.backgroundImage],
+        uniqueBgName,
+        {
+          type: resource.content.backgroundImage.type
+        }
+      )
       formData.append('backgroundImage', renamedBgFile)
       contentData.backgroundImage = uniqueBgName
     }
 
-    // Handle MCQ files
     if (resource.resourceType === 'MCQ') {
       if (resource.content.mcq?.imageFile) {
-        const uniqueMcqImageName = generateUniqueFilename(resource.content.mcq.imageFile.name)
-        const renamedMcqImage = new File([resource.content.mcq.imageFile], uniqueMcqImageName, {
-          type: resource.content.mcq.imageFile.type
-        })
+        const uniqueMcqImageName = generateUniqueFilename(
+          resource.content.mcq.imageFile.name
+        )
+        const renamedMcqImage = new File(
+          [resource.content.mcq.imageFile],
+          uniqueMcqImageName,
+          {
+            type: resource.content.mcq.imageFile.type
+          }
+        )
         formData.append('mcqImage', renamedMcqImage)
         contentData.mcq = {
           ...contentData.mcq,
@@ -319,10 +361,16 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         }
       }
       if (resource.content.mcq?.audioFile) {
-        const uniqueMcqAudioName = generateUniqueFilename(resource.content.mcq.audioFile.name)
-        const renamedMcqAudio = new File([resource.content.mcq.audioFile], uniqueMcqAudioName, {
-          type: resource.content.mcq.audioFile.type
-        })
+        const uniqueMcqAudioName = generateUniqueFilename(
+          resource.content.mcq.audioFile.name
+        )
+        const renamedMcqAudio = new File(
+          [resource.content.mcq.audioFile],
+          uniqueMcqAudioName,
+          {
+            type: resource.content.mcq.audioFile.type
+          }
+        )
         formData.append('mcqAudio', renamedMcqAudio)
         contentData.mcq = {
           ...contentData.mcq,
@@ -331,8 +379,8 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
       }
     }
 
-    // Add other data
     formData.append('name', resource.name)
+    formData.append('number', resource.number)
     formData.append('resourceType', resource.resourceType)
     formData.append('sectionId', sectionId)
     formData.append('content', JSON.stringify(contentData))
@@ -372,10 +420,10 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         alert('Resources added successfully')
       }
 
-      // Reset all states after successful submission
       setResources([
         {
           name: '',
+          number: null,
           resourceType: '',
           content: {
             fileName: '',
@@ -403,9 +451,9 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
           }
         }
       ])
-      setSectionId(null)
-      setUnitId(null)
-      setCourseId(null)
+      // setSectionId(null)
+      // setUnitId(null)
+      // setCourseId(null)
     } catch (error) {
       console.error('Error:', error)
       alert('Error uploading resources')
@@ -415,11 +463,17 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
   }
 
   const removeResource = indexToRemove => {
-    setResources(prev => prev.filter((_, index) => index !== indexToRemove))
+    setResources(prev => {
+      const filtered = prev.filter((_, index) => index !== indexToRemove)
+      return filtered.map((resource, index) => ({
+        ...resource,
+        number: nextNumber + index
+      }))
+    })
   }
 
   return (
-    <Box>
+    <>
       <form onSubmit={handleSubmit}>
         <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
           <Autocomplete
@@ -468,7 +522,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             size='small'
             options={sections}
             getOptionLabel={option => option.name}
-            onChange={(_, newValue) => setSectionId(newValue?._id)}
+            onChange={(_, newValue) => handleSectionSelect(newValue)}
             disabled={!unitId}
             renderInput={params => (
               <TextField
@@ -487,11 +541,11 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         </Box>
 
         {resources.map((resource, index) => (
-          <Accordion 
+          <Accordion
             key={index}
-            defaultExpanded={index === resources.length - 1}
-            sx={{ 
-              mb: 2, 
+            defaultExpanded={index === 0}
+            sx={{
+              mb: 2,
               boxShadow: 'none',
               '&:before': {
                 display: 'none'
@@ -515,21 +569,23 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                 }
               }}
             >
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                width: '100%',
-                justifyContent: 'space-between' 
-              }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  width: '100%',
+                  justifyContent: 'space-between'
+                }}
+              >
                 <Typography>
-                  {resource.name || `Resource ${index + 1}`}
-                  {resource.resourceType && ` - ${resource.resourceType}`}
+                  Resource {resource.number} -{' '}
+                  {resource.name || `(Unnamed Resource ${index + 1})`}
                 </Typography>
                 {index > 0 && (
                   <IconButton
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeResource(index);
+                    onClick={e => {
+                      e.stopPropagation()
+                      removeResource(index)
                     }}
                     sx={{
                       color: 'error.main',
@@ -538,7 +594,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                         color: 'white'
                       }
                     }}
-                    size="small"
+                    size='small'
                   >
                     <DeleteIcon />
                   </IconButton>
@@ -546,14 +602,30 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
               </Box>
             </AccordionSummary>
             <AccordionDetails>
-              <Box>
+              <>
                 <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                  <Typography
+                    sx={{
+                      minWidth: '150px',
+                      padding: '8px 14px',
+                      bgcolor: '#f5f5f5',
+                      borderRadius: '8px',
+                      border: '1px solid #20202033',
+                      whiteSpace: 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                  >
+                    Resource No: {resource.number}
+                  </Typography>
                   <TextField
                     fullWidth
                     size='small'
                     label='Resource Name'
                     value={resource.name}
-                    onChange={e => handleFormChange(index, 'name', e.target.value)}
+                    onChange={e =>
+                      handleFormChange(index, 'name', e.target.value)
+                    }
                     required
                     sx={{
                       '& .MuiOutlinedInput-root': {
@@ -594,9 +666,9 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                   </FormControl>
                 </Box>
 
-                <Box 
-                  sx={{ 
-                    display: 'flex', 
+                <Box
+                  sx={{
+                    display: 'flex',
                     gap: 2,
                     mb: resource.resourceType ? 2 : 0
                   }}
@@ -727,8 +799,6 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                   )}
                 </Box>
 
-                {/* These are kept outside of the main box because they have 
-                multiple fields which shrinks if placeed in the main box */}
                 {resource.resourceType === 'TEXT' && (
                   <>
                     {resource.content.questions.map((q, qIndex) => (
@@ -739,12 +809,16 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                           label={`Question ${qIndex + 1}`}
                           value={q.question}
                           onChange={e => {
-                            const newQuestions = [...resource.content.questions];
+                            const newQuestions = [...resource.content.questions]
                             newQuestions[qIndex] = {
                               ...newQuestions[qIndex],
                               question: e.target.value
-                            };
-                            handleContentChange(index, 'questions', newQuestions);
+                            }
+                            handleContentChange(
+                              index,
+                              'questions',
+                              newQuestions
+                            )
                           }}
                           required
                           sx={{
@@ -768,12 +842,16 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                           label={`Answer ${qIndex + 1}`}
                           value={q.answer}
                           onChange={e => {
-                            const newQuestions = [...resource.content.questions];
+                            const newQuestions = [...resource.content.questions]
                             newQuestions[qIndex] = {
                               ...newQuestions[qIndex],
                               answer: e.target.value
-                            };
-                            handleContentChange(index, 'questions', newQuestions);
+                            }
+                            handleContentChange(
+                              index,
+                              'questions',
+                              newQuestions
+                            )
                           }}
                           required
                           sx={{
@@ -879,12 +957,14 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                           Number of Correct Answers
                         </InputLabel>
                         <Select
-                          value={resource.content.mcq?.numberOfCorrectAnswers || 1}
+                          value={
+                            resource.content.mcq?.numberOfCorrectAnswers || 1
+                          }
                           onChange={e =>
                             handleContentChange(index, 'mcq', {
                               ...resource.content.mcq,
                               numberOfCorrectAnswers: e.target.value,
-                              correctAnswers: [] // Reset correct answers when number changes
+                              correctAnswers: []
                             })
                           }
                           sx={{
@@ -920,7 +1000,9 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                                 key={pairIndex * 2 + optionIndex}
                                 fullWidth
                                 size='small'
-                                label={`Option ${pairIndex * 2 + optionIndex + 1}`}
+                                label={`Option ${
+                                  pairIndex * 2 + optionIndex + 1
+                                }`}
                                 value={option}
                                 onChange={e => {
                                   const newOptions = [
@@ -984,16 +1066,18 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                         }}
                         renderValue={selected => selected.join(', ')}
                       >
-                        {resource.content.mcq?.options?.map((option, optIndex) => (
-                          <MenuItem key={optIndex} value={option}>
-                            <Checkbox
-                              checked={resource.content.mcq?.correctAnswers.includes(
-                                option
-                              )}
-                            />
-                            Option {optIndex + 1}: {option}
-                          </MenuItem>
-                        ))}
+                        {resource.content.mcq?.options?.map(
+                          (option, optIndex) => (
+                            <MenuItem key={optIndex} value={option}>
+                              <Checkbox
+                                checked={resource.content.mcq?.correctAnswers.includes(
+                                  option
+                                )}
+                              />
+                              Option {optIndex + 1}: {option}
+                            </MenuItem>
+                          )
+                        )}
                       </Select>
                     </FormControl>
                   </Box>
@@ -1024,17 +1108,15 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                     }}
                   />
                 )}
-                {/* End here */}
 
-                {/* External Links Section */}
                 <Box sx={{ mb: 2 }}>
                   {resource.content.externalLinks.map((link, linkIndex) => (
-                    <Box 
-                      key={linkIndex} 
-                      sx={{ 
-                        display: 'flex', 
-                        gap: 2, 
-                        mb: linkIndex < 2 ? 2 : 0 
+                    <Box
+                      key={linkIndex}
+                      sx={{
+                        display: 'flex',
+                        gap: 2,
+                        mb: linkIndex < 2 ? 2 : 0
                       }}
                     >
                       <TextField
@@ -1044,7 +1126,10 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                         value={link.name}
                         onChange={e => {
                           const newLinks = [...resource.content.externalLinks]
-                          newLinks[linkIndex] = { ...newLinks[linkIndex], name: e.target.value }
+                          newLinks[linkIndex] = {
+                            ...newLinks[linkIndex],
+                            name: e.target.value
+                          }
                           handleContentChange(index, 'externalLinks', newLinks)
                         }}
                         sx={{
@@ -1069,7 +1154,10 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                         value={link.url}
                         onChange={e => {
                           const newLinks = [...resource.content.externalLinks]
-                          newLinks[linkIndex] = { ...newLinks[linkIndex], url: e.target.value }
+                          newLinks[linkIndex] = {
+                            ...newLinks[linkIndex],
+                            url: e.target.value
+                          }
                           handleContentChange(index, 'externalLinks', newLinks)
                         }}
                         sx={{
@@ -1090,7 +1178,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                     </Box>
                   ))}
                 </Box>
-              </Box>
+              </>
             </AccordionDetails>
           </Accordion>
         ))}
@@ -1151,7 +1239,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
           </Box>
         </Backdrop>
       )}
-    </Box>
+    </>
   )
 }
 

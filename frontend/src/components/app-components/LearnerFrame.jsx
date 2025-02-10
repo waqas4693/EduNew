@@ -592,55 +592,36 @@ const LearnerFrame = () => {
   }
 
   const fetchAllThumbnails = async () => {
-    setIsLoading(true)
     try {
       const response = await getData(`resources/${sectionId}`)
       if (response.status === 200) {
-        setResources(response.data.resources)
+        // Sort resources by number before setting state
+        const sortedResources = response.data.resources.sort((a, b) => a.number - b.number)
+        setResources(sortedResources)
+        setIsLoading(false)
 
-        // Fetch thumbnails for all resources
-        const thumbnailPromises = response.data.resources.map(
-          async resource => {
-            if (resource.content.thumbnailUrl) {
-              const thumbnailUrl = await getLocalFileUrl(
-                resource.content.thumbnailUrl,
-                'THUMBNAILS'
-              )
-              return {
-                fileName: resource.content.thumbnailUrl,
-                url: thumbnailUrl
-              }
-            }
-            if (resource.resourceType !== 'TEXT') {
-              const defaultThumbnail = await getLocalFileUrl(
-                resource.content.fileName,
-                resource.resourceType
-              )
-              return {
-                fileName: resource.name,
-                url: defaultThumbnail
-              }
-            }
-            return null
+        // Get signed URLs for all resources
+        const urls = {}
+        for (const resource of sortedResources) {
+          if (resource.content.fileName) {
+            const signedUrl = await getLocalFileUrl(
+              resource.content.fileName,
+              resource.resourceType
+            )
+            urls[resource.content.fileName] = signedUrl
           }
-        )
-
-        const thumbnailUrls = await Promise.all(thumbnailPromises)
-        const newSignedUrls = {}
-        thumbnailUrls.forEach(item => {
-          if (item) {
-            newSignedUrls[item.fileName] = item.url
+          if (resource.content.backgroundImage) {
+            const signedUrl = await getLocalFileUrl(
+              resource.content.backgroundImage,
+              'BACKGROUNDS'
+            )
+            urls[resource.content.backgroundImage] = signedUrl
           }
-        })
-
-        setSignedUrls(prev => ({
-          ...prev,
-          ...newSignedUrls
-        }))
+        }
+        setSignedUrls(urls)
       }
     } catch (error) {
-      console.error('Error fetching resources and thumbnails:', error)
-    } finally {
+      console.error('Error fetching resources:', error)
       setIsLoading(false)
     }
   }

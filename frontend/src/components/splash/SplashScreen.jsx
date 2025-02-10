@@ -95,6 +95,7 @@ const SplashScreen = () => {
           src='/logo.png'
           component='img'
           sx={{
+            px: 1,
             width: '20%',
             height: '100%',
             objectFit: 'contain'

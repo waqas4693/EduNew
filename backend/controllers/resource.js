@@ -6,8 +6,22 @@ import { uploadFile } from '../utils/fileUpload.js'
 
 export const createResource = async (req, res) => {
   try {
-    const { name, resourceType, sectionId } = req.body
+    const { name, resourceType, sectionId, number } = req.body
     const content = JSON.parse(req.body.content)
+
+    // Check if number already exists for this section
+    const existingResource = await Resource.findOne({
+      sectionId,
+      number,
+      status: 1
+    })
+
+    if (existingResource) {
+      return res.status(400).json({
+        success: false,
+        message: `Resource number ${number} already exists in this section`
+      })
+    }
 
     // Handle file uploads
     if (req.files.file) {
@@ -60,6 +74,7 @@ export const createResource = async (req, res) => {
 
     const resource = new Resource({
       name,
+      number,
       resourceType,
       sectionId,
       content
@@ -74,6 +89,12 @@ export const createResource = async (req, res) => {
 
     res.status(201).json({ success: true, data: savedResource })
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Duplicate resource number found'
+      })
+    }
     console.error('Resource Creation Error:', error)
     handleError(res, error)
   }
@@ -85,7 +106,8 @@ export const getResources = async (req, res) => {
     const resources = await Resource.find({ 
       sectionId,
       status: 1 
-    })
+    }).sort('number') // Sort by number
+    
     res.status(200).json({
       success: true,
       data: resources
@@ -101,7 +123,7 @@ export const getSectionResources = async (req, res) => {
     const resources = await Resource.find({
       sectionId,
       status: 1
-    })
+    }).sort('number') // Sort by number field
 
     res.status(200).json({
       resources
@@ -147,8 +169,11 @@ export const getResourcesWithViewStatus = async (req, res) => {
   try {
     const { sectionId, studentId } = req.params
 
-    // Get all resources for the section
-    const resources = await Resource.find({ sectionId })
+    // Get all resources for the section, sorted by number
+    const resources = await Resource.find({ 
+      sectionId,
+      status: 1 
+    }).sort('number')
 
     // Get all resource views for this student with viewedAt field
     const resourceViews = await ResourceView.find({
@@ -166,6 +191,7 @@ export const getResourcesWithViewStatus = async (req, res) => {
     const resourcesWithStatus = resources.map(resource => ({
       _id: resource._id,
       name: resource.name,
+      number: resource.number, // Include number in response
       resourceType: resource.resourceType,
       isViewed: resourceViews.some(view => 
         view.resourceId.toString() === resource._id.toString()
@@ -178,6 +204,26 @@ export const getResourcesWithViewStatus = async (req, res) => {
     res.status(200).json({
       success: true,
       data: resourcesWithStatus
+    })
+  } catch (error) {
+    handleError(res, error)
+  }
+}
+
+export const getLatestResourceNumber = async (req, res) => {
+  try {
+    const { sectionId } = req.params
+
+    const latestResource = await Resource.findOne({ 
+      sectionId,
+      status: 1 
+    })
+    .sort('-number')
+    .select('number')
+
+    res.status(200).json({
+      success: true,
+      nextNumber: (latestResource?.number || 0) + 1
     })
   } catch (error) {
     handleError(res, error)

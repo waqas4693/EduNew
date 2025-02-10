@@ -5,6 +5,10 @@ const resourceSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  number: {
+    type: Number,
+    required: true
+  },
   sectionId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Section',
@@ -59,6 +63,9 @@ const resourceSchema = new mongoose.Schema({
     default: 1
   }
 }, { timestamps: false })
+
+// Compound unique index for number within a section
+resourceSchema.index({ sectionId: 1, number: 1 }, { unique: true })
 
 const Resource = mongoose.model('Resource', resourceSchema)
 export default Resource

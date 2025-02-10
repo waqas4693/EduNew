@@ -7,22 +7,28 @@ import {
   Paper,
   Autocomplete,
   IconButton,
-  Divider
+  Divider,
+  Alert
 } from '@mui/material'
 import { postData, getData, putData } from '../../api/api'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 
 const AddSection = ({ courseId: propsCourseId, editMode }) => {
-  const [sections, setSections] = useState([{
-    name: '',
-    unitId: null
-  }])
+  const [sections, setSections] = useState([
+    {
+      name: '',
+      number: null,
+      unitId: null
+    }
+  ])
   const [courseId, setCourseId] = useState(null)
   const [courses, setCourses] = useState([])
   const [units, setUnits] = useState([])
   const [selectedCourse, setSelectedCourse] = useState(null)
   const [selectedUnit, setSelectedUnit] = useState(null)
+  const [error, setError] = useState('')
+  const [nextNumber, setNextNumber] = useState(1)
 
   useEffect(() => {
     fetchCourses()
@@ -37,12 +43,6 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
     }
   }, [courseId])
 
-  useEffect(() => {
-    if (selectedUnit) {
-      fetchSections()
-    }
-  }, [selectedUnit])
-
   const fetchCourses = async () => {
     try {
       const response = await getData('courses')
@@ -55,6 +55,7 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
       }
     } catch (error) {
       console.error('Error fetching courses:', error)
+      setError('Failed to fetch courses')
     }
   }
 
@@ -66,82 +67,106 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
       }
     } catch (error) {
       console.error('Error fetching units:', error)
+      setError('Failed to fetch units')
     }
   }
 
-  const fetchSections = async () => {
-    if (editMode && selectedUnit) {
-      try {
-        const response = await getData(`sections/${selectedUnit._id}`)
-        if (response.status === 200 && response.data.sections) {
-          setSections(response.data.sections.map(section => ({
-            name: section.name,
-            unitId: selectedUnit._id,
-            _id: section._id
-          })))
-        }
-      } catch (error) {
-        console.error('Error fetching sections:', error)
+  const fetchNextNumber = async selectedUnitId => {
+    try {
+      const response = await getData(`sections/latest-number/${selectedUnitId}`)
+      if (response.status === 200) {
+        setNextNumber(response.data.nextNumber)
+        // Update the first section's number
+        setSections(prev => [
+          {
+            ...prev[0],
+            number: response.data.nextNumber
+          }
+        ])
       }
+    } catch (error) {
+      console.error('Error fetching next number:', error)
+      setError('Failed to fetch next section number')
     }
   }
 
   const addNewSection = () => {
-    setSections(prev => [...prev, { name: '', unitId: prev[0].unitId }])
+    setSections(prev => [
+      ...prev,
+      {
+        name: '',
+        number: nextNumber + prev.length,
+        unitId: prev[0].unitId
+      }
+    ])
   }
 
-  const removeSection = (indexToRemove) => {
-    setSections(prev => prev.filter((_, index) => index !== indexToRemove))
+  const removeSection = indexToRemove => {
+    setSections(prev => {
+      const filtered = prev.filter((_, index) => index !== indexToRemove)
+      // Recalculate numbers for remaining sections
+      return filtered.map((section, index) => ({
+        ...section,
+        number: nextNumber + index
+      }))
+    })
   }
 
   const handleSectionChange = (index, field, value) => {
-    setSections(prev => {
-      const newSections = [...prev]
-      newSections[index] = {
-        ...newSections[index],
-        [field]: value
-      }
-      if (field === 'unitId') {
-        newSections.forEach(section => section.unitId = value)
-      }
-      return newSections
-    })
+    if (field === 'unitId') {
+      // When unit changes, fetch new number sequence
+      fetchNextNumber(value)
+      setSections(prev =>
+        prev.map((section, idx) => ({
+          ...section,
+          unitId: value,
+          number: nextNumber + idx
+        }))
+      )
+    } else {
+      setSections(prev => {
+        const newSections = [...prev]
+        newSections[index] = {
+          ...newSections[index],
+          [field]: value
+        }
+        return newSections
+      })
+    }
   }
 
   const handleSubmit = async e => {
     e.preventDefault()
+    setError('')
+
     try {
-      if (editMode) {
-        const updatePromises = sections.map(section => 
-          putData(`sections/${section._id}`, {
-            name: section.name,
-            unitId: section.unitId
-          })
-        )
-        
-        await Promise.all(updatePromises)
-        alert('Sections updated successfully')
-      } else {
-        const response = await postData('sections', { sections })
-        if (response.status === 201) {
-          setSections([{ name: '', unitId: null }])
-          setCourseId(null)
-          setSelectedUnit(null)
-          alert('Sections added successfully')
-        }
+      const response = await postData('sections', { sections })
+      if (response.status === 201) {
+        // Reset form
+        setSections([
+          {
+            name: '',
+            number: nextNumber,
+            unitId: selectedUnit?._id
+          }
+        ])
       }
     } catch (error) {
-      console.error('Error handling sections:', error)
-      alert('Error updating sections')
+      console.error('Error creating sections:', error)
+      setError(error.response?.data?.message || 'Failed to create sections')
     }
   }
 
   return (
     <form onSubmit={handleSubmit}>
+      {error && (
+        <Alert severity='error' sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
         <Autocomplete
-          fullWidth
-          size='small'
           options={courses}
           value={selectedCourse}
           disabled={editMode}
@@ -149,18 +174,25 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
           onChange={(_, newValue) => {
             setSelectedCourse(newValue)
             setCourseId(newValue?._id)
+            setSelectedUnit(null)
           }}
           renderInput={params => (
-            <TextField {...params} label='Select Course' required sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '8px'
-              }
-            }}/>
+            <TextField
+              {...params}
+              label='Select Course'
+              size='small'
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px'
+                }
+              }}
+            />
           )}
+          sx={{ flex: 1 }}
         />
+
         <Autocomplete
-          fullWidth
-          size='small'
           options={units}
           value={selectedUnit}
           getOptionLabel={option => option?.name || ''}
@@ -168,22 +200,54 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
             setSelectedUnit(newValue)
             handleSectionChange(0, 'unitId', newValue?._id)
           }}
-          disabled={!courseId}
           renderInput={params => (
-            <TextField {...params} label='Select Unit' required sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '8px'
-              }
-            }}/>
+            <TextField
+              {...params}
+              label='Select Unit'
+              size='small'
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px'
+                }
+              }}
+            />
           )}
+          sx={{ flex: 1 }}
         />
       </Box>
 
       {sections.map((section, index) => (
         <Box key={index}>
-          {index > 0 && !editMode && (
-            <>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <Typography
+              sx={{
+                width: '150px',
+                padding: '8px 14px',
+                bgcolor: '#f5f5f5',
+                borderRadius: '8px',
+                border: '1px solid #20202033'
+              }}
+            >
+              Section No: {section.number}
+            </Typography>
+
+            <TextField
+              fullWidth
+              size='small'
+              label='Section Name'
+              value={section.name}
+              onChange={e => handleSectionChange(index, 'name', e.target.value)}
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px'
+                }
+              }}
+            />
+
+            {index > 0 && !editMode && (
+              <>
                 <IconButton
                   onClick={() => removeSection(index)}
                   sx={{
@@ -193,32 +257,22 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
                 >
                   <DeleteIcon />
                 </IconButton>
-              </Box>
-              <Divider sx={{ my: 4 }} />
-            </>
-          )}
-          
-          <TextField
-            fullWidth
-            size='small'
-            label='Section Name'
-            value={section.name}
-            onChange={e => handleSectionChange(index, 'name', e.target.value)}
-            required
-            sx={{
-              mb: 2,
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '8px'
-              }
-            }}
-          />
+              </>
+            )}
+          </Box>
         </Box>
       ))}
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}
+      >
         {!editMode && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <IconButton 
+            <IconButton
               onClick={addNewSection}
               sx={{
                 bgcolor: 'primary.main',
@@ -233,10 +287,10 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
             </Typography>
           </Box>
         )}
-        <Button 
-          type='submit' 
+        <Button
+          type='submit'
           variant='contained'
-          sx={{ 
+          sx={{
             bgcolor: editMode ? 'success.main' : 'primary.main',
             '&:hover': {
               bgcolor: editMode ? 'success.dark' : 'primary.dark'

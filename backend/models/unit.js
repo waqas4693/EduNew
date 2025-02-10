@@ -5,6 +5,10 @@ const unitSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  number: {
+    type: Number,
+    required: true
+  },
   courseId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Course',
@@ -20,6 +24,9 @@ const unitSchema = new mongoose.Schema({
     default: 1
   }
 }, { timestamps: false })
+
+// Compound unique index for number within a course
+unitSchema.index({ courseId: 1, number: 1 }, { unique: true })
 
 const Unit = mongoose.model('Unit', unitSchema)
 export default Unit

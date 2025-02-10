@@ -208,7 +208,7 @@ const Units = () => {
               </Box>
             ))
           ) : (
-            units.map((unit, index) => (
+            units.map((unit) => (
               <>
                 <ListItem
                   key={unit._id}
@@ -248,7 +248,7 @@ const Units = () => {
                     }}
                   >
                     <Typography sx={{ fontSize: '16px', fontWeight: 500, p: '20px' }}>
-                      {index + 1}
+                      {unit.number}
                     </Typography>
                   </Box>
                   <Box>
