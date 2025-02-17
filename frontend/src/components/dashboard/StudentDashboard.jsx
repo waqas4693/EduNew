@@ -319,19 +319,23 @@ const CourseRow = ({ course, studentId }) => {
       <Card
         sx={{
           mb: 2,
-          width: '300px',
+          width: '100%',
           overflow: 'hidden',
           borderRadius: '12px',
-          boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)'
+          boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          height: '160px'
         }}
       >
-        {course.image && !imageError ? (
-          <Box
-            sx={{
-              position: 'relative',
-              height: '120px'
-            }}
-          >
+        {/* Thumbnail Section */}
+        <Box
+          sx={{
+            width: '200px',
+            height: '160px',
+            flexShrink: 0
+          }}
+        >
+          {course.image && !imageError ? (
             <Box
               component='img'
               src={getThumbnailUrl(course.image)}
@@ -340,77 +344,91 @@ const CourseRow = ({ course, studentId }) => {
               sx={{
                 width: '100%',
                 height: '100%',
-                objectFit: 'cover',
-                display: 'block'
+                objectFit: 'cover'
               }}
             />
-          </Box>
-        ) : (
-          <Box
-            sx={{
-              height: '120px',
-              bgcolor: '#e75480',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative'
-            }}
-          >
+          ) : (
             <Box
-              component='img'
-              src='/course-card-placeholder-icon.svg'
-              alt='Course placeholder'
               sx={{
-                width: '48px',
-                height: '48px'
-              }}
-            />
-          </Box>
-        )}
-
-        <Box sx={{ p: 2 }}>
-          <Tooltip title={course.name} placement='top'>
-            <Typography
-              variant='h6'
-              sx={{
-                fontSize: '16px',
-                fontWeight: 500,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                width: '100%'
+                width: '100%',
+                height: '100%',
+                bgcolor: '#e75480',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
             >
-              {course.name}
+              <Box
+                component='img'
+                src='/course-card-placeholder-icon.svg'
+                alt='Course placeholder'
+                sx={{
+                  width: '48px',
+                  height: '48px'
+                }}
+              />
+            </Box>
+          )}
+        </Box>
+
+        {/* Course Info Section */}
+        <Box sx={{ p: 2, display: 'flex', flex: 1 }}>
+          <Box sx={{ flex: 1 }}>
+            <Tooltip title={course.name} placement='top'>
+              <Typography
+                variant='h6'
+                sx={{
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  width: '100%',
+                  lineHeight: 1.2,
+                  maxWidth: '200px'
+                }}
+              >
+                {course.name}
+              </Typography>
+            </Tooltip>
+            <Typography
+              sx={{
+                color: 'text.secondary',
+                fontSize: '14px',
+                mt: 1
+              }}
+            >
+              Units: {course.units}
             </Typography>
-          </Tooltip>
+          </Box>
 
-          <Typography
+          {/* Vertical Divider */}
+          <Box
             sx={{
-              mb: 2,
-              color: 'text.secondary',
-              fontSize: '14px'
+              mx: 2,
+              borderLeft: '1px solid #E0E0E0',
+              height: '100%'
             }}
-          >
-            Units: {course.units}
-          </Typography>
+          />
 
-          <Typography
-            sx={{
-              mb: 1,
-              color: 'text.secondary',
-              fontSize: '14px',
-              fontWeight: 500
-            }}
-          >
-            Course Progress
-          </Typography>
+          {/* Progress Section */}
+          <Box sx={{ width: '220px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Typography
+              sx={{
+                color: 'text.secondary',
+                fontSize: '14px',
+                fontWeight: 500,
+                mb: 1
+              }}
+            >
+              Course Progress
+            </Typography>
 
-          <Box sx={{ mb: 2 }}>
             {loading ? (
               <CircularProgress size={48} />
             ) : (
-              <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+              <Box sx={{ position: 'relative', display: 'inline-flex', mb: 1 }}>
                 <CircularProgress
                   variant='determinate'
                   value={progress}
@@ -436,56 +454,84 @@ const CourseRow = ({ course, studentId }) => {
                 </Box>
               </Box>
             )}
+
+            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+              <Button
+                variant='outlined'
+                size='small'
+                sx={{
+                  borderRadius: '8px',
+                  borderColor: '#4285f4',
+                  color: '#4285f4',
+                  whiteSpace: 'nowrap'
+                }}
+                onClick={handleCourseClick}
+              >
+                Detail View
+              </Button>
+              <Button
+                variant='contained'
+                size='small'
+                sx={{
+                  borderRadius: '8px',
+                  bgcolor: '#4285f4',
+                  whiteSpace: 'nowrap'
+                }}
+                onClick={handleQuickView}
+              >
+                Quick View
+              </Button>
+            </Box>
           </Box>
 
-          <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-            <Button
-              variant='outlined'
-              size='small'
-              sx={{
-                borderRadius: '8px',
-                flex: 1,
-                borderColor: '#4285f4',
-                color: '#4285f4'
-              }}
-              onClick={handleCourseClick}
-            >
-              Detail View
-            </Button>
-            <Button
-              variant='contained'
-              sx={{
-                borderRadius: '8px',
-                flex: 1,
-                bgcolor: '#4285f4'
-              }}
-              onClick={handleQuickView}
-            >
-              Quick View
-            </Button>
-          </Box>
-
+          {/* Vertical Divider */}
           <Box
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              color: '#4285f4',
-              cursor: 'pointer'
+              mx: 2,
+              borderLeft: '1px solid #E0E0E0',
+              height: '100%'
             }}
-          >
+          />
+
+          {/* AI Learning Section */}
+          <Box sx={{ width: '160px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <Typography
+              sx={{
+                color: 'text.secondary',
+                fontSize: '14px',
+                fontWeight: 500,
+                mb: 1
+              }}
+            >
+              AI Powered Learning
+            </Typography>
+            
             <Box
               component='img'
               src='/ai-education.png'
+              alt="AI Education"
               sx={{
-                width: 24,
-                height: 24,
-                borderRadius: '50%'
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                mb: 1,
+                objectFit: 'cover'
               }}
             />
-            <Typography>AI Powered Learning</Typography>
-            <Box sx={{ ml: 'auto' }}>
-              <ChevronRightIcon sx={{ color: '#3366CC' }} />
+
+            <Box sx={{ mt: 'auto', mb: 1 }}>
+              <Button
+                variant='outlined'
+                size='small'
+                sx={{
+                  borderRadius: '8px',
+                  borderColor: '#4285f4',
+                  color: '#4285f4',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                View
+              </Button>
             </Box>
           </Box>
         </Box>
