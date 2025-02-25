@@ -2,11 +2,22 @@ import Grid from '@mui/material/Grid2'
 import CancelIcon from '@mui/icons-material/Cancel'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CustomDataGrid from '../reusable-components/CustomDataGrid'
+import { Tooltip } from '@mui/material'
 
 import { getData } from '../../api/api'
 import { useState, useEffect } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
 import { Box, Chip, Paper, Typography, CircularProgress } from '@mui/material'
+
+const formatDate = (dateString) => {
+  if (!dateString) return '-'
+  const date = new Date(dateString)
+  return date.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  })
+}
 
 const StudentProgress = () => {
   const { id: studentId, courseId } = useParams()
@@ -155,8 +166,7 @@ const StudentProgress = () => {
       headerName: 'Viewed At',
       flex: 0.7,
       minWidth: 150,
-      renderCell: params =>
-        params.row.viewedAt
+      renderCell: params => formatDate(params.row.viewedAt)
     }
   ]
 
@@ -205,17 +215,43 @@ const StudentProgress = () => {
                     <CircularProgress size={24} />
                   </Box>
                 ) : sections.length > 0 && (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Box 
+                    sx={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: 1,
+                      maxHeight: 'calc(100vh - 300px)',
+                      overflowY: 'auto',
+                      pr: 1
+                    }}
+                  >
                     {sections.map(section => (
-                      <Chip
-                        key={section._id}
-                        label={section.name}
-                        onClick={() => handleSectionClick(section)}
-                        color={selectedSection?._id === section._id ? 'primary' : 'default'}
-                        sx={{
-                          '&:hover': { color: 'white', bgcolor: 'primary.main' }
-                        }}
-                      />
+                      <Tooltip 
+                        key={section._id} 
+                        title={section.name}
+                        placement="right"
+                      >
+                        <Chip
+                          label={
+                            <Typography
+                              sx={{
+                                maxWidth: '120px',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                              }}
+                            >
+                              {section.name}
+                            </Typography>
+                          }
+                          onClick={() => handleSectionClick(section)}
+                          color={selectedSection?._id === section._id ? 'primary' : 'default'}
+                          sx={{
+                            width: '100%',
+                            '&:hover': { color: 'white', bgcolor: 'primary.main' }
+                          }}
+                        />
+                      </Tooltip>
                     ))}
                   </Box>
                 )}
@@ -223,20 +259,58 @@ const StudentProgress = () => {
             )}
           </Grid>
           <Grid size={9.5}>
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box 
+              sx={{ 
+                display: 'flex',
+                gap: 1,
+                overflowX: 'auto',
+                pb: 1,
+                '&::-webkit-scrollbar': {
+                  height: '8px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  backgroundColor: '#f1f1f1',
+                  borderRadius: '4px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  backgroundColor: '#888',
+                  borderRadius: '4px',
+                  '&:hover': {
+                    backgroundColor: '#555'
+                  }
+                }
+              }}
+            >
               {loading.units ? (
                 <CircularProgress size={24} />
               ) : units.length > 0 ? (
                 units.map(unit => (
-                  <Chip
-                    key={unit._id}
-                    label={unit.name}
-                    onClick={() => handleUnitClick(unit)}
-                    color={selectedUnit?._id === unit._id ? 'primary' : 'default'}
-                    sx={{
-                      '&:hover': { bgcolor: 'primary.light' }
-                    }}
-                  />
+                  <Tooltip 
+                    key={unit._id} 
+                    title={unit.name}
+                    placement="top"
+                  >
+                    <Chip
+                      label={
+                        <Typography
+                          sx={{
+                            maxWidth: '150px',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                        >
+                          {unit.name}
+                        </Typography>
+                      }
+                      onClick={() => handleUnitClick(unit)}
+                      color={selectedUnit?._id === unit._id ? 'primary' : 'default'}
+                      sx={{
+                        minWidth: 'fit-content',
+                        '&:hover': { bgcolor: 'primary.light' }
+                      }}
+                    />
+                  </Tooltip>
                 ))
               ) : (
                 <Box sx={{ width: '100%', textAlign: 'center', mt: 4 }}>

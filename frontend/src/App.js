@@ -199,6 +199,7 @@ function App() {
                             <Route path="/units/:courseId/section/:unitId/assessment/:sectionId" element={<ViewAssessment />} />
                             <Route path="/assessment" element={<StudentAssessments />} />
                             <Route path="/profile" element={<Profile />} />
+                            <Route path="/students/:studentId/courses/:courseId/progress" element={<StudentProgress />} />
                           </Routes>
                         </DashboardLayout>
                       </PrivateRoute>

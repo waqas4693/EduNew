@@ -25,6 +25,14 @@ const ASSESSMENT_TYPES = [
   { value: 'FILE', label: 'File Based Assessment' }
 ]
 
+const truncateFileName = (fileName, maxLength = 5) => {
+  if (!fileName) return ''
+  const extension = fileName.split('.').pop()
+  const name = fileName.split('.').slice(0, -1).join('.')
+  if (name.length <= maxLength) return fileName
+  return `${name.substring(0, maxLength)}...${extension}`
+}
+
 const AddAssessment = () => {
   const [formData, setFormData] = useState({
     assessmentType: '',
@@ -314,7 +322,7 @@ const AddAssessment = () => {
           <Box>
             {formData.content.mcqs.map((mcq, index) => (
               <Box key={index} sx={{ mb: 2 }}>
-                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'flex-start' }}>
                   <TextField
                     fullWidth
                     size="small"
@@ -341,7 +349,7 @@ const AddAssessment = () => {
                     variant="outlined"
                     component="label"
                     sx={{
-                      height: '36px',
+                      height: '40px',
                       borderRadius: '8px',
                       border: '1px solid #20202033',
                       minWidth: '150px',
@@ -351,7 +359,16 @@ const AddAssessment = () => {
                       }
                     }}
                   >
-                    {mcq.audioFile ? mcq.audioFile.name : 'Add Audio'}
+                    <Typography 
+                      sx={{ 
+                        maxWidth: '130px',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}
+                    >
+                      {mcq.audioFile ? truncateFileName(mcq.audioFile.name) : 'Add Audio'}
+                    </Typography>
                     <input
                       type="file"
                       hidden

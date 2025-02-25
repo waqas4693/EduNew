@@ -303,7 +303,7 @@ const CourseRow = ({ course, studentId }) => {
     setOpenDialog(false)
   }
 
-  const handleCourseClick = () => {
+  const handleThumbnailClick = () => {
     dispatch(
       setCurrentCourse({
         id: course.id,
@@ -314,9 +314,20 @@ const CourseRow = ({ course, studentId }) => {
     navigate(`/units/${course.id}`)
   }
 
+  const handleDetailView = (e) => {
+    e.stopPropagation() // Prevent thumbnail click
+    navigate(`/students/${studentId}/courses/${course.id}/progress`, {
+      state: {
+        courseName: course.name,
+        studentName: '' // Will be fetched in StudentProgress component
+      }
+    })
+  }
+
   return (
     <>
       <Card
+        onClick={handleThumbnailClick}
         sx={{
           mb: 2,
           width: '100%',
@@ -324,13 +335,14 @@ const CourseRow = ({ course, studentId }) => {
           borderRadius: '12px',
           boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)',
           display: 'flex',
-          height: '160px'
+          height: '160px',
+          cursor: 'pointer',
         }}
       >
         {/* Thumbnail Section */}
         <Box
           sx={{
-            width: '200px',
+            width: '170px',
             height: '160px',
             flexShrink: 0
           }}
@@ -373,25 +385,17 @@ const CourseRow = ({ course, studentId }) => {
 
         {/* Course Info Section */}
         <Box sx={{ p: 2, display: 'flex', flex: 1 }}>
-          <Box sx={{ flex: 1 }}>
-            <Tooltip title={course.name} placement='top'>
-              <Typography
-                variant='h6'
-                sx={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                  width: '100%',
-                  lineHeight: 1.2,
-                  maxWidth: '200px'
-                }}
-              >
-                {course.name}
-              </Typography>
-            </Tooltip>
+          <Box sx={{ width: '100px', flexShrink: 0 }}>
+            <Typography
+              variant='h6'
+              sx={{
+                fontSize: '14px',
+                fontWeight: 500,
+                lineHeight: 1.2
+              }}
+            >
+              {course.name}
+            </Typography>
             <Typography
               sx={{
                 color: 'text.secondary',
@@ -465,7 +469,7 @@ const CourseRow = ({ course, studentId }) => {
                   color: '#4285f4',
                   whiteSpace: 'nowrap'
                 }}
-                onClick={handleCourseClick}
+                onClick={handleDetailView}
               >
                 Detail View
               </Button>
@@ -494,7 +498,7 @@ const CourseRow = ({ course, studentId }) => {
           />
 
           {/* AI Learning Section */}
-          <Box sx={{ width: '160px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <Box sx={{ width: '160px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <Typography
               sx={{
                 color: 'text.secondary',
@@ -519,7 +523,7 @@ const CourseRow = ({ course, studentId }) => {
               }}
             />
 
-            <Box sx={{ mt: 'auto', mb: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
               <Button
                 variant='outlined'
                 size='small'

@@ -1,27 +1,28 @@
 import { useState, useEffect } from 'react'
 import {
   Box,
-  Typography,
-  IconButton,
+  Radio,
   Paper,
   Button,
   TextField,
-  RadioGroup,
+  Typography,
+  IconButton,
   FormControlLabel,
-  Radio
 } from '@mui/material'
-import { useNavigate, useParams } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext'
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
-import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import { ChevronLeft } from '@mui/icons-material'
-
 import { getData } from '../../api/api'
+import { ChevronLeft } from '@mui/icons-material'
+import { useAuth } from '../../context/AuthContext'
+import { useNavigate, useParams } from 'react-router-dom'
+
 import axios from 'axios'
 import url from '../config/server-url'
 import Grid from '@mui/material/Grid2'
-import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
 import FlagIcon from '@mui/icons-material/Flag'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
+import LinearProgress from '@mui/material/LinearProgress'
+import VolumeUpIcon from '@mui/icons-material/VolumeUp'
 
 const AssessmentRenderer = ({
   assessment,
@@ -34,11 +35,11 @@ const AssessmentRenderer = ({
   existingAttempt,
   renderSubmittedFile
 }) => {
-  const [currentMcqIndex, setCurrentMcqIndex] = useState(0)
-  const [flaggedQuestions, setFlaggedQuestions] = useState(new Set())
   const [timeRemaining, setTimeRemaining] = useState(null)
-  const [isAssessmentStarted, setIsAssessmentStarted] = useState(false)
+  const [currentMcqIndex, setCurrentMcqIndex] = useState(0)
   const [isAssessmentEnded, setIsAssessmentEnded] = useState(false)
+  const [flaggedQuestions, setFlaggedQuestions] = useState(new Set())
+  const [isAssessmentStarted, setIsAssessmentStarted] = useState(false)
 
   const renderAttemptStatus = () => {
     if (!attemptStatus) return null
@@ -117,7 +118,7 @@ const AssessmentRenderer = ({
   const formatTime = seconds => {
     const minutes = Math.floor(seconds / 60)
     const remainingSeconds = seconds % 60
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
   }
 
   const renderTimerOrStartButton = () => {
@@ -231,6 +232,163 @@ const AssessmentRenderer = ({
     })
   }
 
+  const renderMCQContent = () => {
+    if (assessment.isTimeBound && !isAssessmentStarted) {
+      return (
+        <>
+          {renderAttemptStatus()}
+          {renderTimerOrStartButton()}
+        </>
+      )
+    }
+
+    const currentMcq = assessment.content.mcqs[currentMcqIndex]
+    return (
+      <Box sx={{ p: 2 }}>
+        {/* Timer Bar */}
+        {assessment.isTimeBound && (
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="h6" sx={{ mb: 1 }}>
+              Time limit: {formatTime(timeRemaining)}
+            </Typography>
+            <LinearProgress 
+              variant="determinate" 
+              value={(timeRemaining / (assessment.duration * 60)) * 100}
+              sx={{ height: 8, borderRadius: 2 }}
+            />
+          </Box>
+        )}
+
+        {/* Question Navigation */}
+        <Box sx={{ mb: 3, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+          {assessment.content.mcqs.map((_, index) => (
+            <Button
+              key={index}
+              onClick={() => handleSelectMcq(index)}
+              sx={{
+                minWidth: '40px',
+                height: '40px',
+                p: 0,
+                borderRadius: '4px',
+                border: currentMcqIndex === index ? '2px solid #1976d2' : 'none',
+                bgcolor: getQuestionButtonColor(index),
+                color: 'white',
+                '&:hover': {
+                  bgcolor: getQuestionButtonHoverColor(index)
+                }
+              }}
+            >
+              {index + 1}
+            </Button>
+          ))}
+        </Box>
+
+        {/* Question Content */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="subtitle1" sx={{ mb: 2 }}>
+            Question {currentMcqIndex + 1} of {assessment.content.mcqs.length}
+          </Typography>
+          
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 3 }}>
+            <Typography variant="h6" sx={{ flex: 1 }}>
+              {currentMcq.question}
+            </Typography>
+            {currentMcq.audioFile && (
+              <IconButton
+                onClick={() => onPlayAudio(currentMcq.audioFile)}
+                sx={{ color: 'primary.main' }}
+              >
+                <VolumeUpIcon />
+              </IconButton>
+            )}
+          </Box>
+
+          {/* Options */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {currentMcq.options.map((option, optIndex) => (
+              <Button
+                key={optIndex}
+                onClick={() => onAnswerChange('mcqAnswers', currentMcqIndex, option)}
+                variant={attemptData?.mcqAnswers?.[currentMcqIndex]?.selectedOption === option ? 'contained' : 'outlined'}
+                sx={{
+                  justifyContent: 'flex-start',
+                  textAlign: 'left',
+                  p: 2,
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  bgcolor: attemptData?.mcqAnswers?.[currentMcqIndex]?.selectedOption === option ? 'primary.main' : 'transparent',
+                  color: attemptData?.mcqAnswers?.[currentMcqIndex]?.selectedOption === option ? 'white' : 'text.primary',
+                  '&:hover': {
+                    bgcolor: attemptData?.mcqAnswers?.[currentMcqIndex]?.selectedOption === option ? 'primary.dark' : 'action.hover'
+                  }
+                }}
+              >
+                {`${String.fromCharCode(65 + optIndex)}. ${option}`}
+              </Button>
+            ))}
+          </Box>
+        </Box>
+
+        {/* Navigation Buttons */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+          <Button
+            onClick={handlePreviousMcq}
+            disabled={currentMcqIndex === 0}
+            startIcon={<ChevronLeftIcon />}
+            sx={{ minWidth: 100 }}
+          >
+            Previous
+          </Button>
+
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="outlined"
+              onClick={() => toggleFlagQuestion(currentMcqIndex)}
+              startIcon={<FlagIcon />}
+              color={flaggedQuestions.has(currentMcqIndex) ? 'warning' : 'primary'}
+            >
+              {flaggedQuestions.has(currentMcqIndex) ? 'Flagged' : 'Flag'}
+            </Button>
+
+            {currentMcqIndex === assessment.content.mcqs.length - 1 && (
+              <Button
+                variant="contained"
+                onClick={onSubmit}
+                sx={{ minWidth: 120 }}
+              >
+                Submit
+              </Button>
+            )}
+          </Box>
+
+          <Button
+            onClick={handleNextMcq}
+            disabled={currentMcqIndex === assessment.content.mcqs.length - 1}
+            endIcon={<ChevronRightIcon />}
+            sx={{ minWidth: 100 }}
+          >
+            Next
+          </Button>
+        </Box>
+      </Box>
+    )
+  }
+
+  // Helper function for question button colors
+  const getQuestionButtonColor = (index) => {
+    if (flaggedQuestions.has(index)) return '#ffa726' // Warning/Review color
+    if (attemptData?.mcqAnswers?.[index]) return '#4caf50' // Attempted color
+    if (currentMcqIndex === index) return '#1976d2' // Current question color
+    return '#e0e0e0' // Default color
+  }
+
+  const getQuestionButtonHoverColor = (index) => {
+    if (flaggedQuestions.has(index)) return '#f57c00'
+    if (attemptData?.mcqAnswers?.[index]) return '#388e3c'
+    if (currentMcqIndex === index) return '#1565c0'
+    return '#bdbdbd'
+  }
+
   switch (assessment.assessmentType) {
     case 'QNA':
       return (
@@ -262,222 +420,7 @@ const AssessmentRenderer = ({
       )
 
     case 'MCQ':
-      if (assessment.isTimeBound && !isAssessmentStarted) {
-        return (
-          <>
-            {renderAttemptStatus()}
-            {renderTimerOrStartButton()}
-          </>
-        )
-      }
-
-      if (isAssessmentEnded) {
-        return (
-          <Box
-            sx={{
-              textAlign: 'center',
-              mt: 4,
-              p: 3,
-              bgcolor: '#f44336',
-              color: 'white',
-              borderRadius: '4px'
-            }}
-          >
-            <Typography variant='h4' sx={{ mb: 2 }}>
-              Time's Up!
-            </Typography>
-            <Typography variant='body1'>
-              Your assessment has been submitted automatically.
-            </Typography>
-          </Box>
-        )
-      }
-
-      const currentMcq = assessment.content.mcqs[currentMcqIndex]
-      return (
-        <Grid container>
-          {renderAttemptStatus()}
-          {renderTimerOrStartButton()}
-
-          {/* MCQ Content Area */}
-          <Grid size={10} sx={{ px: '15px' }}>
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                mb: '10px'
-              }}
-            >
-              <Typography variant='body1'>
-                {currentMcqIndex + 1} / {assessment.content.mcqs.length}
-              </Typography>
-            </Box>
-
-            <Box>
-              <Box sx={{ mb: '15px' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography
-                    variant='h6'
-                    sx={{ fontWeight: 'bold' }}
-                  >
-                    {currentMcq.question}
-                  </Typography>
-                  {currentMcq.audioFile && (
-                    <IconButton
-                      onClick={() => onPlayAudio(currentMcq.audioFile)}
-                      sx={{
-                        color: 'primary.main',
-                        '&:hover': { bgcolor: 'primary.light' }
-                      }}
-                    >
-                      <PlayCircleOutlineIcon />
-                    </IconButton>
-                  )}
-                </Box>
-
-                <Box>
-                  {currentMcq.options.map((option, optIndex) => (
-                    <Box
-                      key={optIndex}
-                      sx={{
-                        px: '10px',
-                        mb: '10px',
-                        border: '1px solid #ddd',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        '&:hover': {
-                          bgcolor: 'rgba(0, 0, 0, 0.04)'
-                        }
-                      }}
-                      onClick={() =>
-                        onAnswerChange('mcqAnswers', currentMcqIndex, option)
-                      }
-                    >
-                      <FormControlLabel
-                        value={option}
-                        control={
-                          <Radio
-                            checked={
-                              attemptData?.mcqAnswers?.[currentMcqIndex]
-                                ?.selectedOption === option
-                            }
-                          />
-                        }
-                        label={`${String.fromCharCode(
-                          65 + optIndex
-                        )}. ${option}`}
-                      />
-                    </Box>
-                  ))}
-                </Box>
-
-                {/* Navigation Arrows - Moved inside MCQ area */}
-                <Box
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    mt: '10px'
-                  }}
-                >
-                  <IconButton
-                    onClick={handlePreviousMcq}
-                    disabled={currentMcqIndex === 0}
-                    sx={{
-                      bgcolor: 'primary.main',
-                      color: 'white',
-                      '&:hover': { bgcolor: 'primary.dark' },
-                      '&.Mui-disabled': { bgcolor: 'grey.300' }
-                    }}
-                  >
-                    <ChevronLeftIcon />
-                  </IconButton>
-                  <IconButton
-                    onClick={handleNextMcq}
-                    disabled={
-                      currentMcqIndex === assessment.content.mcqs.length - 1
-                    }
-                    sx={{
-                      bgcolor: 'primary.main',
-                      color: 'white',
-                      '&:hover': { bgcolor: 'primary.dark' },
-                      '&.Mui-disabled': { bgcolor: 'grey.300' }
-                    }}
-                  >
-                    <ChevronRightIcon />
-                  </IconButton>
-                </Box>
-
-                {/* Submit Button - only show on last question */}
-                {currentMcqIndex === assessment.content.mcqs.length - 1 && (
-                  <Box sx={{ mt: '10px', textAlign: 'center' }}>
-                    <Button
-                      variant='contained'
-                      onClick={onSubmit}
-                      sx={{ minWidth: 200 }}
-                    >
-                      Submit Assessment
-                    </Button>
-                  </Box>
-                )}
-              </Box>
-            </Box>
-          </Grid>
-
-          {/* Question List Area */}
-          <Grid size={2}>
-            <Box sx={{ p: 2 }}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 2,
-                  mb: 3
-                }}
-              >
-                <Button
-                  color='error'
-                  onClick={() => toggleFlagQuestion(currentMcqIndex)}
-                  variant={
-                    flaggedQuestions.has(currentMcqIndex)
-                      ? 'contained'
-                      : 'outlined'
-                  }
-                  startIcon={<FlagIcon />}
-                  sx={{
-                    borderRadius: '4px',
-                    '&.MuiButton-contained': {
-                      bgcolor: '#f44336',
-                      '&:hover': {
-                        bgcolor: '#d32f2f'
-                      }
-                    }
-                  }}
-                >
-                  {flaggedQuestions.has(currentMcqIndex) ? 'Flagged' : 'Flag'}
-                </Button>
-                {/* <Typography variant='h6'>Questions</Typography> */}
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {assessment.content.mcqs.map((_, index) => (
-                  <Button
-                    key={index}
-                    onClick={() => handleSelectMcq(index)}
-                    sx={{
-                      minWidth: '40px',
-                      minHeight: '40px',
-                      borderRadius: '4px',
-                      ...getQuestionButtonStyle(index)
-                    }}
-                  >
-                    {index + 1}
-                  </Button>
-                ))}
-              </Box>
-            </Box>
-          </Grid>
-        </Grid>
-      )
+      return renderMCQContent()
 
     case 'FILE':
       return (
@@ -551,18 +494,20 @@ const AssessmentRenderer = ({
 }
 
 const ViewAssessment = () => {
-  const [assessments, setAssessments] = useState([])
-  const [currentIndex, setCurrentIndex] = useState(0)
+  const { user } = useAuth()
+  const { courseId, unitId, sectionId } = useParams()
+
+  const navigate = useNavigate()
+
+  const [dueDates, setDueDates] = useState({})
+  const [audioUrls, setAudioUrls] = useState({})
   const [signedUrls, setSignedUrls] = useState({})
   const [attemptData, setAttemptData] = useState({})
-  const [existingAttempt, setExistingAttempt] = useState(null)
-  const navigate = useNavigate()
-  const { courseId, unitId, sectionId } = useParams()
-  const { user } = useAuth()
+  const [assessments, setAssessments] = useState([])
+  const [currentIndex, setCurrentIndex] = useState(0)
   const [audioPlayer, setAudioPlayer] = useState(null)
-  const [audioUrls, setAudioUrls] = useState({})
+  const [existingAttempt, setExistingAttempt] = useState(null)
   const [selectedAssessment, setSelectedAssessment] = useState(null)
-  const [dueDates, setDueDates] = useState({})
 
   // Group assessments by type
   const groupedAssessments = assessments.reduce((groups, assessment) => {

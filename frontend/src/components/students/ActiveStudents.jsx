@@ -33,6 +33,9 @@ import MenuBookIcon from '@mui/icons-material/MenuBook'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import BlockIcon from '@mui/icons-material/Block'
 import AssessmentIcon from '@mui/icons-material/Assessment'
+import List from '@mui/material/List'
+import ListItem from '@mui/material/ListItem'
+import ListItemText from '@mui/material/ListItemText'
 
 const ActiveStudents = () => {
   const navigate = useNavigate()
@@ -248,6 +251,7 @@ const ActiveStudents = () => {
                 <TableCell>Name</TableCell>
                 <TableCell>Email</TableCell>
                 <TableCell>Contact Number</TableCell>
+                <TableCell>Enrolled Courses</TableCell>
                 <TableCell align='right'>Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -271,6 +275,39 @@ const ActiveStudents = () => {
                   </TableCell>
                   <TableCell>{student.email}</TableCell>
                   <TableCell>{student.contactNo}</TableCell>
+                  <TableCell>
+                    <List dense sx={{ p: 0, maxHeight: 100, overflowY: 'auto' }}>
+                      {student.courses && student.courses.length > 0 ? (
+                        student.courses
+                          .filter(course => course.courseStatus === 1)
+                          .map((course, index) => (
+                            <ListItem key={index} sx={{ py: 0 }}>
+                              <ListItemText 
+                                primary={course.name}
+                                sx={{
+                                  '& .MuiListItemText-primary': {
+                                    fontSize: '0.875rem',
+                                  } 
+                                }}
+                              />
+                            </ListItem>
+                          ))
+                      ) : (
+                        <ListItem sx={{ py: 0 }}>
+                          <ListItemText 
+                            primary="No courses enrolled"
+                            sx={{
+                              '& .MuiListItemText-primary': {
+                                fontSize: '0.875rem',
+                                color: 'text.secondary',
+                                fontStyle: 'italic'
+                              }
+                            }}
+                          />
+                        </ListItem>
+                      )}
+                    </List>
+                  </TableCell>
                   <TableCell align='right'>
                     <IconButton
                       onClick={e => handleMenuOpen(e, student)}

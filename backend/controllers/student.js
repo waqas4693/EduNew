@@ -102,48 +102,47 @@ export const getDashboardData = async (req, res) => {
 }
 
 export const getAllStudents = async (req, res) => {
-
-  console.log('Get All Students:', req.params)
-
   try {
     const { courseId } = req.params
-    const { status } = req.query  // Get status from query params
+    const { status } = req.query
     
-    // Set default query for active students if no status provided
     let query = { status: status ? parseInt(status) : 1 }
 
-    // If courseId is provided, filter students enrolled in that course
     if (courseId) {
       query['courses.courseId'] = courseId
-      query['courses.courseStatus'] = 1 // Only active enrollments
+      query['courses.courseStatus'] = 1
     }
 
     const students = await Student.find(query)
       .select('name email contactNo status courses')
       .populate({
         path: 'courses.courseId',
-        select: 'name'
+        select: 'name status',
+        match: { status: 1 } // Only populate active courses
       })
       .lean()
 
-    // If courseId provided, get the course name
-    let courseName = ''
-    if (courseId) {
-      const course = await Course.findById(courseId).select('name')
-      courseName = course ? course.name : ''
-    }
+    // Transform the data to include course information
+    const transformedStudents = students.map(student => ({
+      _id: student._id,
+      name: student.name,
+      email: student.email,
+      contactNo: student.contactNo,
+      status: student.status,
+      courses: student.courses
+        .filter(course => course.courseId) // Filter out any null populated courses
+        .map(course => ({
+          courseId: course.courseId._id,
+          name: course.courseId.name,
+          courseStatus: course.courseStatus,
+          enrollmentDate: course.enrollmentDate
+        }))
+    }))
 
     res.status(200).json({
       success: true,
       data: {
-        courseName,
-        students: students.map(student => ({
-          _id: student._id,
-          name: student.name,
-          email: student.email,
-          contactNo: student.contactNo,
-          status: student.status
-        }))
+        students: transformedStudents
       }
     })
 

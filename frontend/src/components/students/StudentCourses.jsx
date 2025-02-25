@@ -257,6 +257,46 @@ const getThumbnailUrl = (fileName) => {
 // Course Row Component
 const CourseRow = ({ course, onRemove, studentId, studentName }) => {
   const navigate = useNavigate()
+  const [imageError, setImageError] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [openDialog, setOpenDialog] = useState(false)
+  const [unitsProgress, setUnitsProgress] = useState([])
+
+  useEffect(() => {
+    fetchProgress()
+  }, [course._id, studentId])
+
+  const fetchProgress = async () => {
+    try {
+      const response = await getData(
+        `student/${studentId}/courses/${course._id}/progress`
+      )
+      const progressData = response.data.data || []
+      setUnitsProgress(progressData)
+
+      if (progressData.length > 0) {
+        const totalProgress = progressData.reduce(
+          (sum, unit) => sum + unit.progress,
+          0
+        )
+        setProgress(Math.round(totalProgress / progressData.length))
+      }
+    } catch (error) {
+      console.error('Error fetching progress:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleQuickView = (e) => {
+    e.stopPropagation()
+    setOpenDialog(true)
+  }
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false)
+  }
 
   const handleCourseClick = () => {
     navigate(`/admin/students/${studentId}/courses/${course._id}/progress`, {
@@ -268,108 +308,381 @@ const CourseRow = ({ course, onRemove, studentId, studentName }) => {
   }
 
   return (
-    <Box sx={{ 
-      '&:not(:last-child)': {
-        borderBottom: '1px solid #E0E0E0',
-        pb: 2,
-        mb: 2
-      }
-    }}>
-      <Grid container spacing={2}>
-        {/* Course Card */}
-        <Grid xs={4}>
-          <Card
-            onClick={handleCourseClick}
-            sx={{
-              height: '100%',
-              width: '200px',
-              p: 2,
-              border: '1px solid #3366CC33',
-              borderRadius: '12px',
-              boxShadow: '0px 14px 42px 0px #080F340F',
-              position: 'relative',
-              cursor: 'pointer',
-              '&:hover': {
-                boxShadow: '0px 14px 42px 0px #080F3422'
-              }
-            }}
-          >
-            <IconButton
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove(course);
-              }}
+    <>
+      <Card
+        sx={{
+          mb: 2,
+          width: '100%',
+          overflow: 'hidden',
+          borderRadius: '12px',
+          boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          height: '160px'
+        }}
+      >
+        {/* Thumbnail Section */}
+        <Box
+          sx={{
+            width: '200px',
+            height: '160px',
+            flexShrink: 0,
+            position: 'relative'
+          }}
+        >
+          {course.image && !imageError ? (
+            <Box
+              component='img'
+              src={getThumbnailUrl(course.image)}
+              alt={course.name}
+              onError={() => setImageError(true)}
               sx={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                backgroundColor: 'white',
-                width: '32px',
-                height: '32px',
-                '&:hover': {
-                  backgroundColor: 'white',
-                  opacity: 0.9
-                },
-                boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
               }}
-            >
-              <RemoveCircleOutlineIcon sx={{ color: 'error.main' }} />
-            </IconButton>
-
+            />
+          ) : (
             <Box
               sx={{
                 width: '100%',
-                height: '120px',
-                bgcolor: course.image ? 'transparent' : 'primary.light',
-                borderRadius: '8px',
-                mb: 2
+                height: '100%',
+                bgcolor: '#e75480',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
             >
-              {course.image ? (
-                <img
-                  src={getThumbnailUrl(course.image)}
-                  alt={course.name}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    borderRadius: '8px'
-                  }}
+              <Box
+                component='img'
+                src='/course-card-placeholder-icon.svg'
+                alt='Course placeholder'
+                sx={{
+                  width: '48px',
+                  height: '48px'
+                }}
+              />
+            </Box>
+          )}
+          {/* Remove Course Button */}
+          <IconButton
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(course);
+            }}
+            sx={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              backgroundColor: 'white',
+              width: '32px',
+              height: '32px',
+              '&:hover': {
+                backgroundColor: 'white',
+                opacity: 0.9
+              },
+              boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+              zIndex: 1
+            }}
+          >
+            <RemoveCircleOutlineIcon sx={{ color: '#e75480' }} />
+          </IconButton>
+        </Box>
+
+        {/* Course Info Section */}
+        <Box sx={{ p: 2, display: 'flex', flex: 1 }}>
+          {/* Course Name Section */}
+          <Box sx={{ 
+            flex: '2 1 0',
+            minWidth: '200px',
+            pr: 2
+          }}>
+            <Typography
+              variant='h6'
+              sx={{
+                fontSize: '14px',
+                fontWeight: 500,
+                lineHeight: 1.2
+              }}
+            >
+              {course.name}
+            </Typography>
+            <Typography
+              sx={{
+                color: 'text.secondary',
+                fontSize: '14px',
+                mt: 1
+              }}
+            >
+              Units: {unitsProgress.length}
+            </Typography>
+          </Box>
+
+          {/* Vertical Divider */}
+          <Box
+            sx={{
+              borderLeft: '1px solid #E0E0E0',
+              height: '100%'
+            }}
+          />
+
+          {/* Progress Section */}
+          <Box sx={{ 
+            flex: '2 1 0',
+            minWidth: '250px',
+            px: 2,
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center' 
+          }}>
+            <Typography
+              sx={{
+                color: 'text.secondary',
+                fontSize: '14px',
+                fontWeight: 500,
+                mb: 1
+              }}
+            >
+              Course Progress
+            </Typography>
+
+            {loading ? (
+              <CircularProgress size={48} />
+            ) : (
+              <Box sx={{ position: 'relative', display: 'inline-flex', mb: 1 }}>
+                <CircularProgress
+                  variant='determinate'
+                  value={progress}
+                  size={48}
+                  thickness={4}
+                  sx={{ color: '#4285f4' }}
                 />
-              ) : (
                 <Box
                   sx={{
-                    height: '100%',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center'
                   }}
                 >
-                  <MenuBookOutlinedIcon sx={{ fontSize: 40, color: 'primary.main' }} />
+                  <Typography variant='caption' sx={{ fontSize: '14px' }}>
+                    {`${progress}%`}
+                  </Typography>
                 </Box>
-              )}
+              </Box>
+            )}
+
+            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+              <Button
+                variant='outlined'
+                size='small'
+                sx={{
+                  borderRadius: '8px',
+                  borderColor: '#4285f4',
+                  color: '#4285f4',
+                  whiteSpace: 'nowrap'
+                }}
+                onClick={handleCourseClick}
+              >
+                Detail View
+              </Button>
+              <Button
+                variant='contained'
+                size='small'
+                sx={{
+                  borderRadius: '8px',
+                  bgcolor: '#4285f4',
+                  whiteSpace: 'nowrap'
+                }}
+                onClick={handleQuickView}
+              >
+                Quick View
+              </Button>
             </Box>
+          </Box>
 
-            <Typography variant="h6" sx={{ mb: 1, fontSize: '14px' }}>
-              {course.name}
+          {/* Vertical Divider */}
+          <Box
+            sx={{
+              borderLeft: '1px solid #E0E0E0',
+              height: '100%'
+            }}
+          />
+
+          {/* AI Learning Section */}
+          <Box sx={{ 
+            flex: '1.5 1 0',
+            minWidth: '160px',
+            pl: 2,
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center'
+          }}>
+            <Typography
+              sx={{
+                color: 'text.secondary',
+                fontSize: '14px',
+                fontWeight: 500,
+                mb: 1,
+                width: '100%'
+              }}
+            >
+              AI Powered Learning
             </Typography>
-            <Typography color="text.secondary" sx={{ fontSize: '12px' }}>
-              {course.units?.length || 0} Units
-            </Typography>
-          </Card>
-        </Grid>
+            
+            <Box
+              component='img'
+              src='/ai-education.png'
+              alt="AI Education"
+              sx={{
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                mb: 1,
+                objectFit: 'cover',
+                display: 'block',
+                margin: '0 auto'
+              }}
+            />
 
-        {/* Progress Card */}
-        <Grid xs={4}>
-          <CourseProgressCard courseId={course._id} studentId={studentId} />
-        </Grid>
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 1, 
+              mt: 1,
+              justifyContent: 'center',
+              width: '100%'
+            }}>
+              <Button
+                variant='outlined'
+                size='small'
+                sx={{
+                  borderRadius: '8px',
+                  borderColor: '#4285f4',
+                  color: '#4285f4',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                View
+              </Button>
+            </Box>
+          </Box>
+        </Box>
+      </Card>
 
-        {/* Decorative Card */}
-        <Grid xs={4}>
-          <DecorativeCard />
-        </Grid>
-      </Grid>
-    </Box>
+      {/* Progress Dialog */}
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        maxWidth='md'
+        PaperProps={{
+          sx: {
+            borderRadius: '12px',
+            p: 3,
+            maxWidth: '900px'
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 2 }}>
+          <Typography
+            variant='h6'
+            sx={{ fontSize: '24px', fontWeight: 'bold', textAlign: 'center' }}
+          >
+            {course.name}
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={3}>
+            {unitsProgress.length > 0 ? (
+              unitsProgress.map(unit => (
+                <Grid key={unit._id} item size={3}>
+                  <Box
+                    sx={{
+                      p: 3,
+                      border: '1px solid rgba(0, 0, 0, 0.12)',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 1
+                    }}
+                  >
+                    <Typography
+                      variant='h6'
+                      sx={{
+                        fontSize: '16px',
+                        fontWeight: 500,
+                        textAlign: 'center'
+                      }}
+                    >
+                      {unit.name}
+                    </Typography>
+                    <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                      <CircularProgress
+                        variant='determinate'
+                        value={100}
+                        size={80}
+                        thickness={4}
+                        sx={{ color: '#E5E5EF' }}
+                      />
+                      <CircularProgress
+                        variant='determinate'
+                        value={unit.progress}
+                        size={80}
+                        thickness={4}
+                        sx={{
+                          color: '#3366CC',
+                          position: 'absolute',
+                          left: 0
+                        }}
+                      />
+                      <Box
+                        sx={{
+                          top: 0,
+                          left: 0,
+                          bottom: 0,
+                          right: 0,
+                          position: 'absolute',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <Typography variant='h6' sx={{ fontSize: '18px', fontWeight: 'bold' }}>
+                          {unit.progress}%
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                </Grid>
+              ))
+            ) : (
+              <Grid item xs={12}>
+                <Typography color='text.secondary' align='center' sx={{ py: 3 }}>
+                  No progress data available
+                </Typography>
+              </Grid>
+            )}
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', pt: 2 }}>
+          <Button
+            onClick={handleCloseDialog}
+            variant='contained'
+            sx={{
+              bgcolor: '#3366CC',
+              px: 4
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   )
 }
 
