@@ -1,11 +1,9 @@
 import express from 'express'
-import {
-  getS3SignedUrl,
-  getS3SignedUrlGet
-} from '../controllers/s3.js'
+import { getSignedUrl } from '../controllers/s3.js'
 
-const router = express.Router();
+const router = express.Router()
 
-router.post('/', getS3SignedUrl)
-router.post('/get', getS3SignedUrlGet)
+// Get signed URL for file access
+router.get('/url/:folder/:filename', getSignedUrl)
+
 export default router

@@ -180,33 +180,30 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
       try {
         const response = await getData(`resources/${sectionId}`)
         if (response.status === 200 && response.data.resources) {
-          const formattedResources = response.data.resources.map(resource => ({
-            name: resource.name,
-            resourceType: resource.resourceType,
-            _id: resource._id,
-            content: {
-              fileName: resource.content?.fileName || '',
-              questions: resource.content?.questions || [
-                { question: '', answer: '' },
-                { question: '', answer: '' },
-                { question: '', answer: '' }
-              ],
-              backgroundImage: resource.content?.backgroundImage || '',
-              previewImage: resource.content?.previewImage || '',
-              file: null,
-              thumbnail: null,
-              externalLinks: resource.content?.externalLinks || [
-                { name: '', url: '' },
-                { name: '', url: '' },
-                { name: '', url: '' }
-              ],
-              mcq: resource.content?.mcq || {
-                question: '',
-                options: ['', '', '', ''],
-                numberOfCorrectAnswers: 1,
-                correctAnswers: [],
-                imageFile: null
-              }
+          const formattedResources = await Promise.all(response.data.resources.map(async resource => {
+            // Get signed URLs for any existing files
+            const content = { ...resource.content }
+            
+            if (content.fileName) {
+              const fileResponse = await axios.get(`${url}resources/files/url/${resource.resourceType}/${content.fileName}`)
+              content.fileUrl = fileResponse.data.signedUrl
+            }
+            if (content.backgroundImage) {
+              const bgResponse = await axios.get(`${url}resources/files/url/BACKGROUNDS/${content.backgroundImage}`)
+              content.backgroundImageUrl = bgResponse.data.signedUrl
+            }
+            if (content.mcq?.imageFile) {
+              const mcqImgResponse = await axios.get(`${url}resources/files/url/MCQ_IMAGES/${content.mcq.imageFile}`)
+              content.mcq.imageFileUrl = mcqImgResponse.data.signedUrl
+            }
+            if (content.mcq?.audioFile) {
+              const mcqAudioResponse = await axios.get(`${url}resources/files/url/MCQ_AUDIO/${content.mcq.audioFile}`)
+              content.mcq.audioFileUrl = mcqAudioResponse.data.signedUrl
+            }
+
+            return {
+              ...resource,
+              content
             }
           }))
           setResources(formattedResources)

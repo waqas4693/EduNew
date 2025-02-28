@@ -2,7 +2,7 @@ import Resource from '../models/resource.js'
 import { handleError } from '../utils/errorHandler.js'
 import Section from '../models/section.js'
 import ResourceView from '../models/resourceView.js'
-import { uploadFile } from '../utils/fileUpload.js'
+import { uploadToS3 } from './s3.js'
 
 export const createResource = async (req, res) => {
   try {
@@ -23,30 +23,30 @@ export const createResource = async (req, res) => {
       })
     }
 
-    // Handle file uploads
+    // Handle file uploads to S3
     if (req.files.file) {
-      const fileName = await uploadFile(
+      const fileName = await uploadToS3(
         req.files.file[0],
-        resourceType,
-        req.files.file[0].originalname
+        resourceType,  // Uses resource type as folder name
+        `${Date.now()}-${req.files.file[0].originalname}`
       )
       content.fileName = fileName
     }
 
     if (req.files.thumbnail) {
-      const thumbnailName = await uploadFile(
+      const thumbnailName = await uploadToS3(
         req.files.thumbnail[0],
         'THUMBNAILS',
-        req.files.thumbnail[0].originalname
+        `${Date.now()}-${req.files.thumbnail[0].originalname}`
       )
       content.thumbnailUrl = thumbnailName
     }
 
     if (req.files.backgroundImage) {
-      const bgImageName = await uploadFile(
+      const bgImageName = await uploadToS3(
         req.files.backgroundImage[0],
         'BACKGROUNDS',
-        req.files.backgroundImage[0].originalname
+        `${Date.now()}-${req.files.backgroundImage[0].originalname}`
       )
       content.backgroundImage = bgImageName
     }
@@ -54,19 +54,19 @@ export const createResource = async (req, res) => {
     // Handle MCQ files
     if (resourceType === 'MCQ') {
       if (req.files.mcqImage) {
-        const mcqImageName = await uploadFile(
+        const mcqImageName = await uploadToS3(
           req.files.mcqImage[0],
           'MCQ_IMAGES',
-          req.files.mcqImage[0].originalname
+          `${Date.now()}-${req.files.mcqImage[0].originalname}`
         )
         content.mcq.imageFile = mcqImageName
       }
       
       if (req.files.mcqAudio) {
-        const mcqAudioName = await uploadFile(
+        const mcqAudioName = await uploadToS3(
           req.files.mcqAudio[0],
           'MCQ_AUDIO',
-          req.files.mcqAudio[0].originalname
+          `${Date.now()}-${req.files.mcqAudio[0].originalname}`
         )
         content.mcq.audioFile = mcqAudioName
       }

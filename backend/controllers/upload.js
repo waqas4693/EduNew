@@ -1,4 +1,4 @@
-import { uploadFile as uploadFileUtil } from '../utils/fileUpload.js'
+import { uploadToS3 } from './s3.js'
 
 export const uploadThumbnail = async (req, res) => {
   try {
@@ -6,10 +6,10 @@ export const uploadThumbnail = async (req, res) => {
       return res.status(400).json({ message: 'No file uploaded' })
     }
 
-    const fileName = await uploadFileUtil(
+    const fileName = await uploadToS3(
       req.file,
       'THUMBNAILS',
-      req.file.originalname
+      `${Date.now()}-${req.file.originalname}`
     )
 
     res.status(200).json({
@@ -43,10 +43,10 @@ export const uploadFile = async (req, res) => {
         folderName = 'ASSESSMENT_FILES'
     }
 
-    const fileName = await uploadFileUtil(
+    const fileName = await uploadToS3(
       req.file,
       folderName,
-      req.file.originalname
+      `${Date.now()}-${req.file.originalname}`
     )
 
     res.status(200).json({

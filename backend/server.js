@@ -23,6 +23,7 @@ import assessmentRoutes from './routes/assessment.js'
 import resourceViewRoutes from './routes/resourceView.js'
 import assessmentReviewRoutes from './routes/assessmentReview.js'
 import assessmentAttemptRoutes from './routes/assessmentAttempt.js'
+import s3Routes from './routes/s3.js'
 
 /* CONFIGURATION */
 dotenv.config()
@@ -84,10 +85,8 @@ app.use('/api/assessments', assessmentRoutes)
 app.use('/api/assessment-attempts', assessmentAttemptRoutes)
 app.use('/api/assessment-review', assessmentReviewRoutes)
 app.use('/api/resource-views', resourceViewRoutes)
-app.use('/api/resources/files', express.static(path.join(__dirname, 'ResourceFiles')))
+app.use('/api/resources/files', s3Routes)
 app.use('/api/upload', uploadRoutes)
-app.use('/api/resources/files/ASSESSMENT_SUBMISSIONS', express.static(path.join(__dirname, 'ResourceFiles/ASSESSMENT_SUBMISSIONS')))
-app.use('/api/resources/files/ASSESSMENT_FILES', express.static(path.join(__dirname, 'ResourceFiles/ASSESSMENT_FILES')))
 app.use('/api/users', userRoutes)
 mongoose.set('strictQuery', false)
 
