@@ -20,7 +20,8 @@ import {
   PersonAdd as PersonAddIcon,
   Assignment as AssignmentIcon,
   Analytics as AnalyticsIcon,
-  AccountCircle as ProfileIcon
+  AccountCircle as ProfileIcon,
+  CloudUpload as CloudUploadIcon
 } from '@mui/icons-material'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -85,6 +86,11 @@ const Sidebar = ({ open, onClose }) => {
         { text: 'Submitted', path: '/admin/assessment-review/submitted' },
         { text: 'Graded', path: '/admin/assessment-review/graded' }
       ]
+    },
+    {
+      text: 'Bulk Upload',
+      icon: <CloudUploadIcon />,
+      path: '/admin/bulk-upload'
     }
   ]
 

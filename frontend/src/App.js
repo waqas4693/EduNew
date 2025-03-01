@@ -24,6 +24,7 @@ import GradedAssessments from './components/assessment/GradedAssessments'
 import ResourceAnalytics from './components/admin/ResourceAnalytics'
 import StudentAssessments from './components/assessment/StudentAssessments'
 import CreateUser from './components/users/CreateUser'
+import BulkUpload from './components/files/BulkUpload'
 
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
@@ -128,6 +129,14 @@ function App() {
                               element={
                                 <PrivateRoute requiredRole={[1]}>
                                   <CreateUser />
+                                </PrivateRoute>
+                              } 
+                            />
+                            <Route 
+                              path="/bulk-upload" 
+                              element={
+                                <PrivateRoute requiredRole={[1]}>
+                                  <BulkUpload />
                                 </PrivateRoute>
                               } 
                             />

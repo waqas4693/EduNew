@@ -1,9 +1,9 @@
 import url from '../config/server-url'
 import Grid from '@mui/material/Grid2'
-
 import { getData, postData } from '../../api/api'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import axios from 'axios'
 import {
   Box,
   Typography,
@@ -577,6 +577,7 @@ const LearnerFrame = () => {
   const { courseId, unitId, sectionId } = useParams()
   const { user } = useAuth()
   const [sectionProgress, setSectionProgress] = useState(0)
+  const [urlRefreshTimer, setUrlRefreshTimer] = useState(null)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -586,49 +587,113 @@ const LearnerFrame = () => {
     return () => clearTimeout(timer)
   }, [])
 
-  const getLocalFileUrl = async (fileName, resourceType) => {
-    if (!fileName) return null
-    return `${url}resources/files/${resourceType}/${fileName}`
+  // Function to get signed URL from S3
+  const getSignedS3Url = async (fileName, folder) => {
+    try {
+      const response = await axios.get(`${url}resources/files/url/${folder}/${fileName}`)
+      return response.data.signedUrl
+    } catch (error) {
+      console.error('Error getting signed URL:', error, fileName, folder)
+      return null
+    }
   }
 
-  const fetchAllThumbnails = async () => {
+  // Function to fetch all required signed URLs for a resource
+  const fetchSignedUrls = async (resource) => {
+    const urls = {}
+    
+    try {
+      // Main resource file
+      if (resource.content.fileName) {
+        urls[resource.content.fileName] = await getSignedS3Url(
+          resource.content.fileName,
+          resource.resourceType
+        )
+      }
+
+      // Background image
+      if (resource.content.backgroundImage) {
+        urls[resource.content.backgroundImage] = await getSignedS3Url(
+          resource.content.backgroundImage,
+          'BACKGROUNDS'
+        )
+      }
+
+      // MCQ related files
+      if (resource.resourceType === 'MCQ') {
+        if (resource.content.mcq?.imageFile) {
+          urls[resource.content.mcq.imageFile] = await getSignedS3Url(
+            resource.content.mcq.imageFile,
+            'MCQ_IMAGES'
+          )
+        }
+        if (resource.content.mcq?.audioFile) {
+          urls[resource.content.mcq.audioFile] = await getSignedS3Url(
+            resource.content.mcq.audioFile,
+            'MCQ_AUDIO'
+          )
+        }
+      }
+
+      return urls
+    } catch (error) {
+      console.error('Error fetching signed URLs:', error)
+      return urls
+    }
+  }
+
+  // Modified fetchResources to include signed URL fetching
+  const fetchResources = async () => {
+    setIsLoading(true)
     try {
       const response = await getData(`resources/${sectionId}`)
-      if (response.status === 200) {
-        // Sort resources by number before setting state
-        const sortedResources = response.data.resources.sort((a, b) => a.number - b.number)
-        setResources(sortedResources)
-        setIsLoading(false)
-
-        // Get signed URLs for all resources
-        const urls = {}
-        for (const resource of sortedResources) {
-          if (resource.content.fileName) {
-            const signedUrl = await getLocalFileUrl(
-              resource.content.fileName,
-              resource.resourceType
-            )
-            urls[resource.content.fileName] = signedUrl
-          }
-          if (resource.content.backgroundImage) {
-            const signedUrl = await getLocalFileUrl(
-              resource.content.backgroundImage,
-              'BACKGROUNDS'
-            )
-            urls[resource.content.backgroundImage] = signedUrl
-          }
+      if (response.status === 200 && response.data.resources) {
+        setResources(response.data.resources)
+        
+        // Fetch signed URLs for all resources
+        const allUrls = {}
+        for (const resource of response.data.resources) {
+          const resourceUrls = await fetchSignedUrls(resource)
+          Object.assign(allUrls, resourceUrls)
         }
-        setSignedUrls(urls)
+        setSignedUrls(allUrls)
+
+        // Set up URL refresh timer (every 45 minutes)
+        if (urlRefreshTimer) clearInterval(urlRefreshTimer)
+        const timer = setInterval(() => {
+          refreshSignedUrls(response.data.resources)
+        }, 45 * 60 * 1000) // 45 minutes
+        setUrlRefreshTimer(timer)
       }
     } catch (error) {
       console.error('Error fetching resources:', error)
+    } finally {
       setIsLoading(false)
     }
   }
 
+  // Function to refresh signed URLs
+  const refreshSignedUrls = async (resourcesList) => {
+    const newUrls = {}
+    for (const resource of resourcesList) {
+      const resourceUrls = await fetchSignedUrls(resource)
+      Object.assign(newUrls, resourceUrls)
+    }
+    setSignedUrls(newUrls)
+  }
+
+  // Clean up timer on component unmount
+  useEffect(() => {
+    return () => {
+      if (urlRefreshTimer) {
+        clearInterval(urlRefreshTimer)
+      }
+    }
+  }, [urlRefreshTimer])
+
   // Fetch all thumbnails on mount
   useEffect(() => {
-    fetchAllThumbnails()
+    fetchResources()
   }, [sectionId])
 
   // Load main resource content only when clicked
@@ -640,7 +705,7 @@ const LearnerFrame = () => {
         if (resource.resourceType === 'MCQ') {
           // Fetch MCQ image if exists
           if (resource.content.mcq?.imageFile && !signedUrls[resource.content.mcq.imageFile]) {
-            const mcqImageUrl = await getLocalFileUrl(resource.content.mcq.imageFile, 'MCQ_IMAGES')
+            const mcqImageUrl = await getSignedS3Url(resource.content.mcq.imageFile, 'MCQ_IMAGES')
             setSignedUrls(prev => ({
               ...prev,
               [resource.content.mcq.imageFile]: mcqImageUrl
@@ -649,7 +714,7 @@ const LearnerFrame = () => {
           
           // Fetch MCQ audio if exists
           if (resource.content.mcq?.audioFile && !signedUrls[resource.content.mcq.audioFile]) {
-            const mcqAudioUrl = await getLocalFileUrl(resource.content.mcq.audioFile, 'MCQ_AUDIO')
+            const mcqAudioUrl = await getSignedS3Url(resource.content.mcq.audioFile, 'MCQ_AUDIO')
             setSignedUrls(prev => ({
               ...prev,
               [resource.content.mcq.audioFile]: mcqAudioUrl
@@ -662,7 +727,7 @@ const LearnerFrame = () => {
           resource.content.fileName &&
           !signedUrls[resource.content.fileName]
         ) {
-          const fileUrl = await getLocalFileUrl(
+          const fileUrl = await getSignedS3Url(
             resource.content.fileName,
             resource.resourceType
           )
@@ -680,7 +745,7 @@ const LearnerFrame = () => {
           resource.content.backgroundImage &&
           !signedUrls[resource.content.backgroundImage]
         ) {
-          const bgUrl = await getLocalFileUrl(
+          const bgUrl = await getSignedS3Url(
             resource.content.backgroundImage,
             'BACKGROUNDS'
           )
@@ -696,7 +761,7 @@ const LearnerFrame = () => {
           resource.content.previewImageUrl &&
           !signedUrls[resource.content.previewImageUrl]
         ) {
-          const previewUrl = await getLocalFileUrl(
+          const previewUrl = await getSignedS3Url(
             resource.content.previewImageUrl,
             'PPT'
           )
@@ -995,9 +1060,7 @@ const LearnerFrame = () => {
               {resources[currentIndex] && (
                 <ResourceRenderer
                   resource={resources[currentIndex]}
-                  signedUrl={
-                    signedUrls[resources[currentIndex].content.fileName]
-                  }
+                  signedUrl={signedUrls[resources[currentIndex]?.content?.fileName]}
                   signedUrls={signedUrls}
                 />
               )}
