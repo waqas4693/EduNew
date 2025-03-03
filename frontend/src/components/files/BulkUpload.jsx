@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Box,
   Paper,
@@ -18,29 +18,33 @@ import {
 import {
   CloudUpload as UploadIcon,
   Delete as DeleteIcon,
-  Description as FileIcon,
-  Folder as FolderIcon
+  Folder as FolderIcon,
+  Add as AddIcon
 } from '@mui/icons-material'
 import { postData, getData } from '../../api/api'
 
 const BulkUpload = () => {
-  const [configFile, setConfigFile] = useState(null)
+  const [courses, setCourses] = useState([])
+  const [units, setUnits] = useState([])
+  const [sections, setSections] = useState([])
+  const [selectedCourse, setSelectedCourse] = useState(null)
+  const [selectedUnit, setSelectedUnit] = useState(null)
+  const [courseId, setCourseId] = useState(null)
   const [selectedFolder, setSelectedFolder] = useState(null)
-  const [parsedConfig, setParsedConfig] = useState(null)
-  const [validationErrors, setValidationErrors] = useState([])
   const [uploading, setUploading] = useState(false)
   const [currentFile, setCurrentFile] = useState('')
   const [overallProgress, setOverallProgress] = useState(0)
   const [fileProgress, setFileProgress] = useState(0)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [courses, setCourses] = useState([])
-  const [units, setUnits] = useState([])
-  const [selectedCourse, setSelectedCourse] = useState(null)
-  const [selectedUnit, setSelectedUnit] = useState(null)
-  const [courseId, setCourseId] = useState(null)
-  
-  const folderInputRef = useRef(null)
+
+  // New state for section configurations
+  const [sectionConfigs, setSectionConfigs] = useState([
+    {
+      section: null,
+      resources: '' // Multiline text for resources
+    }
+  ])
 
   useEffect(() => {
     fetchCourses()
@@ -51,6 +55,12 @@ const BulkUpload = () => {
       fetchUnits()
     }
   }, [courseId])
+
+  useEffect(() => {
+    if (selectedUnit?._id) {
+      fetchSections()
+    }
+  }, [selectedUnit])
 
   const fetchCourses = async () => {
     try {
@@ -76,157 +86,182 @@ const BulkUpload = () => {
     }
   }
 
-  const parseConfigFile = async (file) => {
+  const fetchSections = async () => {
     try {
-      const content = await file.text()
-      const lines = content.split('\n').map(line => line.trim())
-      let currentSection = null
-      const config = []
-
-      for (const line of lines) {
-        if (!line) continue
-
-        if (line.startsWith('[') && line.endsWith(']')) {
-          currentSection = line.slice(1, -1)
-        } else if (currentSection && line.includes('|')) {
-          const [filename, type] = line.split('|')
-          config.push({
-            section: currentSection,
-            filename: filename.trim(),
-            type: type.trim()
-          })
-        }
+      const response = await getData(`sections/${selectedUnit._id}`)
+      if (response.status === 200) {
+        setSections(response.data.sections)
       }
-
-      return config
     } catch (error) {
-      throw new Error('Failed to parse config file')
-    }
-  }
-
-  const validateFiles = async (folderHandle, config) => {
-    const errors = []
-    const validFiles = []
-
-    for (const entry of config) {
-      try {
-        // Try to get file from folder
-        const fileHandle = await folderHandle.getFileHandle(entry.filename)
-        const file = await fileHandle.getFile()
-        validFiles.push({
-          ...entry,
-          file
-        })
-      } catch (error) {
-        errors.push(`File not found: ${entry.filename}`)
-      }
-    }
-
-    return { errors, validFiles }
-  }
-
-  const handleConfigFileChange = async (event) => {
-    const file = event.target.files[0]
-    if (file && file.type === 'text/plain') {
-      setConfigFile(file)
-      try {
-        const config = await parseConfigFile(file)
-        setParsedConfig(config)
-        setError('')
-      } catch (err) {
-        setError('Invalid config file format')
-        setConfigFile(null)
-      }
-    } else {
-      setError('Please upload a valid text file for configuration')
+      console.error('Error fetching sections:', error)
+      setError('Failed to fetch sections')
     }
   }
 
   const handleFolderSelect = async () => {
     try {
-      // Show folder picker
-      const handle = await window.showDirectoryPicker()
-      setSelectedFolder(handle)
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.webkitdirectory = true
+      input.multiple = true
 
-      if (parsedConfig) {
-        const { errors, validFiles } = await validateFiles(handle, parsedConfig)
-        if (errors.length > 0) {
-          setValidationErrors(errors)
-        } else {
-          setValidationErrors([])
-          // Store valid files for upload
-          setParsedConfig(validFiles)
+      input.onchange = (e) => {
+        const files = Array.from(e.target.files)
+        if (files.length === 0) {
+          setError('No files selected')
+          return
         }
+
+        console.log('Selected files:', files)
+        const folderName = files[0]?.webkitRelativePath.split('/')[0] || 'Selected Folder'
+        
+        // Create a map of filenames to files for easier lookup
+        const fileMap = new Map()
+        files.forEach(file => {
+          // Store both the full name and the base name
+          fileMap.set(file.name, file) // Store by base name
+          fileMap.set(file.webkitRelativePath.split('/').pop(), file) // Store by base name
+          fileMap.set(file.webkitRelativePath, file) // Store by full path
+        })
+
+        setSelectedFolder({
+          name: folderName,
+          files: files,
+          fileMap: fileMap,
+          getFileHandle: async (filename) => {
+            // Try to find the file by various name formats
+            const file = fileMap.get(filename) || 
+                        fileMap.get(`${folderName}/${filename}`) ||
+                        files.find(f => f.name === filename || 
+                                      f.webkitRelativePath.endsWith(`/${filename}`))
+
+            if (!file) {
+              console.error('Available files:', Array.from(fileMap.keys()))
+              throw new Error(`File ${filename} not found in folder`)
+            }
+
+            return {
+              getFile: async () => file
+            }
+          }
+        })
+        
+        setError('')
+        console.log('Folder selected:', folderName)
+        console.log('Available files:', Array.from(fileMap.keys()))
       }
+
+      input.click()
     } catch (error) {
-      if (error.name !== 'AbortError') {
-        setError('Error accessing folder')
-      }
+      console.error('Folder selection error:', error)
+      setError('Error accessing folder: ' + error.message)
     }
   }
 
+  const addSectionConfig = () => {
+    setSectionConfigs([...sectionConfigs, { section: null, resources: '' }])
+  }
+
+  const removeSectionConfig = (index) => {
+    setSectionConfigs(sectionConfigs.filter((_, i) => i !== index))
+  }
+
+  const handleSectionConfigChange = (index, field, value) => {
+    const newConfigs = [...sectionConfigs]
+    newConfigs[index] = { ...newConfigs[index], [field]: value }
+    setSectionConfigs(newConfigs)
+  }
+
+  const parseResourceText = (text) => {
+    return text.split('\n')
+      .map(line => line.trim())
+      .filter(line => line)
+      .map(line => {
+        const [filename, type] = line.split('|').map(part => part.trim())
+        return { filename, type }
+      })
+      .filter(resource => resource.filename && resource.type)
+  }
+
   const uploadFiles = async () => {
-    if (!selectedUnit) {
-      setError('Please select a unit first')
+    if (!selectedFolder) {
+      setError('Please select a resource folder')
       return
     }
-
-    if (!parsedConfig || parsedConfig.length === 0) return
 
     setUploading(true)
     setError('')
     setSuccess('')
-    
+
+    let totalFiles = 0
     let completed = 0
-    const total = parsedConfig.length
 
-    for (const fileConfig of parsedConfig) {
-      try {
-        setCurrentFile(fileConfig.filename)
-        setFileProgress(0)
+    // Calculate total files
+    sectionConfigs.forEach(config => {
+      if (config.section && config.resources) {
+        totalFiles += parseResourceText(config.resources).length
+      }
+    })
 
-        const formData = new FormData()
-        
-        // Get fresh file handle
-        const fileHandle = await selectedFolder.getFileHandle(fileConfig.filename)
-        const file = await fileHandle.getFile()
-        
-        formData.append('file', file)
-        formData.append('section', fileConfig.section)
-        formData.append('type', fileConfig.type)
-        formData.append('unitId', selectedUnit._id)  // Add unit ID
+    // Process each section
+    for (const config of sectionConfigs) {
+      if (!config.section || !config.resources) continue
 
-        await postData('resources/upload', formData, {
-          onUploadProgress: (progressEvent) => {
-            const progress = (progressEvent.loaded / progressEvent.total) * 100
-            setFileProgress(progress)
+      const resources = parseResourceText(config.resources)
+      
+      for (const resource of resources) {
+        try {
+          setCurrentFile(resource.filename)
+          setFileProgress(0)
+
+          // Log the file being processed
+          console.log('Processing file:', resource.filename)
+          console.log('Available files in folder:', selectedFolder.files.map(f => f.name))
+
+          try {
+            const fileHandle = await selectedFolder.getFileHandle(resource.filename)
+            const file = await fileHandle.getFile()
+
+            const formData = new FormData()
+            formData.append('file', file)
+            formData.append('sectionId', config.section._id)
+            formData.append('type', resource.type)
+
+            await postData('resources/upload', formData, {
+              onUploadProgress: (progressEvent) => {
+                const progress = (progressEvent.loaded / progressEvent.total) * 100
+                setFileProgress(progress)
+              }
+            })
+
+            completed++
+            setOverallProgress((completed / totalFiles) * 100)
+
+            // Clear memory
+            formData.delete('file')
+
+            await new Promise(resolve => setTimeout(resolve, 100))
+
+          } catch (error) {
+            console.error(`Error processing file ${resource.filename}:`, error)
+            setError(`File "${resource.filename}" not found in selected folder. Please check the filename and try again.`)
+            continue
           }
-        })
 
-        completed++
-        setOverallProgress((completed / total) * 100)
-
-        // Clear memory
-        formData.delete('file')
-        file = null
-
-        if (window.gc) window.gc()
-        
-        await new Promise(resolve => setTimeout(resolve, 100))
-
-      } catch (error) {
-        setError(`Failed to upload ${fileConfig.filename}`)
-        break
+        } catch (error) {
+          console.error('Upload error:', error)
+          setError(`Failed to upload ${resource.filename}: ${error.message}`)
+          break
+        }
       }
     }
 
     setUploading(false)
-    if (completed === total) {
+    if (completed === totalFiles) {
       setSuccess('All files uploaded successfully!')
       // Reset states
-      setConfigFile(null)
+      setSectionConfigs([{ section: null, resources: '' }])
       setSelectedFolder(null)
-      setParsedConfig(null)
       setCurrentFile('')
       setOverallProgress(0)
       setFileProgress(0)
@@ -249,19 +284,11 @@ const BulkUpload = () => {
               setSelectedCourse(newValue)
               setCourseId(newValue?._id)
               setSelectedUnit(null)
+              setSections([])
+              setSectionConfigs([{ section: null, resources: '' }])
             }}
             renderInput={params => (
-              <TextField
-                {...params}
-                label='Select Course'
-                size='small'
-                required
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '8px'
-                  }
-                }}
-              />
+              <TextField {...params} label="Select Course" size="small" required />
             )}
             sx={{ flex: 1 }}
           />
@@ -272,19 +299,11 @@ const BulkUpload = () => {
             getOptionLabel={option => option?.name || ''}
             onChange={(_, newValue) => {
               setSelectedUnit(newValue)
+              setSections([])
+              setSectionConfigs([{ section: null, resources: '' }])
             }}
             renderInput={params => (
-              <TextField
-                {...params}
-                label='Select Unit'
-                size='small'
-                required
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '8px'
-                  }
-                }}
-              />
+              <TextField {...params} label="Select Unit" size="small" required />
             )}
             sx={{ flex: 1 }}
           />
@@ -292,70 +311,77 @@ const BulkUpload = () => {
 
         <Divider sx={{ my: 3 }} />
 
-        {/* Config File Section */}
-        <Typography variant="h6" sx={{ mb: 2 }}>Step 2: Upload Configuration File</Typography>
-        <Box sx={{ mb: 3 }}>
-          <input
-            type="file"
-            accept=".txt"
-            onChange={handleConfigFileChange}
-            style={{ display: 'none' }}
-            id="config-file-input"
-          />
-          <label htmlFor="config-file-input">
-            <Button
-              variant="outlined"
-              component="span"
-              startIcon={<FileIcon />}
-              sx={{ mr: 2 }}
-            >
-              Select Config File
-            </Button>
-          </label>
-          {configFile && (
-            <Typography variant="body2" color="text.secondary">
-              Selected: {configFile.name}
-            </Typography>
-          )}
-        </Box>
+        {/* Section Configurations */}
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          Step 2: Configure Sections and Resources
+        </Typography>
+        
+        {sectionConfigs.map((config, index) => (
+          <Box key={index} sx={{ mb: 3 }}>
+            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <Autocomplete
+                options={sections}
+                value={config.section}
+                getOptionLabel={option => option?.name || ''}
+                onChange={(_, newValue) => {
+                  handleSectionConfigChange(index, 'section', newValue)
+                }}
+                renderInput={params => (
+                  <TextField {...params} label="Select Section" size="small" required />
+                )}
+                sx={{ flex: 1 }}
+              />
+
+              {index > 0 && (
+                <IconButton
+                  onClick={() => removeSectionConfig(index)}
+                  color="error"
+                >
+                  <DeleteIcon />
+                </IconButton>
+              )}
+            </Box>
+
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              value={config.resources}
+              onChange={(e) => handleSectionConfigChange(index, 'resources', e.target.value)}
+              placeholder="Enter resources (one per line):&#10;filename.mp4|VIDEO&#10;document.pdf|PDF&#10;image.jpg|IMAGE"
+              sx={{ mb: 1 }}
+            />
+          </Box>
+        ))}
+
+        <Button
+          startIcon={<AddIcon />}
+          onClick={addSectionConfig}
+          sx={{ mb: 3 }}
+        >
+          Add Another Section
+        </Button>
 
         <Divider sx={{ my: 3 }} />
 
-        {/* Folder Selection Section */}
+        {/* Folder Selection */}
         <Typography variant="h6" sx={{ mb: 2 }}>Step 3: Select Resources Folder</Typography>
-        <Box sx={{ mb: 3 }}>
-          <Button
-            variant="outlined"
-            onClick={handleFolderSelect}
-            startIcon={<FolderIcon />}
-            disabled={!parsedConfig}
-          >
-            Select Folder
-          </Button>
-          {selectedFolder && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Folder selected: {selectedFolder.name}
-            </Typography>
-          )}
-        </Box>
-
-        {/* Validation Errors */}
-        {validationErrors.length > 0 && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            <Typography variant="subtitle2">Validation Errors:</Typography>
-            <List dense>
-              {validationErrors.map((error, index) => (
-                <ListItem key={index}>
-                  <ListItemText primary={error} />
-                </ListItem>
-              ))}
-            </List>
-          </Alert>
+        <Button
+          variant="outlined"
+          onClick={handleFolderSelect}
+          startIcon={<FolderIcon />}
+        >
+          Select Folder
+        </Button>
+        {selectedFolder && (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Folder selected: {selectedFolder.name}
+          </Typography>
         )}
 
         {/* Upload Progress */}
         {uploading && (
-          <Box sx={{ mb: 3 }}>
+          <Box sx={{ mt: 3 }}>
             <Typography variant="body2" sx={{ mb: 1 }}>
               Uploading: {currentFile}
             </Typography>
@@ -376,12 +402,12 @@ const BulkUpload = () => {
 
         {/* Error/Success Messages */}
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ mt: 2 }}>
             {error}
           </Alert>
         )}
         {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
+          <Alert severity="success" sx={{ mt: 2 }}>
             {success}
           </Alert>
         )}
@@ -390,8 +416,9 @@ const BulkUpload = () => {
         <Button
           variant="contained"
           onClick={uploadFiles}
-          disabled={uploading || !selectedFolder || !selectedUnit || validationErrors.length > 0}
+          disabled={uploading || !selectedFolder || sectionConfigs.some(config => !config.section || !config.resources)}
           startIcon={uploading ? <CircularProgress size={20} /> : <UploadIcon />}
+          sx={{ mt: 3 }}
         >
           {uploading ? 'Uploading...' : 'Start Upload'}
         </Button>
