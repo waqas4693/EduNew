@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   Box,
   Paper,
@@ -11,7 +11,9 @@ import {
   ListItemText,
   IconButton,
   Divider,
-  LinearProgress
+  LinearProgress,
+  Autocomplete,
+  TextField
 } from '@mui/material'
 import {
   CloudUpload as UploadIcon,
@@ -19,7 +21,7 @@ import {
   Description as FileIcon,
   Folder as FolderIcon
 } from '@mui/icons-material'
-import { postData } from '../../api/api'
+import { postData, getData } from '../../api/api'
 
 const BulkUpload = () => {
   const [configFile, setConfigFile] = useState(null)
@@ -32,8 +34,47 @@ const BulkUpload = () => {
   const [fileProgress, setFileProgress] = useState(0)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [courses, setCourses] = useState([])
+  const [units, setUnits] = useState([])
+  const [selectedCourse, setSelectedCourse] = useState(null)
+  const [selectedUnit, setSelectedUnit] = useState(null)
+  const [courseId, setCourseId] = useState(null)
   
   const folderInputRef = useRef(null)
+
+  useEffect(() => {
+    fetchCourses()
+  }, [])
+
+  useEffect(() => {
+    if (courseId) {
+      fetchUnits()
+    }
+  }, [courseId])
+
+  const fetchCourses = async () => {
+    try {
+      const response = await getData('courses')
+      if (response.status === 200) {
+        setCourses(response.data.data)
+      }
+    } catch (error) {
+      console.error('Error fetching courses:', error)
+      setError('Failed to fetch courses')
+    }
+  }
+
+  const fetchUnits = async () => {
+    try {
+      const response = await getData(`units/${courseId}`)
+      if (response.status === 200) {
+        setUnits(response.data.units)
+      }
+    } catch (error) {
+      console.error('Error fetching units:', error)
+      setError('Failed to fetch units')
+    }
+  }
 
   const parseConfigFile = async (file) => {
     try {
@@ -125,6 +166,11 @@ const BulkUpload = () => {
   }
 
   const uploadFiles = async () => {
+    if (!selectedUnit) {
+      setError('Please select a unit first')
+      return
+    }
+
     if (!parsedConfig || parsedConfig.length === 0) return
 
     setUploading(true)
@@ -140,9 +186,15 @@ const BulkUpload = () => {
         setFileProgress(0)
 
         const formData = new FormData()
-        formData.append('file', fileConfig.file)
+        
+        // Get fresh file handle
+        const fileHandle = await selectedFolder.getFileHandle(fileConfig.filename)
+        const file = await fileHandle.getFile()
+        
+        formData.append('file', file)
         formData.append('section', fileConfig.section)
         formData.append('type', fileConfig.type)
+        formData.append('unitId', selectedUnit._id)  // Add unit ID
 
         await postData('resources/upload', formData, {
           onUploadProgress: (progressEvent) => {
@@ -153,6 +205,15 @@ const BulkUpload = () => {
 
         completed++
         setOverallProgress((completed / total) * 100)
+
+        // Clear memory
+        formData.delete('file')
+        file = null
+
+        if (window.gc) window.gc()
+        
+        await new Promise(resolve => setTimeout(resolve, 100))
+
       } catch (error) {
         setError(`Failed to upload ${fileConfig.filename}`)
         break
@@ -177,8 +238,62 @@ const BulkUpload = () => {
       <Typography variant="h4" sx={{ mb: 3 }}>Bulk Resource Upload</Typography>
       
       <Paper elevation={3} sx={{ p: 3, maxWidth: 800, mx: 'auto' }}>
+        {/* Course and Unit Selection */}
+        <Typography variant="h6" sx={{ mb: 2 }}>Step 1: Select Course and Unit</Typography>
+        <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+          <Autocomplete
+            options={courses}
+            value={selectedCourse}
+            getOptionLabel={option => option?.name || ''}
+            onChange={(_, newValue) => {
+              setSelectedCourse(newValue)
+              setCourseId(newValue?._id)
+              setSelectedUnit(null)
+            }}
+            renderInput={params => (
+              <TextField
+                {...params}
+                label='Select Course'
+                size='small'
+                required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '8px'
+                  }
+                }}
+              />
+            )}
+            sx={{ flex: 1 }}
+          />
+
+          <Autocomplete
+            options={units}
+            value={selectedUnit}
+            getOptionLabel={option => option?.name || ''}
+            onChange={(_, newValue) => {
+              setSelectedUnit(newValue)
+            }}
+            renderInput={params => (
+              <TextField
+                {...params}
+                label='Select Unit'
+                size='small'
+                required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '8px'
+                  }
+                }}
+              />
+            )}
+            sx={{ flex: 1 }}
+          />
+        </Box>
+
+        <Divider sx={{ my: 3 }} />
+
         {/* Config File Section */}
-        <Typography variant="h6" sx={{ mb: 2 }}>Step 1: Upload Configuration File</Typography>
+        <Typography variant="h6" sx={{ mb: 2 }}>Step 2: Upload Configuration File</Typography>
         <Box sx={{ mb: 3 }}>
           <input
             type="file"
@@ -207,7 +322,7 @@ const BulkUpload = () => {
         <Divider sx={{ my: 3 }} />
 
         {/* Folder Selection Section */}
-        <Typography variant="h6" sx={{ mb: 2 }}>Step 2: Select Resources Folder</Typography>
+        <Typography variant="h6" sx={{ mb: 2 }}>Step 3: Select Resources Folder</Typography>
         <Box sx={{ mb: 3 }}>
           <Button
             variant="outlined"
@@ -275,7 +390,7 @@ const BulkUpload = () => {
         <Button
           variant="contained"
           onClick={uploadFiles}
-          disabled={uploading || !selectedFolder || validationErrors.length > 0}
+          disabled={uploading || !selectedFolder || !selectedUnit || validationErrors.length > 0}
           startIcon={uploading ? <CircularProgress size={20} /> : <UploadIcon />}
         >
           {uploading ? 'Uploading...' : 'Start Upload'}
