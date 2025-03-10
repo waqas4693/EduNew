@@ -148,6 +148,8 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
   }
 
   const renderMCQ = () => {
+    const alphabet = ['A', 'B', 'C', 'D'];
+    
     return (
       <Box sx={{ p: 3 }}>
         <Typography variant="h6" gutterBottom sx={{ color: '#000' }}>
@@ -208,7 +210,7 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
               }}
               onClick={() => handleAnswerSelect(option)}
             >
-              <Typography>{option}</Typography>
+              <Typography>{`${alphabet[index]}. ${option}`}</Typography>
             </Paper>
           ))}
         </Box>

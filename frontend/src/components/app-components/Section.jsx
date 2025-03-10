@@ -20,6 +20,7 @@ import Calendar from '../calendar/Calendar'
 import MenuBook from '@mui/icons-material/MenuBook'
 import ChevronLeft from '@mui/icons-material/ChevronLeft'
 import AssignmentOutlined from '@mui/icons-material/AssignmentOutlined'
+import SmartToyOutlined from '@mui/icons-material/SmartToyOutlined'
 
 const Section = () => {
   const navigate = useNavigate()
@@ -176,7 +177,8 @@ const Section = () => {
                     position: 'relative',
                     cursor: 'pointer',
                     display: 'flex',
-                    alignItems: 'center'
+                    flexDirection: 'column',
+                    alignItems: 'flex-start'
                   }}
                 >
                   <Box
@@ -206,7 +208,7 @@ const Section = () => {
                     </Typography>
                   </Box>
 
-                  <Box sx={{ flex: 1 }}>
+                  <Box sx={{ flex: 1, width: '100%', mb: 2 }}>
                     <Typography
                       sx={{
                         fontWeight: 'bold',
@@ -223,7 +225,7 @@ const Section = () => {
                     </Typography>
                   </Box>
 
-                  <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Box sx={{ display: 'flex', gap: 2, alignSelf: 'flex-end' }}>
                     {section.resources.length > 0 && (
                       <Button
                         variant='contained'
@@ -246,6 +248,24 @@ const Section = () => {
                         Learning
                       </Button>
                     )}
+
+                    <Button
+                      variant='outlined'
+                      startIcon={<SmartToyOutlined />}
+                      sx={{
+                        color: '#4169e1',
+                        borderColor: '#4169e1',
+                        borderRadius: '8px',
+                        textTransform: 'none',
+                        '&:hover': {
+                          borderColor: '#4169e1',
+                          backgroundColor: 'rgba(65, 105, 225, 0.04)'
+                        }
+                      }}
+                    >
+                      AI Practice
+                    </Button>
+
                     {section.assessments && section.assessments.length > 0 && (
                       <Button
                         variant='outlined'

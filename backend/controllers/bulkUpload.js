@@ -93,7 +93,7 @@ export const bulkUploadResources = async (req, res) => {
     // Commit the transaction
     await session.commitTransaction()
 
-    res.status(201).json({
+    res.status(200).json({
       success: true,
       message: 'Bulk upload completed successfully',
       data: {

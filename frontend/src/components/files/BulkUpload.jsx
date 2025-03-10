@@ -63,6 +63,9 @@ const FilePreview = ({ file }) => {
 }
 
 const detectResourceType = (title) => {
+
+  console.log('title checking for resource', title)
+
   const titleLower = title.toLowerCase()
   if (titleLower.includes('video')) return 'VIDEO'
   if (titleLower.includes('audio')) return 'AUDIO'
@@ -74,10 +77,10 @@ const detectResourceType = (title) => {
 
 const VideoResourceConfig = ({ resource, onUpdate }) => {
   return (
-    <Card sx={{ mb: 2, p: 2 }}>
-      <Box sx={{ 
-        display: 'flex', 
-        gap: 2, 
+    <Box sx={{ px: '5px', py: '10px' }}>
+      <Box sx={{
+        display: 'flex',
+        gap: 2,
         alignItems: 'center',
         mb: 2 
       }}>
@@ -90,7 +93,8 @@ const VideoResourceConfig = ({ resource, onUpdate }) => {
             onUpdate(resource.videoNumber, {
               ...resource,
               resourceFile: file,
-              resourceName: resource.title
+              resourceName: resource.title,
+              resourceType: resource.resourceType
             })
           }}
         />
@@ -113,22 +117,6 @@ const VideoResourceConfig = ({ resource, onUpdate }) => {
           </Button>
         </label>
 
-        {/* Display selected file name */}
-        {/* {resource.resourceFile && (
-          <Typography 
-            variant="body2" 
-            sx={{ 
-              color: 'text.secondary',
-              position: 'absolute',
-              mt: 7,
-              ml: 0.5,
-              fontSize: '0.75rem'
-            }}
-          >
-            {resource.resourceFile.name}
-          </Typography>
-        )} */}
-
         <Box sx={{ 
           display: 'flex', 
           flex: 1,
@@ -142,43 +130,50 @@ const VideoResourceConfig = ({ resource, onUpdate }) => {
               ...resource,
               resourceName: e.target.value
             })}
-            sx={{ 
-              flex: '0 0 70%' // Takes 70% of remaining space
+            sx={{
+              flex: '0 0 70%',
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px'
+              }
             }}
           />
-
-          <ResourceTypeSelector
-            value={resource.resourceType || detectResourceType(resource.title)}
-            onChange={(value) => onUpdate(resource.videoNumber, {
-              ...resource,
-              resourceType: value
-            })}
-            sx={{ 
-              flex: '0 0 30%' // Takes 30% of remaining space
+          
+          {/* Display resource type as text */}
+          <Typography
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              color: 'text.secondary',
+              bgcolor: 'grey.100',
+              px: 2,
+              borderRadius: 1,
+              fontSize: '0.875rem'
             }}
-          />
+          >
+            {resource.resourceType}
+          </Typography>
         </Box>
       </Box>
 
       {/* Optimized MCQs Summary */}
       {resource.mcqs && resource.mcqs.length > 0 && (
-        <Box sx={{ pl: 1 }}>
-          <Typography variant="subtitle2" sx={{ 
-            mb: 1, 
+        <>
+          <Typography variant="subtitle2" sx={{
+            mb: 1,
             color: 'text.secondary',
             fontSize: '0.875rem'
           }}>
             MCQs Summary
           </Typography>
-          <Box sx={{ 
-            display: 'grid', 
+          <Box sx={{
+            display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', // Smaller cards
             gap: 1 // Reduced gap
           }}>
             {resource.mcqs.map((mcq, index) => (
-              <Card 
+              <Card
                 key={index}
-                sx={{ 
+                sx={{
                   p: 1, // Reduced padding
                   border: '1px solid',
                   borderColor: 'primary.light',
@@ -187,22 +182,22 @@ const VideoResourceConfig = ({ resource, onUpdate }) => {
                   bgcolor: mcq.correctAnswersCount > 1 ? 'warning.lighter' : 'background.paper'
                 }}
               >
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
+                <Box sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
                   alignItems: 'center',
                   mb: 0.5 // Reduced margin
                 }}>
-                  <Typography sx={{ 
+                  <Typography sx={{
                     color: 'primary.main',
                     fontSize: '0.875rem' // Smaller font
                   }}>
                     Q{mcq.questionNumber}
                   </Typography>
                   {mcq.correctAnswersCount > 1 && (
-                    <Typography 
-                      variant="caption" 
-                      sx={{ 
+                    <Typography
+                      variant="caption"
+                      sx={{
                         bgcolor: 'warning.main',
                         color: 'warning.contrastText',
                         px: 0.5,
@@ -221,9 +216,9 @@ const VideoResourceConfig = ({ resource, onUpdate }) => {
               </Card>
             ))}
           </Box>
-        </Box>
+        </>
       )}
-    </Card>
+    </Box>
   )
 }
 
@@ -268,7 +263,7 @@ const BulkUpload = () => {
 
       return {
         ...prevPreview,
-        videoResources: prevPreview.videoResources.map(resource => 
+        videoResources: prevPreview.videoResources.map(resource =>
           resource.videoNumber === videoNumber ? updatedResource : resource
         )
       }
@@ -278,11 +273,11 @@ const BulkUpload = () => {
   // Modified to handle regular file selection
   const handleFileSelect = (event, groupIndex) => {
     const files = Array.from(event.target.files)
-    
+
     setSectionGroups(prevGroups => {
       const newGroups = [...prevGroups]
       const currentGroup = newGroups[groupIndex]
-      
+
       if (!currentGroup.section) {
         setError('Please select a section first')
         return prevGroups
@@ -310,17 +305,26 @@ const BulkUpload = () => {
     reader.onload = async (e) => {
       const content = e.target.result
       
-      // Split content by video sections
-      const videoSections = content.split(/Video \d+:/)
+      const videoSections = content.split(/(?:Video|Audio|Image|PDF|PPT) \d+:/)
         .filter(section => section.trim())
         .map(section => section.trim())
 
       const videoResources = []
       let globalQuestionNumber = 1
 
-      videoSections.forEach((section, index) => {
+      // Get the original sections with their headers to extract resource type
+      const fullSections = content.match(/(?:Video|Audio|Image|PDF|PPT) \d+:[\s\S]+?(?=(?:Video|Audio|Image|PDF|PPT) \d+:|$)/g) || []
+
+      fullSections.forEach((section, index) => {
         const lines = section.split('\n')
-        const videoTitle = lines[0].trim()
+        const titleLine = lines[0].trim()
+        
+        // Extract resource type from the title line (e.g., "Audio 1: Title" -> "AUDIO")
+        const typeMatch = titleLine.match(/^(Video|Audio|Image|PDF|PPT)/i)
+        const resourceType = typeMatch ? typeMatch[1].toUpperCase() : 'VIDEO'
+        
+        // Remove the "Type X:" prefix to get clean title
+        const videoTitle = titleLine.replace(/^(?:Video|Audio|Image|PDF|PPT) \d+:\s*/, '').trim()
         
         // Process MCQs for this section
         const mcqText = lines.slice(1).join('\n')
@@ -328,15 +332,9 @@ const BulkUpload = () => {
           .filter(mcq => mcq.trim())
           .map(mcq => {
             const lines = mcq.split('\n').map(line => line.trim())
-            
-            // Get the question text (first line)
             const question = lines[0]
-            
-            // Extract options (lines starting with A., B., C., D.)
             const options = lines.filter(line => /^[A-D]\./.test(line))
               .map(line => line.replace(/^[A-D]\./, '').trim())
-            
-            // Extract correct answers
             const answerLine = lines.find(line => line.startsWith('Answer:'))
             const correctAnswers = answerLine
               ? answerLine.replace('Answer:', '')
@@ -360,7 +358,7 @@ const BulkUpload = () => {
           videoNumber: index + 1,
           resourceFile: null,
           resourceName: videoTitle,
-          resourceType: 'MCQ',
+          resourceType: resourceType,
           mcqs
         })
       })
@@ -482,14 +480,14 @@ const BulkUpload = () => {
 
     try {
       const formData = new FormData()
-      
+
       console.log('Starting resource creation from mcqPreview:', mcqPreview)
-      
+
       const resources = mcqPreview.videoResources.flatMap((videoResource, videoIndex) => {
         console.log(`Processing video resource ${videoIndex + 1}:`, videoResource)
-        
+
         const resources = []
-        
+
         // First add the video resource if it exists
         if (videoResource.resourceFile) {
           const videoResourceObj = {
@@ -507,7 +505,7 @@ const BulkUpload = () => {
         // Modified MCQ processing
         videoResource.mcqs.forEach((mcq, mcqIndex) => {
           console.log(`Processing MCQ ${mcqIndex + 1} for video ${videoIndex + 1}:`, mcq)
-          
+
           // Create a mapping of letter options to full text
           const optionMap = {}
           const letters = ['A', 'B', 'C', 'D']
@@ -533,7 +531,7 @@ const BulkUpload = () => {
           })
 
           const mcqResourceObj = {
-            name: `MCQ ${mcq.questionNumber} - ${videoResource.title}`,
+            name: `MCQ ${mcq.questionNumber}`,
             sectionId: sectionGroups[0].section._id,
             resourceType: 'MCQ',
             content: {
@@ -552,11 +550,9 @@ const BulkUpload = () => {
         return resources
       })
 
-      console.log('Final resources array:', JSON.stringify(resources, null, 2))
       formData.append('resources', JSON.stringify(resources))
 
       // Log files being appended
-      console.log('Appending files to FormData:')
       mcqPreview.videoResources.forEach((resource, index) => {
         if (resource.resourceFile) {
           console.log(`Appending file for video ${index + 1}:`, {
@@ -587,8 +583,8 @@ const BulkUpload = () => {
 
       console.log('Upload response:', response)
 
-      if (!response.success) {
-        throw new Error(response.message || 'Upload failed')
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Upload failed')
       }
 
       setSuccess('Resources uploaded successfully')
@@ -634,9 +630,9 @@ const BulkUpload = () => {
                 setSectionGroups([{ section: null, resources: [] }])
               }}
               renderInput={params => (
-                <TextField 
-                  {...params} 
-                  label="Select Course" 
+                <TextField
+                  {...params}
+                  label="Select Course"
                   size="small"
                   required
                   sx={{
@@ -659,9 +655,9 @@ const BulkUpload = () => {
                 setSectionGroups([{ section: null, resources: [] }])
               }}
               renderInput={params => (
-                <TextField 
-                  {...params} 
-                  label="Select Unit" 
+                <TextField
+                  {...params}
+                  label="Select Unit"
                   size="small"
                   required
                   sx={{
@@ -680,10 +676,10 @@ const BulkUpload = () => {
 
         {/* Section Groups */}
         {sectionGroups.map((group, groupIndex) => (
-          <Accordion 
+          <Accordion
             key={groupIndex}
             defaultExpanded={groupIndex === sectionGroups.length - 1}
-            sx={{ 
+            sx={{
               mb: 2,
               '&:before': { display: 'none' },
               boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
@@ -707,13 +703,13 @@ const BulkUpload = () => {
                 {group.section ? `Section: ${group.section.name}` : 'New Section'}
               </Typography>
               {groupIndex > 0 && (
-                <IconButton 
+                <IconButton
                   onClick={(e) => {
                     e.stopPropagation()
                     removeSectionGroup(groupIndex)
                   }}
                   size="small"
-                  sx={{ 
+                  sx={{
                     color: 'white',
                     '&:hover': {
                       backgroundColor: 'rgba(255, 255, 255, 0.1)'
@@ -732,10 +728,10 @@ const BulkUpload = () => {
                   getOptionLabel={option => option?.name || ''}
                   onChange={(_, value) => handleSectionChange(groupIndex, value)}
                   renderInput={params => (
-                    <TextField 
-                      {...params} 
-                      label="Select Section" 
-                      size="small" 
+                    <TextField
+                      {...params}
+                      label="Select Section"
+                      size="small"
                       required
                       sx={{
                         '& .MuiOutlinedInput-root': {
@@ -773,17 +769,17 @@ const BulkUpload = () => {
 
               {/* MCQ Preview */}
               {mcqPreview && (
-                <MCQDetailedPreview 
-                  mcqPreview={mcqPreview} 
+                <MCQDetailedPreview
+                  mcqPreview={mcqPreview}
                   onVideoResourceUpdate={handleVideoResourceUpdate}
                 />
               )}
 
               {/* Resources List */}
               {group.resources.map((resource, resourceIndex) => (
-                <Card 
-                  key={resourceIndex} 
-                  sx={{ 
+                <Card
+                  key={resourceIndex}
+                  sx={{
                     mb: 2,
                     borderRadius: '8px',
                     boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.05)'
@@ -791,11 +787,11 @@ const BulkUpload = () => {
                 >
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Box sx={{ 
-                        flex: 1, 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: 2 
+                      <Box sx={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2
                       }}>
                         <TextField
                           size="small"
@@ -807,14 +803,14 @@ const BulkUpload = () => {
                             'name',
                             e.target.value
                           )}
-                          sx={{ 
+                          sx={{
                             flex: 1,
                             '& .MuiOutlinedInput-root': {
                               borderRadius: '8px'
                             }
                           }}
                         />
-                        
+
                         <Box sx={{ width: '200px' }}>
                           <ResourceTypeSelector
                             value={resource.type}
@@ -850,18 +846,18 @@ const BulkUpload = () => {
         ))}
 
         {/* Bottom Actions Container */}
-        <Box sx={{ 
-          display: 'flex', 
+        <Box sx={{
+          display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          mt: 3 
+          mt: 3
         }}>
           {/* Add Section Button - Left side */}
           <Button
             startIcon={<AddIcon />}
             onClick={addNewSectionGroup}
             variant="outlined"
-            sx={{ 
+            sx={{
               borderRadius: '8px',
               textTransform: 'none'
             }}
@@ -875,7 +871,7 @@ const BulkUpload = () => {
             onClick={uploadFiles}
             disabled={uploading || !mcqPreview}
             startIcon={uploading ? <CircularProgress size={20} /> : <UploadIcon />}
-            sx={{ 
+            sx={{
               borderRadius: '8px',
               textTransform: 'none',
               '&.Mui-disabled': {
@@ -888,39 +884,39 @@ const BulkUpload = () => {
         </Box>
 
         {/* Upload Progress */}
-        {uploading && (
+        {/* {uploading && (
           <Box sx={{ mt: 3 }}>
             <Typography variant="body2" sx={{ mb: 1 }}>
               Uploading: {currentFile}
             </Typography>
-            <LinearProgress 
-              variant="determinate" 
-              value={fileProgress} 
-              sx={{ 
+            <LinearProgress
+              variant="determinate"
+              value={fileProgress}
+              sx={{
                 mb: 2,
                 borderRadius: '4px',
                 backgroundColor: 'primary.light'
-              }} 
+              }}
             />
             <Typography variant="body2" sx={{ mb: 1 }}>
               Overall Progress: {Math.round(overallProgress)}%
             </Typography>
-            <LinearProgress 
-              variant="determinate" 
+            <LinearProgress
+              variant="determinate"
               value={overallProgress}
-              sx={{ 
+              sx={{
                 borderRadius: '4px',
                 backgroundColor: 'primary.light'
               }}
             />
           </Box>
-        )}
+        )} */}
 
         {/* Error/Success Messages */}
         {error && (
-          <Alert 
-            severity="error" 
-            sx={{ 
+          <Alert
+            severity="error"
+            sx={{
               mt: 2,
               borderRadius: '8px'
             }}
@@ -929,9 +925,9 @@ const BulkUpload = () => {
           </Alert>
         )}
         {success && (
-          <Alert 
-            severity="success" 
-            sx={{ 
+          <Alert
+            severity="success"
+            sx={{
               mt: 2,
               borderRadius: '8px'
             }}
