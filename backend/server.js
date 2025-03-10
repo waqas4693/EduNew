@@ -24,6 +24,7 @@ import resourceViewRoutes from './routes/resourceView.js'
 import assessmentReviewRoutes from './routes/assessmentReview.js'
 import assessmentAttemptRoutes from './routes/assessmentAttempt.js'
 import s3Routes from './routes/s3.js'
+import bulkUploadRoutes from './routes/bulkUpload.js'
 
 /* CONFIGURATION */
 dotenv.config()
@@ -88,6 +89,7 @@ app.use('/api/resource-views', resourceViewRoutes)
 app.use('/api/resources/files', s3Routes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api/users', userRoutes)
+app.use('/api/bulk-upload', bulkUploadRoutes)
 mongoose.set('strictQuery', false)
 
 await mongoose

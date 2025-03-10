@@ -21,6 +21,7 @@ import Calendar from '../calendar/Calendar'
 import { useDispatch } from 'react-redux'
 import { setCurrentCourse } from '../../redux/slices/courseSlice'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import SpeedIcon from '@mui/icons-material/Speed'
 
 const getThumbnailUrl = fileName => {
   if (!fileName) return ''
@@ -325,26 +326,30 @@ const CourseRow = ({ course, studentId }) => {
   }
 
   return (
-    <>
-      <Card
-        onClick={handleThumbnailClick}
-        sx={{
-          mb: 2,
-          width: '100%',
-          overflow: 'hidden',
-          borderRadius: '12px',
-          boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)',
-          display: 'flex',
-          height: '160px',
-          cursor: 'pointer',
-        }}
-      >
-        {/* Thumbnail Section */}
+    <Card
+      onClick={handleThumbnailClick}
+      sx={{
+        mb: 2,
+        width: '100%',
+        overflow: 'hidden',
+        borderRadius: '12px',
+        bgcolor: 'primary.main',
+        color: 'white',
+        display: 'flex',
+        flexDirection: 'column',
+        cursor: 'pointer',
+      }}
+    >
+      {/* Main content container */}
+      <Box sx={{ display: 'flex', p: 2, gap: 2 }}>
+        {/* Thumbnail Box */}
         <Box
           sx={{
-            width: '170px',
-            height: '160px',
-            flexShrink: 0
+            flex: 1,
+            aspectRatio: '1/1',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            bgcolor: 'white'
           }}
         >
           {course.image && !imageError ? (
@@ -374,172 +379,152 @@ const CourseRow = ({ course, studentId }) => {
                 component='img'
                 src='/course-card-placeholder-icon.svg'
                 alt='Course placeholder'
-                sx={{
-                  width: '48px',
-                  height: '48px'
-                }}
+                sx={{ width: '48px', height: '48px' }}
               />
             </Box>
           )}
         </Box>
 
-        {/* Course Info Section */}
-        <Box sx={{ p: 2, display: 'flex', flex: 1 }}>
-          <Box sx={{ width: '100px', flexShrink: 0 }}>
-            <Typography
-              variant='h6'
+        {/* Progress Box */}
+        <Box
+          sx={{
+            flex: 1,
+            aspectRatio: '1/1',
+            borderRadius: '8px',
+            bgcolor: '#fff',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 2
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Button
+              onClick={handleQuickView}
               sx={{
-                fontSize: '14px',
-                fontWeight: 500,
-                lineHeight: 1.2
+                fontSize: '13px',
+                fontWeight: 'bold',
+                textTransform: 'capitalize'
               }}
             >
-              {course.name}
-            </Typography>
-            <Typography
-              sx={{
-                color: 'text.secondary',
-                fontSize: '14px',
-                mt: 1
-              }}
-            >
-              Units: {course.units}
-            </Typography>
-          </Box>
-
-          {/* Vertical Divider */}
-          <Box
-            sx={{
-              mx: 2,
-              borderLeft: '1px solid #E0E0E0',
-              height: '100%'
-            }}
-          />
-
-          {/* Progress Section */}
-          <Box sx={{ width: '220px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <Typography
-              sx={{
-                color: 'text.secondary',
-                fontSize: '14px',
-                fontWeight: 500,
-                mb: 1
-              }}
-            >
-              Course Progress
-            </Typography>
-
-            {loading ? (
-              <CircularProgress size={48} />
-            ) : (
-              <Box sx={{ position: 'relative', display: 'inline-flex', mb: 1 }}>
-                <CircularProgress
-                  variant='determinate'
-                  value={progress}
-                  size={48}
-                  thickness={4}
-                  sx={{ color: '#4285f4' }}
-                />
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  <Typography variant='caption' sx={{ fontSize: '14px' }}>
-                    {`${progress}%`}
-                  </Typography>
-                </Box>
-              </Box>
-            )}
-
-            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-              <Button
-                variant='outlined'
-                size='small'
-                sx={{
-                  borderRadius: '8px',
-                  borderColor: '#4285f4',
-                  color: '#4285f4',
-                  whiteSpace: 'nowrap'
-                }}
-                onClick={handleDetailView}
-              >
-                Detail View
-              </Button>
-              <Button
-                variant='contained'
-                size='small'
-                sx={{
-                  borderRadius: '8px',
-                  bgcolor: '#4285f4',
-                  whiteSpace: 'nowrap'
-                }}
-                onClick={handleQuickView}
-              >
-                Quick View
-              </Button>
-            </Box>
-          </Box>
-
-          {/* Vertical Divider */}
-          <Box
-            sx={{
-              mx: 2,
-              borderLeft: '1px solid #E0E0E0',
-              height: '100%'
-            }}
-          />
-
-          {/* AI Learning Section */}
-          <Box sx={{ width: '160px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <Typography
-              sx={{
-                color: 'text.secondary',
-                fontSize: '14px',
-                fontWeight: 500,
-                mb: 1
-              }}
-            >
-              AI Powered Learning
-            </Typography>
-            
-            <Box
-              component='img'
-              src='/ai-education.png'
-              alt="AI Education"
-              sx={{
-                width: 48,
-                height: 48,
-                borderRadius: '50%',
-                mb: 1,
-                objectFit: 'cover'
-              }}
+              Quick View
+            </Button>
+            <SpeedIcon 
+              sx={{ 
+                fontSize: 50,
+                color: 'primary.main'
+              }} 
             />
-
-            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-              <Button
-                variant='outlined'
-                size='small'
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Button
+              onClick={handleDetailView}
+              sx={{
+                fontSize: '13px',
+                fontWeight: 'bold',
+                textTransform: 'capitalize'
+              }}
+            >
+              Detailed View
+            </Button>
+            <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+              <CircularProgress
+                variant="determinate"
+                value={100}
+                size={65}
+                thickness={8}
+                sx={{ color: 'grey.200' }}
+              />
+              <CircularProgress
+                variant="determinate"
+                value={loading ? 0 : progress}
+                size={65}
+                thickness={8}
                 sx={{
-                  borderRadius: '8px',
-                  borderColor: '#4285f4',
-                  color: '#4285f4',
-                  whiteSpace: 'nowrap'
+                  color: 'primary.main',
+                  position: 'absolute',
+                  left: 0,
+                }}
+              />
+              <Box
+                sx={{
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  display: 'flex',
+                  position: 'absolute',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
-                View
-              </Button>
+                <Typography variant="caption" sx={{ fontSize: '12px', fontWeight: 'bold', color: 'primary.main' }}>
+                  {loading ? '...' : `${progress}%`}
+                </Typography>
+              </Box>
             </Box>
           </Box>
         </Box>
-      </Card>
+
+        {/* AI Tutor Box */}
+        <Box
+          sx={{
+            flex: 1,
+            aspectRatio: '1/1',
+            borderRadius: '8px',
+            bgcolor: '#fff',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}
+        >
+          <Box
+            component='img'
+            src='/ai-education.png'
+            alt="AI Education"
+            sx={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }}
+          />
+        </Box>
+      </Box>
+
+      {/* Labels container */}
+      <Box sx={{ display: 'flex', pb: 1 }}>
+        <Typography
+          sx={{
+            flex: 1,
+            fontSize: '14px',
+            fontWeight: 'bold',
+            textAlign: 'center'
+          }}
+        >
+          {course.name}
+        </Typography>
+        <Typography
+          sx={{
+            flex: 1,
+            textAlign: 'center',
+            fontSize: '14px',
+            fontWeight: 'bold'
+          }}
+        >
+          Course Progress
+        </Typography>
+        <Typography
+          sx={{
+            flex: 1,
+            textAlign: 'center',
+            fontSize: '14px',
+            fontWeight: 'bold'
+          }}
+        >
+          Test Your Understanding
+        </Typography>
+      </Box>
 
       <Dialog
         open={openDialog}
@@ -690,7 +675,7 @@ const CourseRow = ({ course, studentId }) => {
           </Button>
         </DialogActions>
       </Dialog>
-    </>
+    </Card>
   )
 }
 
