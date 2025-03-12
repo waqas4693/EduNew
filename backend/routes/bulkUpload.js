@@ -9,14 +9,14 @@ const storage = multer.memoryStorage()
 const upload = multer({ 
   storage,
   limits: {
-    fileSize: 100 * 1024 * 1024, // 100MB limit
-    files: 50 // Max 50 files
+    fileSize: 20000 * 1024 * 1024, // 20GB limit
+    files: 100 // Max 100 files
   }
 })
 
 // Define the fields we expect
 const uploadFields = upload.fields([
-  { name: 'files', maxCount: 50 }, // For video/pdf files
+  { name: 'files', maxCount: 100 }, // For video/pdf files
 ])
 
 router.post('/mcq', uploadFields, bulkUploadResources)
