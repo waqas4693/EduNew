@@ -1,15 +1,8 @@
-import url from '../config/server-url'
 import Grid from '@mui/material/Grid2'
-import { getData, postData } from '../../api/api'
-import { useState, useEffect, useRef } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import axios from 'axios'
 import {
   Box,
   Typography,
-  IconButton,
   Paper,
-  Checkbox,
   Button,
   Alert,
   CircularProgress,
@@ -21,10 +14,13 @@ import {
 import {
   ChevronLeft,
   ChevronRight,
-  Launch,
-  ExpandMore
+  ExpandMore,
+  NavigateNext
 } from '@mui/icons-material'
+import { getData, postData } from '../../api/api'
 import { useAuth } from '../../context/AuthContext'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 
 const formatExternalUrl = url => {
   if (!url) return ''
@@ -34,10 +30,19 @@ const formatExternalUrl = url => {
   return `https://${url}`
 }
 
-const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
+const ResourceRenderer = ({ 
+  resource, 
+  signedUrl, 
+  signedUrls, 
+  onMcqCompleted, 
+  mcqProgress,
+  onNext,
+  isLastResource
+}) => {
   const [selectedAnswers, setSelectedAnswers] = useState([])
   const [hasSubmitted, setHasSubmitted] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
+  const [attempts, setAttempts] = useState(mcqProgress?.attempts || 0)
   const audioRef = useRef(null)
   const mcqAudioRef = useRef(null)
   const [playCount, setPlayCount] = useState(0)
@@ -109,6 +114,9 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
       return
     }
 
+    const newAttempts = attempts + 1
+    setAttempts(newAttempts)
+
     const isAnswerCorrect =
       selectedAnswers.length === resource.content.mcq.correctAnswers.length &&
       selectedAnswers.every(answer =>
@@ -117,6 +125,9 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
 
     setIsCorrect(isAnswerCorrect)
     setHasSubmitted(true)
+
+    // Call the callback to update progress in the parent component
+    onMcqCompleted(resource._id, isAnswerCorrect, newAttempts)
   }
 
   const handleReset = () => {
@@ -135,20 +146,95 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
     }
 
     const isSelected = selectedAnswers.includes(option)
-    const isCorrect = resource.content.mcq.correctAnswers.includes(option)
+    const isCorrectOption = resource.content.mcq.correctAnswers.includes(option)
 
-    if (isSelected && isCorrect) {
-      return { bgcolor: '#4CAF50', color: 'white' }
-    } else if (isSelected && !isCorrect) {
-      return { bgcolor: '#f44336', color: 'white' }
-    } else if (!isSelected && isCorrect) {
-      return { bgcolor: '#4CAF50', color: 'white' }
+    if (isCorrect) {
+      if (isCorrectOption) {
+        return { bgcolor: '#4CAF50', color: 'white' }
+      }
+    } else {
+      if (isSelected) {
+        return { bgcolor: '#f44336', color: 'white' }
+      }
     }
+    
     return { border: '1px solid #ddd' }
   }
 
   const renderMCQ = () => {
     const alphabet = ['A', 'B', 'C', 'D'];
+    
+    if (mcqProgress?.completed && !hasSubmitted) {
+      return (
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom sx={{ color: '#000' }}>
+            {resource.content.mcq.question}
+          </Typography>
+
+          {/* MCQ Image */}
+          {resource.content.mcq?.imageFile && signedUrls[resource.content.mcq.imageFile] && (
+            <Box sx={{ mb: 2, maxWidth: '100%', overflow: 'hidden' }}>
+              <img
+                src={signedUrls[resource.content.mcq.imageFile]}
+                alt="Question"
+                style={{ maxWidth: '100%', height: 'auto' }}
+              />
+            </Box>
+          )}
+
+          {/* MCQ Audio Player */}
+          {resource.content.mcq?.audioFile && signedUrls[resource.content.mcq.audioFile] && (
+            <Box sx={{ mb: 2 }}>
+              <audio
+                ref={mcqAudioRef}
+                controls
+                style={{ width: '100%' }}
+                src={signedUrls[resource.content.mcq.audioFile]}
+              >
+                Your browser does not support the audio element.
+              </audio>
+            </Box>
+          )}
+
+          <Alert severity="success" sx={{ mb: 2 }}>
+            You have already completed this MCQ correctly! You can proceed to the next one.
+          </Alert>
+          
+          {/* Options with correct answers highlighted */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {resource.content.mcq.options.map((option, index) => (
+              <Paper
+                key={index}
+                sx={{
+                  p: 2,
+                  bgcolor: resource.content.mcq.correctAnswers.includes(option)
+                    ? 'success.main'  // Stronger green color for correct answers
+                    : 'white',
+                  color: resource.content.mcq.correctAnswers.includes(option)
+                    ? 'white'
+                    : 'inherit',
+                }}
+              >
+                <Typography>{`${alphabet[index]}. ${option}`}</Typography>
+              </Paper>
+            ))}
+          </Box>
+          
+          {/* Next button for already completed MCQs */}
+          {!isLastResource && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<NavigateNext />}
+              onClick={onNext}
+              sx={{ mt: 2 }}
+            >
+              Next
+            </Button>
+          )}
+        </Box>
+      );
+    }
     
     return (
       <Box sx={{ p: 3 }}>
@@ -156,7 +242,6 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
           {resource.content.mcq.question}
         </Typography>
 
-        {/* MCQ Image */}
         {resource.content.mcq?.imageFile && signedUrls[resource.content.mcq.imageFile] && (
           <Box sx={{ mb: 2, maxWidth: '100%', overflow: 'hidden' }}>
             <img
@@ -167,7 +252,6 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
           </Box>
         )}
 
-        {/* MCQ Audio Player */}
         {resource.content.mcq?.audioFile && signedUrls[resource.content.mcq.audioFile] && (
           <Box sx={{ mb: 2 }}>
             <audio
@@ -181,6 +265,12 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
           </Box>
         )}
 
+        {attempts > 0 && (
+          <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+            Attempts: {attempts}
+          </Typography>
+        )}
+
         {/* Options */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {resource.content.mcq.options.map((option, index) => (
@@ -189,22 +279,10 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
               sx={{
                 p: 2,
                 cursor: hasSubmitted ? 'default' : 'pointer',
-                bgcolor: hasSubmitted
-                  ? resource.content.mcq.correctAnswers.includes(option)
-                    ? '#e8f5e9'
-                    : selectedAnswers.includes(option)
-                    ? '#ffebee'
-                    : 'white'
-                  : selectedAnswers.includes(option)
-                  ? '#e3f2fd'
-                  : 'white',
+                ...getOptionStyle(option),
                 '&:hover': {
-                  bgcolor: hasSubmitted
-                    ? resource.content.mcq.correctAnswers.includes(option)
-                      ? '#e8f5e9'
-                      : selectedAnswers.includes(option)
-                      ? '#ffebee'
-                      : 'white'
+                  bgcolor: hasSubmitted 
+                    ? getOptionStyle(option).bgcolor || 'white'
                     : '#f5f5f5'
                 }
               }}
@@ -229,17 +307,34 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
             <Alert severity={isCorrect ? 'success' : 'error'}>
               {isCorrect ? 'Correct!' : 'Incorrect. Try again!'}
             </Alert>
-            <Button
-              variant="outlined"
-              onClick={handleReset}
-              sx={{ mt: 1 }}
-            >
-              Try Again
-            </Button>
+            
+            {/* Show Next button if answer is correct and not the last resource */}
+            {isCorrect && !isLastResource ? (
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<NavigateNext />}
+                onClick={onNext}
+                sx={{ mt: 1 }}
+              >
+                Next
+              </Button>
+            ) : (
+              /* Only show Try Again button if the answer was incorrect */
+              !isCorrect && (
+                <Button
+                  variant="outlined"
+                  onClick={handleReset}
+                  sx={{ mt: 1 }}
+                >
+                  Try Again
+                </Button>
+              )
+            )}
           </Box>
         )}
       </Box>
-    )
+    );
   }
 
   switch (resource.resourceType) {
@@ -570,39 +665,55 @@ const ResourceRenderer = ({ resource, signedUrl, signedUrls }) => {
   }
 }
 
+const getIdString = (idValue) => {
+  if (typeof idValue === 'string') {
+    return idValue;
+  } else if (idValue && idValue._id) {
+    return idValue._id.toString();
+  } else if (idValue && typeof idValue.toString === 'function') {
+    return idValue.toString();
+  }
+  return null;
+};
+
 const LearnerFrame = () => {
-  const [resources, setResources] = useState([])
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [signedUrls, setSignedUrls] = useState({})
-  const [isLoading, setIsLoading] = useState(true)
-  const navigate = useNavigate()
-  const { courseId, unitId, sectionId } = useParams()
-  const { user } = useAuth()
-  const [sectionProgress, setSectionProgress] = useState(0)
-  const [urlRefreshTimer, setUrlRefreshTimer] = useState(null)
+  // Consolidated state management
+  const [resources, setResources] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [signedUrls, setSignedUrls] = useState({});
+  const [loading, setLoading] = useState({
+    resources: true,
+    urls: false,
+    progress: false
+  });
+  const [progress, setProgress] = useState({
+    section: 0,
+    mcq: 0,
+    totalMcqs: 0,
+    completedMcqs: 0,
+    studentProgress: null
+  });
+  const [urlRefreshTimer, setUrlRefreshTimer] = useState(null);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  
+  const navigate = useNavigate();
+  const { courseId, unitId, sectionId } = useParams();
+  const { user } = useAuth();
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 2500)
-
-    return () => clearTimeout(timer)
-  }, [])
-
-  // Function to get signed URL from S3
+  // Optimized function using getData from api.js
   const getSignedS3Url = async (fileName, folder) => {
     try {
-      const response = await axios.get(`${url}resources/files/url/${folder}/${fileName}`)
-      return response.data.signedUrl
+      const response = await getData(`resources/files/url/${folder}/${fileName}`);
+      return response.data.signedUrl;
     } catch (error) {
-      console.error('Error getting signed URL:', error, fileName, folder)
-      return null
+      console.error('Error getting signed URL:', error);
+      return null;
     }
-  }
+  };
 
   // Function to fetch all required signed URLs for a resource
   const fetchSignedUrls = async (resource) => {
-    const urls = {}
+    const urls = {};
     
     try {
       // Main resource file
@@ -610,7 +721,7 @@ const LearnerFrame = () => {
         urls[resource.content.fileName] = await getSignedS3Url(
           resource.content.fileName,
           resource.resourceType
-        )
+        );
       }
 
       // Background image
@@ -618,7 +729,7 @@ const LearnerFrame = () => {
         urls[resource.content.backgroundImage] = await getSignedS3Url(
           resource.content.backgroundImage,
           'BACKGROUNDS'
-        )
+        );
       }
 
       // MCQ related files
@@ -627,299 +738,545 @@ const LearnerFrame = () => {
           urls[resource.content.mcq.imageFile] = await getSignedS3Url(
             resource.content.mcq.imageFile,
             'MCQ_IMAGES'
-          )
+          );
         }
         if (resource.content.mcq?.audioFile) {
           urls[resource.content.mcq.audioFile] = await getSignedS3Url(
             resource.content.mcq.audioFile,
             'MCQ_AUDIO'
-          )
+          );
         }
       }
 
-      return urls
+      return urls;
     } catch (error) {
-      console.error('Error fetching signed URLs:', error)
-      return urls
+      console.error('Error fetching signed URLs:', error);
+      return urls;
     }
-  }
+  };
 
-  // Modified fetchResources to include signed URL fetching
+  // Optimized fetchResources to batch operations
   const fetchResources = async () => {
-    setIsLoading(true)
+    setLoading(prev => ({ ...prev, resources: true }));
     try {
-      const response = await getData(`resources/${sectionId}`)
+      const response = await getData(`resources/${sectionId}`);
       if (response.status === 200 && response.data.resources) {
-        setResources(response.data.resources)
+        const resourcesList = response.data.resources;
+        setResources(resourcesList);
         
         // Fetch signed URLs for all resources
-        const allUrls = {}
-        for (const resource of response.data.resources) {
-          const resourceUrls = await fetchSignedUrls(resource)
-          Object.assign(allUrls, resourceUrls)
+        setLoading(prev => ({ ...prev, urls: true }));
+        const allUrls = {};
+        for (const resource of resourcesList) {
+          const resourceUrls = await fetchSignedUrls(resource);
+          Object.assign(allUrls, resourceUrls);
         }
-        setSignedUrls(allUrls)
+        setSignedUrls(allUrls);
+        setLoading(prev => ({ ...prev, urls: false }));
 
         // Set up URL refresh timer (every 45 minutes)
-        if (urlRefreshTimer) clearInterval(urlRefreshTimer)
+        if (urlRefreshTimer) clearInterval(urlRefreshTimer);
         const timer = setInterval(() => {
-          refreshSignedUrls(response.data.resources)
-        }, 45 * 60 * 1000) // 45 minutes
-        setUrlRefreshTimer(timer)
+          refreshSignedUrls(resourcesList);
+        }, 45 * 60 * 1000); // 45 minutes
+        setUrlRefreshTimer(timer);
+        
+        // After resources are loaded, fetch student progress
+        await fetchStudentProgress(resourcesList);
       }
     } catch (error) {
-      console.error('Error fetching resources:', error)
+      console.error('Error fetching resources:', error);
     } finally {
-      setIsLoading(false)
+      setLoading(prev => ({ ...prev, resources: false }));
     }
-  }
+  };
 
   // Function to refresh signed URLs
   const refreshSignedUrls = async (resourcesList) => {
-    const newUrls = {}
-    for (const resource of resourcesList) {
-      const resourceUrls = await fetchSignedUrls(resource)
-      Object.assign(newUrls, resourceUrls)
+    setLoading(prev => ({ ...prev, urls: true }));
+    try {
+      const newUrls = {};
+      for (const resource of resourcesList) {
+        const resourceUrls = await fetchSignedUrls(resource);
+        Object.assign(newUrls, resourceUrls);
+      }
+      setSignedUrls(newUrls);
+    } catch (error) {
+      console.error('Error refreshing signed URLs:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, urls: false }));
     }
-    setSignedUrls(newUrls)
-  }
+  };
 
   // Clean up timer on component unmount
   useEffect(() => {
     return () => {
       if (urlRefreshTimer) {
-        clearInterval(urlRefreshTimer)
+        clearInterval(urlRefreshTimer);
       }
-    }
-  }, [urlRefreshTimer])
+    };
+  }, [urlRefreshTimer]);
 
-  // Fetch all thumbnails on mount
+  // Fetch all resources on mount
   useEffect(() => {
-    fetchResources()
-  }, [sectionId])
+    fetchResources();
+  }, [sectionId]);
 
   // Load main resource content only when clicked
   useEffect(() => {
     const fetchResourceContent = async () => {
-      if (resources[currentIndex]) {
-        const resource = resources[currentIndex]
-
-        if (resource.resourceType === 'MCQ') {
-          // Fetch MCQ image if exists
-          if (resource.content.mcq?.imageFile && !signedUrls[resource.content.mcq.imageFile]) {
-            const mcqImageUrl = await getSignedS3Url(resource.content.mcq.imageFile, 'MCQ_IMAGES')
-            setSignedUrls(prev => ({
-              ...prev,
-              [resource.content.mcq.imageFile]: mcqImageUrl
-            }))
-          }
-          
-          // Fetch MCQ audio if exists
-          if (resource.content.mcq?.audioFile && !signedUrls[resource.content.mcq.audioFile]) {
-            const mcqAudioUrl = await getSignedS3Url(resource.content.mcq.audioFile, 'MCQ_AUDIO')
-            setSignedUrls(prev => ({
-              ...prev,
-              [resource.content.mcq.audioFile]: mcqAudioUrl
-            }))
-          }
+      if (!resources[currentIndex]) return;
+      
+      const resource = resources[currentIndex];
+      const urlsToFetch = [];
+      
+      // Determine which URLs need to be fetched
+      if (resource.resourceType === 'MCQ') {
+        if (resource.content.mcq?.imageFile && !signedUrls[resource.content.mcq.imageFile]) {
+          urlsToFetch.push({
+            key: resource.content.mcq.imageFile,
+            fileName: resource.content.mcq.imageFile,
+            folder: 'MCQ_IMAGES'
+          });
         }
-
-        // Load main resource content if not already loaded
-        if (
-          resource.content.fileName &&
-          !signedUrls[resource.content.fileName]
-        ) {
-          const fileUrl = await getSignedS3Url(
-            resource.content.fileName,
-            resource.resourceType
-          )
-          setSignedUrls(prev => ({
-            ...prev,
-            [resource.content.fileName]: fileUrl
-          }))
-        }
-
-        // Load background images
-        if (
-          (resource.resourceType === 'AUDIO' ||
-            resource.resourceType === 'TEXT' ||
-            resource.resourceType === 'PPT') &&
-          resource.content.backgroundImage &&
-          !signedUrls[resource.content.backgroundImage]
-        ) {
-          const bgUrl = await getSignedS3Url(
-            resource.content.backgroundImage,
-            'BACKGROUNDS'
-          )
-          setSignedUrls(prev => ({
-            ...prev,
-            [resource.content.backgroundImage]: bgUrl
-          }))
-        }
-
-        // Load PPT preview images
-        if (
-          resource.resourceType === 'PPT' &&
-          resource.content.previewImageUrl &&
-          !signedUrls[resource.content.previewImageUrl]
-        ) {
-          const previewUrl = await getSignedS3Url(
-            resource.content.previewImageUrl,
-            'PPT'
-          )
-          setSignedUrls(prev => ({
-            ...prev,
-            [resource.content.previewImageUrl]: previewUrl
-          }))
+        
+        if (resource.content.mcq?.audioFile && !signedUrls[resource.content.mcq.audioFile]) {
+          urlsToFetch.push({
+            key: resource.content.mcq.audioFile,
+            fileName: resource.content.mcq.audioFile,
+            folder: 'MCQ_AUDIO'
+          });
         }
       }
+
+      // Main resource content
+      if (resource.content.fileName && !signedUrls[resource.content.fileName]) {
+        urlsToFetch.push({
+          key: resource.content.fileName,
+          fileName: resource.content.fileName,
+          folder: resource.resourceType
+        });
+      }
+
+      // Background images
+      if ((resource.resourceType === 'AUDIO' || resource.resourceType === 'TEXT' || 
+           resource.resourceType === 'PPT') && 
+          resource.content.backgroundImage && 
+          !signedUrls[resource.content.backgroundImage]) {
+        urlsToFetch.push({
+          key: resource.content.backgroundImage,
+          fileName: resource.content.backgroundImage,
+          folder: 'BACKGROUNDS'
+        });
+      }
+
+      // PPT preview images
+      if (resource.resourceType === 'PPT' && 
+          resource.content.previewImageUrl && 
+          !signedUrls[resource.content.previewImageUrl]) {
+        urlsToFetch.push({
+          key: resource.content.previewImageUrl,
+          fileName: resource.content.previewImageUrl,
+          folder: 'PPT'
+        });
+      }
+      
+      // Fetch all needed URLs in parallel
+      if (urlsToFetch.length > 0) {
+        setLoading(prev => ({ ...prev, urls: true }));
+        try {
+          const results = await Promise.all(
+            urlsToFetch.map(item => 
+              getSignedS3Url(item.fileName, item.folder)
+                .then(url => ({ key: item.key, url }))
+            )
+          );
+          
+          const newUrls = { ...signedUrls };
+          results.forEach(result => {
+            if (result.url) {
+              newUrls[result.key] = result.url;
+            }
+          });
+          
+          setSignedUrls(newUrls);
+        } catch (error) {
+          console.error('Error fetching resource content:', error);
+        } finally {
+          setLoading(prev => ({ ...prev, urls: false }));
+        }
+      }
+    };
+
+    fetchResourceContent();
+  }, [currentIndex, resources]);
+
+  // Update last accessed resource
+  const updateLastAccessedResource = async (resourceId) => {
+    if (!user?.studentId) return;
+    
+    try {
+      await postData(`student-progress/last-accessed/${user.studentId}/${courseId}/${unitId}/${sectionId}`, {
+        resourceId: resourceId
+      });
+    } catch (error) {
+      console.error('Error updating last accessed resource:', error);
     }
+  };
 
-    fetchResourceContent()
-  }, [currentIndex, resources])
-
+  // Optimized navigation handlers
   const handleNext = () => {
     if (currentIndex < resources.length - 1) {
-      setCurrentIndex(prev => prev + 1)
+      const nextIndex = currentIndex + 1;
+      setCurrentIndex(nextIndex);
+      
+      // Update last accessed resource
+      if (resources[nextIndex]) {
+        updateLastAccessedResource(resources[nextIndex]._id);
+      }
+      
+      // Record resource view
+      if (resources[nextIndex]) {
+        recordResourceView(resources[nextIndex]);
+      }
     }
-  }
+  };
 
   const handlePrevious = () => {
     if (currentIndex > 0) {
-      setCurrentIndex(prev => prev - 1)
-    }
-  }
-
-  const getThumbnailContent = (resource, signedUrl) => {
-    switch (resource.resourceType) {
-      case 'VIDEO':
-      case 'IMAGE':
-      case 'PDF':
-        return (
-          <Box sx={{ width: '100%', height: '100%', bgcolor: '#000' }}>
-            {resource.content.fileName && (
-              <img
-                src={signedUrl}
-                alt={resource.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            )}
-          </Box>
-        )
+      const prevIndex = currentIndex - 1;
+      setCurrentIndex(prevIndex);
       
-      case 'AUDIO':
-        return (
-          <Box sx={{ width: '100%', height: '100%', bgcolor: '#000' }}>
-            {resource.content.backgroundImage && (
-              <img
-                src={signedUrls[resource.content.backgroundImage]}
-                alt={resource.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            )}
-          </Box>
-        )
-
-      case 'TEXT':
-        return (
-          <Box sx={{ width: '100%', height: '100%', bgcolor: '#000' }}>
-            <Typography
-              variant='body1'
-              sx={{
-                color: 'white',
-                p: 1,
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              {resource.content.text}
-            </Typography>
-          </Box>
-        )
-
-      default:
-        return <Typography>Unsupported resource type</Typography>
-    }
-  }
-
-  const recordResourceView = async (resource) => {
-    try {
-      if (!user.studentId) {
-        console.error('No student ID found')
-        return
+      // Update last accessed resource
+      if (resources[prevIndex]) {
+        updateLastAccessedResource(resources[prevIndex]._id);
       }
+      
+      // Record resource view
+      if (resources[prevIndex]) {
+        recordResourceView(resources[prevIndex]);
+      }
+    }
+  };
 
+  // Check section completion
+  const checkSectionCompletion = async () => {
+    if (!user?.studentId) return;
+    
+    try {
+      const response = await getData(`section-unlock/check-completion/${user.studentId}/${courseId}/${unitId}/${sectionId}`);
+      return response.status === 200 && response.data.isCompleted;
+    } catch (error) {
+      console.error('Error checking section completion:', error);
+      return false;
+    }
+  };
+
+  // Optimized MCQ completion handler
+  const handleMcqCompleted = async (resourceId, isCorrect, attempts) => {
+    if (!user?.studentId || !isCorrect) return;
+    
+    try {
+      // Mark the resource as correctly answered in our local state
+      const updatedResources = [...resources];
+      const resourceIndex = updatedResources.findIndex(r => r._id === resourceId);
+      
+      if (resourceIndex >= 0) {
+        updatedResources[resourceIndex] = {
+          ...updatedResources[resourceIndex],
+          isCorrectlyAnswered: true
+        };
+        setResources(updatedResources);
+      }
+      
+      // Update the progress on the server
+      await postData(`student-progress/${user.studentId}/${courseId}/${unitId}/${sectionId}/${resourceId}`, {
+        completed: true,
+        attempts
+      });
+      
+      // Also update this as the last accessed resource
+      await updateLastAccessedResource(resourceId);
+      
+      // Refresh all progress data
+      await fetchStudentProgress();
+      
+      // Check if all MCQs in the section are completed
+      await checkSectionCompletion();
+    } catch (error) {
+      console.error('Error updating MCQ progress:', error);
+    }
+  };
+
+  // Optimized MCQ completion check
+  const isCurrentMcqCompleted = () => {
+    if (!resources[currentIndex] || resources[currentIndex].resourceType !== 'MCQ') {
+      return true; // Not an MCQ, so navigation is allowed
+    }
+    
+    const currentResource = resources[currentIndex];
+    
+    // Check if the resource is marked as correctly answered in our local state
+    if (currentResource.isCorrectlyAnswered === true) {
+      return true;
+    }
+    
+    // Also check the mcqProgress data from the server
+    if (progress.studentProgress && progress.studentProgress.mcqProgress) {
+      const mcqProgress = progress.studentProgress.mcqProgress.find(
+        p => getIdString(p.resourceId) === currentResource._id.toString()
+      );
+      
+      if (mcqProgress && mcqProgress.completed) {
+        // If we find it's completed in the progress data but not marked locally,
+        // update our local state
+        const updatedResources = [...resources];
+        updatedResources[currentIndex] = {
+          ...updatedResources[currentIndex],
+          isCorrectlyAnswered: true
+        };
+        setResources(updatedResources);
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
+  // Record resource view
+  const recordResourceView = async (resource) => {
+    if (!user?.studentId) return;
+    
+    try {
       await postData('resource-views/record', {
         studentId: user.studentId,
         resourceId: resource._id,
         courseId,
         unitId,
         sectionId
-      })
+      });
     } catch (error) {
-      console.error('Error recording resource view:', error)
+      console.error('Error recording resource view:', error);
     }
-  }
+  };
 
+  // Record view when current resource changes
   useEffect(() => {
     if (resources[currentIndex]) {
-      recordResourceView(resources[currentIndex])
+      recordResourceView(resources[currentIndex]);
     }
-  }, [currentIndex, resources])
+  }, [currentIndex, resources]);
 
+  // Optimized section progress calculation with memoization
   useEffect(() => {
     const fetchSectionProgress = async () => {
       if (!user?.studentId || !sectionId || !resources?.length) {
-        setSectionProgress(0)
-        return
+        setProgress(prev => ({ ...prev, section: 0 }));
+        return;
       }
 
+      setLoading(prev => ({ ...prev, progress: true }));
       try {
-        const response = await getData(`resource-views/student/${user.studentId}`)
+        const response = await getData(`resource-views/student/${user.studentId}`);
         if (response.status === 200) {
-          const allViews = response.data.data
+          const allViews = response.data.data;
           
           // Filter views for the current section
           const currentSectionViews = allViews.filter(view => 
             view.sectionId?._id?.toString() === sectionId.toString()
-          )
+          );
 
           // Get unique viewed resource IDs in current section
-          const viewedResourceIds = new Set()
+          const viewedResourceIds = new Set();
           currentSectionViews.forEach(view => {
-            const resourceId = view.resourceId?._id?.toString() || view.resourceId?.toString()
+            const resourceId = getIdString(view.resourceId);
             if (resourceId) {
-              viewedResourceIds.add(resourceId)
+              viewedResourceIds.add(resourceId);
             }
-          })
+          });
 
           // Calculate progress
-          const totalResourcesInSection = resources.length
-          const viewedResourcesCount = viewedResourceIds.size
+          const totalResourcesInSection = resources.length;
+          const viewedResourcesCount = viewedResourceIds.size;
+          const calculatedProgress = (viewedResourcesCount / totalResourcesInSection) * 100;
           
-          console.log('Progress Calculation:', {
-            totalResourcesInSection,
-            viewedResourcesCount,
-            viewedResourceIds: Array.from(viewedResourceIds),
-            resourceIds: resources.map(r => r._id.toString())
-          })
-
-          const calculatedProgress = (viewedResourcesCount / totalResourcesInSection) * 100
-          setSectionProgress(calculatedProgress)
+          setProgress(prev => ({ ...prev, section: calculatedProgress }));
         }
       } catch (error) {
-        console.error('Error calculating section progress:', error)
-        setSectionProgress(0)
+        console.error('Error calculating section progress:', error);
+        setProgress(prev => ({ ...prev, section: 0 }));
+      } finally {
+        setLoading(prev => ({ ...prev, progress: false }));
+      }
+    };
+
+    fetchSectionProgress();
+  }, [user?.studentId, sectionId, resources.length, currentIndex]);
+
+  // Optimized student progress fetching
+  const fetchStudentProgress = async (resourcesList = null) => {
+    if (!user?.studentId) return;
+    
+    // Use the passed resources list or the current state
+    const currentResources = resourcesList || resources;
+    if (!currentResources.length) return;
+    
+    setLoading(prev => ({ ...prev, progress: true }));
+    try {
+      const response = await getData(`student-progress/${user.studentId}/${courseId}/${unitId}/${sectionId}`);
+      if (response.status === 200) {
+        const progressData = response.data.data.progress;
+        
+        // Update progress state
+        setProgress({
+          ...progress,
+          studentProgress: progressData,
+          totalMcqs: response.data.data.totalMcqs,
+          completedMcqs: response.data.data.completedMcqs,
+          mcq: response.data.data.mcqProgressPercentage
+        });
+        
+        // Mark all completed MCQs in our local state
+        if (progressData && progressData.mcqProgress && progressData.mcqProgress.length > 0) {
+          const completedMcqIds = progressData.mcqProgress
+            .filter(p => p.completed)
+            .map(p => getIdString(p.resourceId))
+            .filter(id => id !== null);
+          
+          if (completedMcqIds.length > 0 && currentResources.length > 0) {
+            const updatedResources = [...currentResources];
+            
+            // Mark all completed MCQs
+            updatedResources.forEach((resource, index) => {
+              if (resource.resourceType === 'MCQ' && 
+                  completedMcqIds.includes(resource._id.toString())) {
+                updatedResources[index] = {
+                  ...updatedResources[index],
+                  isCorrectlyAnswered: true
+                };
+              }
+            });
+            
+            setResources(updatedResources);
+          }
+        }
+        
+        // After marking completed MCQs, navigate to the last accessed resource
+        if (!initialLoadComplete && progressData && currentResources.length > 0) {
+          navigateToLastAccessedResource(progressData, currentResources);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching student progress:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, progress: false }));
+      setInitialLoadComplete(true);
+    }
+  };
+
+  // Simplified navigation to last accessed resource
+  const navigateToLastAccessedResource = (progressData, resourcesList = null) => {
+    // Use the passed resources list or the current state
+    const currentResources = resourcesList || resources;
+    
+    if (!progressData || !currentResources.length) return;
+    
+    // Try to find the last accessed resource
+    const lastAccessedResourceId = getIdString(progressData.lastAccessedResource);
+    
+    if (lastAccessedResourceId) {
+      const resourceIndex = currentResources.findIndex(
+        r => r._id.toString() === lastAccessedResourceId
+      );
+      
+      if (resourceIndex !== -1) {
+        // Check if this is an MCQ and if it's completed
+        const resource = currentResources[resourceIndex];
+        if (resource.resourceType === 'MCQ') {
+          // Find the MCQ progress for this resource
+          const mcqProgress = progressData.mcqProgress.find(p => 
+            getIdString(p.resourceId) === resource._id.toString()
+          );
+          
+          if (mcqProgress && mcqProgress.completed) {
+            // Mark as correctly answered in our local state
+            const updatedResources = [...currentResources];
+            updatedResources[resourceIndex] = {
+              ...updatedResources[resourceIndex],
+              isCorrectlyAnswered: true
+            };
+            setResources(updatedResources);
+            setCurrentIndex(resourceIndex);
+            return;
+          }
+        } else {
+          // Not an MCQ, just navigate to it
+          setCurrentIndex(resourceIndex);
+          return;
+        }
       }
     }
+    
+    // If no lastAccessedResource or it wasn't found, find the last completed MCQ
+    if (progressData.mcqProgress && progressData.mcqProgress.length > 0) {
+      // Get all completed MCQs
+      const completedMcqs = progressData.mcqProgress
+        .filter(p => p.completed)
+        .map(p => getIdString(p.resourceId))
+        .filter(id => id !== null);
+      
+      if (completedMcqs.length > 0) {
+        // Find the index of the last completed MCQ in our resources array
+        let lastCompletedIndex = -1;
+        
+        // Iterate through resources to find the last completed MCQ
+        for (let i = 0; i < currentResources.length; i++) {
+          const resource = currentResources[i];
+          if (
+            resource.resourceType === 'MCQ' && 
+            completedMcqs.includes(resource._id.toString())
+          ) {
+            lastCompletedIndex = i;
+            
+            // Mark as correctly answered in our local state
+            const updatedResources = [...currentResources];
+            updatedResources[i] = {
+              ...updatedResources[i],
+              isCorrectlyAnswered: true
+            };
+            setResources(updatedResources);
+          }
+        }
+        
+        // If we found a completed MCQ, navigate to the next resource after it
+        if (lastCompletedIndex !== -1 && lastCompletedIndex < currentResources.length - 1) {
+          setCurrentIndex(lastCompletedIndex + 1);
+          return;
+        } else if (lastCompletedIndex !== -1) {
+          // If it's the last resource, just navigate to it
+          setCurrentIndex(lastCompletedIndex);
+          return;
+        }
+      }
+    }
+    
+    // If no completed MCQs found, start from the beginning
+    setCurrentIndex(0);
+  };
 
-    // Fetch progress whenever resources change or when a new resource view is recorded
-    fetchSectionProgress()
-  }, [user?.studentId, sectionId, resources, currentIndex])  // Added currentIndex to refresh on resource change
+  // Get current MCQ progress
+  const getCurrentMcqProgress = () => {
+    if (!progress.studentProgress || !resources[currentIndex]) return null;
+    
+    return progress.studentProgress.mcqProgress.find(p => 
+      getIdString(p.resourceId) === resources[currentIndex]._id.toString()
+    );
+  };
 
-  if (isLoading) {
+  // Determine if we should show loading state
+  const isPageLoading = loading.resources || (resources.length === 0);
+
+  if (isPageLoading) {
     return (
       <Paper
         elevation={5}
@@ -944,14 +1301,20 @@ const LearnerFrame = () => {
         />
         <Typography variant='h5'>Loading Learner's Frame</Typography>
       </Paper>
-    )
+    );
   }
 
   return (
     <Grid container>
       <Grid size={12}>
         <Paper elevation={5} sx={{ borderRadius: '16px', overflow: 'hidden' }}>
-          <Box sx={{ p: 1 }}>
+          <Box sx={{ 
+            p: 1, 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            borderBottom: '1px solid #f0f0f0'
+          }}>
             <Typography
               variant='body2'
               sx={{
@@ -964,6 +1327,11 @@ const LearnerFrame = () => {
               onClick={() => navigate(`/units/${courseId}/section/${unitId}`)}
             >
               <ChevronLeft sx={{ color: 'primary.main' }} /> Back To Section
+            </Typography>
+            
+            {/* Section Viewed percentage moved here */}
+            <Typography variant='body2' sx={{ color: 'text.secondary' }}>
+              Section Viewed: {Math.round(progress.section)}%
             </Typography>
           </Box>
 
@@ -979,100 +1347,106 @@ const LearnerFrame = () => {
             {/* Resource Title Bar */}
             <Box
               sx={{
-                p: 1,
+                p: 2,
                 display: 'flex',
-                alignItems: 'center',
                 justifyContent: 'space-between',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+                alignItems: 'center'
               }}
             >
-              <Typography variant='h6'>
-                {resources[currentIndex]?.name}
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                {resources[currentIndex]?.content?.externalLinks?.map((link, index) => (
-                  link.url && (
-                    <Box
-                      key={index}
-                      component='span'
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1
-                      }}
-                    >
-                      <IconButton
-                        href={formatExternalUrl(link.url)}
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        component='a'
-                        sx={{
-                          color: 'white',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1,
-                          '&:hover': {
-                            bgcolor: 'rgba(255, 255, 255, 0.1)'
-                          }
-                        }}
-                      >
-                        <Launch />
-                        <Typography
-                          variant='body2'
-                          sx={{
-                            fontSize: '14px',
-                            display: { xs: 'none', sm: 'block' }
-                          }}
-                        >
-                          {link.name || 'External Link'}
-                        </Typography>
-                      </IconButton>
-                    </Box>
-                  )
-                ))}
-                <IconButton
-                  onClick={handlePrevious}
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant='h6' sx={{ mr: 1 }}>
+                  {resources[currentIndex]?.name}
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  variant='contained'
+                  color='inherit'
+                  size='small'
                   disabled={currentIndex === 0}
+                  onClick={handlePrevious}
                   sx={{
+                    minWidth: '36px',
+                    bgcolor: 'rgba(255, 255, 255, 0.2)',
                     color: 'white',
+                    '&:hover': {
+                      bgcolor: 'rgba(255, 255, 255, 0.3)'
+                    },
                     '&.Mui-disabled': {
-                      color: 'rgba(255, 255, 255, 0.3)'
+                      bgcolor: 'rgba(255, 255, 255, 0.1)',
+                      color: 'rgba(255, 255, 255, 0.5)'
                     }
                   }}
                 >
                   <ChevronLeft />
-                </IconButton>
-                <IconButton
+                </Button>
+                <Button
+                  variant='contained'
+                  color='inherit'
+                  size='small'
+                  disabled={
+                    currentIndex === resources.length - 1 ||
+                    (resources[currentIndex]?.resourceType === 'MCQ' &&
+                      !isCurrentMcqCompleted())
+                  }
                   onClick={handleNext}
-                  disabled={currentIndex === resources.length - 1}
                   sx={{
+                    minWidth: '36px',
+                    bgcolor: 'rgba(255, 255, 255, 0.2)',
                     color: 'white',
+                    '&:hover': {
+                      bgcolor: 'rgba(255, 255, 255, 0.3)'
+                    },
                     '&.Mui-disabled': {
-                      color: 'rgba(255, 255, 255, 0.3)'
+                      bgcolor: 'rgba(255, 255, 255, 0.1)',
+                      color: 'rgba(255, 255, 255, 0.5)'
                     }
                   }}
                 >
                   <ChevronRight />
-                </IconButton>
+                </Button>
               </Box>
             </Box>
-
-            {/* Main Content */}
-            <Box sx={{ bgcolor: 'white' }}>
-              {resources[currentIndex] && (
-                <ResourceRenderer
-                  resource={resources[currentIndex]}
-                  signedUrl={signedUrls[resources[currentIndex]?.content?.fileName]}
-                  signedUrls={signedUrls}
-                />
-              )}
-            </Box>
           </Box>
-          <Box sx={{ mt: 2, px: 2, pb: 2 }}>
-            <Typography variant='body2' gutterBottom>
-              Section Progress: {Math.round(sectionProgress)}%
-            </Typography>
-            <LinearProgress variant='determinate' value={sectionProgress} />
+
+          {/* Main Content */}
+          <Box sx={{ bgcolor: 'white' }}>
+            {resources[currentIndex] && (
+              <ResourceRenderer
+                key={`resource-${resources[currentIndex]._id}-${currentIndex}`}
+                resource={resources[currentIndex]}
+                signedUrl={signedUrls[resources[currentIndex]?.content?.fileName]}
+                signedUrls={signedUrls}
+                onMcqCompleted={handleMcqCompleted}
+                mcqProgress={getCurrentMcqProgress()}
+                onNext={handleNext}  // Pass the handleNext function to ResourceRenderer
+                isLastResource={currentIndex === resources.length - 1}
+              />
+            )}
+          </Box>
+
+          <Box sx={{ px: 2, py: 2, borderTop: '1px solid #f0f0f0' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant='body2' fontWeight="medium">
+                Your Progress (MCQs): {progress.mcq}%
+              </Typography>
+              <Typography variant='body2' color="text.secondary">
+                {progress.completedMcqs} of {progress.totalMcqs} MCQs completed
+              </Typography>
+            </Box>
+            <LinearProgress 
+              variant='determinate' 
+              value={progress.mcq} 
+              sx={{ 
+                height: 8,  // Thickened progress bar
+                borderRadius: 4,
+                '& .MuiLinearProgress-bar': { 
+                  backgroundColor: 'success.main',
+                  borderRadius: 4
+                } 
+              }} 
+            />
           </Box>
         </Paper>
       </Grid>

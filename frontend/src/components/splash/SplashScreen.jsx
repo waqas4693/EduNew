@@ -85,9 +85,10 @@ const SplashScreen = () => {
       >
         <Box
           sx={{
+            mx: 3,
             width: '10%',
-            height: '50%',
-            backgroundColor: '#BC0000'
+            height: '35%',
+            backgroundColor: '#ff2b0c'
           }}
         />
         <Box
@@ -96,16 +97,17 @@ const SplashScreen = () => {
           component='img'
           sx={{
             px: 1,
-            width: '20%',
+            width: '15%',
             height: '100%',
             objectFit: 'contain'
           }}
         />
         <Box
           sx={{
+            mx: 3,
             flexGrow: 1,
-            height: '50%',
-            backgroundColor: '#BC0000'
+            height: '35%',
+            backgroundColor: '#ff2b0c'
           }}
         />
       </Box>
@@ -145,10 +147,47 @@ const SplashScreen = () => {
       <Box
         sx={{
           width: '100%',
-          height: '70px',
-          backgroundColor: '#1F7EC2'
+          height: '150px',
+          display: 'flex',
+          alignItems: 'center'
         }}
-      />
+      >
+        <Box
+          sx={{
+            mx: 3,
+            width: '75%',
+            height: '30%',
+            backgroundColor: '#0070c0'
+          }}
+        />
+        <Box
+          alt='Logo'
+          src='/ehouse-logo.svg'
+          component='img'
+          sx={{
+            px: 1,
+            width: '10%',
+            height: '90%',
+            objectFit: 'contain'
+          }}
+        />
+        <Box
+          sx={{
+            mx: 3,
+            flexGrow: 1,
+            height: '30%',
+            backgroundColor: '#0070c0'
+          }}
+        />
+      </Box>
+      {/* <Box
+        sx={{
+          m: 3,
+          width: '100%',
+          height: '10%',
+          backgroundColor: '#0070c0'
+        }}
+      /> */}
     </Box>
   )
 }

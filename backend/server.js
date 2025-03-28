@@ -24,6 +24,8 @@ import resourceViewRoutes from './routes/resourceView.js'
 import assessmentReviewRoutes from './routes/assessmentReview.js'
 import assessmentAttemptRoutes from './routes/assessmentAttempt.js'
 import s3Routes from './routes/s3.js'
+import sectionUnlockStatusRoutes from './routes/sectionUnlockStatusRoutes.js'
+import studentProgressRoutes from './routes/studentProgress.js'
 import bulkUploadRoutes from './routes/bulkUpload.js'
 
 /* CONFIGURATION */
@@ -82,6 +84,8 @@ app.use('/api/resources', upload.fields([
   { name: 'mcqImage', maxCount: 1 },
   { name: 'mcqAudio', maxCount: 1 }
 ]), resourceRoutes)
+app.use('/api/section-unlock', sectionUnlockStatusRoutes)
+
 app.use('/api/assessments', assessmentRoutes)
 app.use('/api/assessment-attempts', assessmentAttemptRoutes)
 app.use('/api/assessment-review', assessmentReviewRoutes)
@@ -90,6 +94,7 @@ app.use('/api/resources/files', s3Routes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/bulk-upload', bulkUploadRoutes)
+app.use('/api/student-progress', studentProgressRoutes)
 mongoose.set('strictQuery', false)
 
 await mongoose
