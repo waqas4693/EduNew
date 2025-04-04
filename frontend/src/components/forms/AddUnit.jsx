@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Box,
   TextField,
@@ -7,38 +7,80 @@ import {
   Autocomplete,
   Divider,
   IconButton,
-  Alert
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material'
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material'
 import { postData, getData, putData } from '../../api/api'
+import NumberInput from '../common/NumberInput'
+import { debounce } from 'lodash'
 
 const AddUnit = ({ courseId, editMode }) => {
-  const [units, setUnits] = useState([
-    {
-      name: '',
-      number: null,
-      courseId: null
-    }
-  ])
+  const [units, setUnits] = useState([])
   const [courses, setCourses] = useState([])
   const [selectedCourse, setSelectedCourse] = useState(null)
   const [error, setError] = useState('')
   const [nextNumber, setNextNumber] = useState(1)
+  const [numberError, setNumberError] = useState('')
+  const [swapMode, setSwapMode] = useState(false)
+  const [selectedUnits, setSelectedUnits] = useState([])
+  const [insertMode, setInsertMode] = useState(false)
+
+  const debouncedNameUpdate = useCallback(
+    debounce(async (unitId, newName) => {
+      try {
+        const response = await putData(`units/${unitId}`, { name: newName })
+        if (response.status === 200) {
+          setUnits(prev => prev.map(unit => 
+            unit._id === unitId ? { ...unit, name: newName } : unit
+          ))
+        }
+      } catch (error) {
+        console.error('Error updating unit name:', error)
+        setError(error.response?.data?.message || 'Failed to update unit name')
+      }
+    }, 500),
+    []
+  )
+
+  useEffect(() => {
+    fetchCourses()
+  }, [])
+
+  useEffect(() => {
+    if (editMode && courseId && courses.length > 0) {
+      const course = courses.find(c => c._id === courseId)
+      if (course) {
+        setSelectedCourse(course)
+        fetchExistingUnits(courseId)
+      }
+    }
+  }, [editMode, courseId, courses])
 
   const fetchCourses = async () => {
     try {
       const response = await getData('courses')
       if (response.status === 200) {
         setCourses(response.data.data)
-        if (editMode && courseId) {
-          const course = response.data.data.find(c => c._id === courseId)
-          setSelectedCourse(course)
-          handleUnitChange(0, 'courseId', course?._id)
-        }
       }
     } catch (error) {
       console.error('Error fetching courses:', error)
       setError('Failed to fetch courses')
+    }
+  }
+
+  const fetchExistingUnits = async (courseId) => {
+    try {
+      const response = await getData(`units/${courseId}`)
+      if (response.status === 200) {
+        setUnits(response.data.units)
+      }
+    } catch (error) {
+      console.error('Error fetching existing units:', error)
+      setError('Failed to fetch existing units')
     }
   }
 
@@ -47,13 +89,13 @@ const AddUnit = ({ courseId, editMode }) => {
       const response = await getData(`units/latest-number/${selectedCourseId}`)
       if (response.status === 200) {
         setNextNumber(response.data.nextNumber)
-        // Update the first unit's number
-        setUnits(prev => [
-          {
-            ...prev[0],
-            number: response.data.nextNumber
-          }
-        ])
+        if (!editMode) {
+          setUnits([{
+            name: '',
+            number: response.data.nextNumber,
+            courseId: selectedCourseId
+          }])
+        }
       }
     } catch (error) {
       console.error('Error fetching next number:', error)
@@ -61,9 +103,180 @@ const AddUnit = ({ courseId, editMode }) => {
     }
   }
 
-  useEffect(() => {
-    fetchCourses()
-  }, [courseId, editMode])
+  const handleNumberChange = async (unitId, newNumber) => {
+    try {
+      setNumberError('')
+      
+      // Validate number
+      if (newNumber < 1) {
+        setNumberError('Number must be positive')
+        return
+      }
+
+      // Check for duplicates in current state
+      const isDuplicate = units.some(
+        unit => unit.number === newNumber && unit._id !== unitId
+      )
+      if (isDuplicate) {
+        setNumberError('Number already exists')
+        return
+      }
+
+      // Only update in backend if not in insert mode
+      if (!insertMode) {
+        // Update in backend
+        const response = await putData(`units/${unitId}/number`, {
+          newNumber,
+          courseId: selectedCourse._id
+        })
+
+        if (response.status === 200) {
+          // Update local state
+          setUnits(prev => {
+            const updated = prev.map(unit => {
+              if (unit._id === unitId) {
+                return { ...unit, number: newNumber }
+              }
+              return unit
+            })
+            return updated.sort((a, b) => a.number - b.number)
+          })
+        }
+      } else {
+        // In insert mode, just update the local state
+        setUnits(prev => prev.map(unit => ({
+          ...unit,
+          number: newNumber
+        })))
+      }
+    } catch (error) {
+      console.error('Error updating unit number:', error)
+      setNumberError(error.response?.data?.message || 'Failed to update number')
+    }
+  }
+
+  const handleNameChange = (index, newName) => {
+    setUnits(prev => {
+      const updatedUnits = [...prev]
+      updatedUnits[index] = {
+        ...updatedUnits[index],
+        name: newName
+      }
+      return updatedUnits
+    })
+  }
+
+  const handleSwapClick = (unitId) => {
+    if (swapMode) {
+      // If already in swap mode, add to selection
+      setSelectedUnits(prev => {
+        if (prev.includes(unitId)) {
+          // If already selected, remove it
+          return prev.filter(id => id !== unitId)
+        }
+        if (prev.length < 2) {
+          // If less than 2 selected, add it
+          return [...prev, unitId]
+        }
+        return prev
+      })
+    } else {
+      // Start swap mode with this unit selected
+      setSwapMode(true)
+      setSelectedUnits([unitId])
+    }
+  }
+
+  const handleConfirmSwap = async () => {
+    if (selectedUnits.length !== 2) {
+      setError('Please select exactly two units to swap')
+      return
+    }
+
+    try {
+      setError('')
+      const response = await postData('units/swap-numbers', {
+        unitId1: selectedUnits[0],
+        unitId2: selectedUnits[1]
+      })
+      if (response.status === 200) {
+        // Reset swap mode and refresh units
+        setSwapMode(false)
+        setSelectedUnits([])
+        await fetchExistingUnits(selectedCourse._id)
+      }
+    } catch (error) {
+      console.error('Error swapping unit numbers:', error)
+      setError(error.response?.data?.message || 'Failed to swap unit numbers')
+    }
+  }
+
+  const handleCancelSwap = () => {
+    setSwapMode(false)
+    setSelectedUnits([])
+  }
+
+  const handleInsertClick = () => {
+    setInsertMode(true)
+    setUnits([{
+      name: '',
+      number: 1,
+      courseId: selectedCourse?._id
+    }])
+  }
+
+  const handleInsertSubmit = async () => {
+    try {
+      setError('')
+      
+      // Validate course selection
+      if (!selectedCourse) {
+        setError('Please select a course first')
+        return
+      }
+
+      // Validate number
+      if (units[0].number < 1) {
+        setNumberError('Number must be positive')
+        return
+      }
+
+      // Validate name
+      if (!units[0].name) {
+        setError('Please enter a unit name')
+        return
+      }
+
+      // Find the unit that comes before our insertion point
+      const response = await getData(`units/${selectedCourse._id}`)
+      if (response.status === 200 || response.status === 304) {
+        const existingUnits = response.data.units
+        const unitsBeforeInsert = existingUnits.filter(u => u.number < units[0].number)
+        const afterUnitId = unitsBeforeInsert.length > 0 
+          ? unitsBeforeInsert[unitsBeforeInsert.length - 1]._id 
+          : null
+
+        const insertResponse = await postData('units/insert', {
+          afterUnitId,
+          newUnit: {
+            name: units[0].name,
+            number: units[0].number,
+            courseId: selectedCourse._id
+          }
+        })
+        if (insertResponse.status === 201) {
+          setInsertMode(false)
+          setUnits([])
+          fetchExistingUnits(selectedCourse._id)
+        }
+      } else {
+        setError('Failed to fetch existing units')
+      }
+    } catch (error) {
+      console.error('Error inserting unit:', error)
+      setError(error.response?.data?.message || 'Failed to insert unit')
+    }
+  }
 
   const addNewUnit = () => {
     setUnits(prev => [
@@ -71,7 +284,7 @@ const AddUnit = ({ courseId, editMode }) => {
       {
         name: '',
         number: nextNumber + prev.length,
-        courseId: prev[0].courseId
+        courseId: selectedCourse._id
       }
     ])
   }
@@ -79,7 +292,6 @@ const AddUnit = ({ courseId, editMode }) => {
   const removeUnit = indexToRemove => {
     setUnits(prev => {
       const filtered = prev.filter((_, index) => index !== indexToRemove)
-      // Recalculate numbers for remaining units
       return filtered.map((unit, index) => ({
         ...unit,
         number: nextNumber + index
@@ -89,7 +301,6 @@ const AddUnit = ({ courseId, editMode }) => {
 
   const handleUnitChange = (index, field, value) => {
     if (field === 'courseId') {
-      // When course changes, fetch new number sequence
       fetchNextNumber(value)
       setUnits(prev =>
         prev.map((unit, idx) => ({
@@ -115,20 +326,27 @@ const AddUnit = ({ courseId, editMode }) => {
     setError('')
 
     try {
-      const response = await postData('units', { units })
-      if (response.status === 201) {
-        // Reset form
-        setUnits([
-          {
-            name: '',
-            number: nextNumber,
-            courseId: selectedCourse?._id
-          }
-        ])
+      if (editMode) {
+        // Update existing units
+        for (const unit of units) {
+          await putData(`units/${unit._id}`, { name: unit.name })
+        }
+      } else {
+        // Create new units
+        const response = await postData('units', { units })
+        if (response.status === 201) {
+          setUnits([
+            {
+              name: '',
+              number: nextNumber,
+              courseId: selectedCourse?._id
+            }
+          ])
+        }
       }
     } catch (error) {
-      console.error('Error creating units:', error)
-      setError(error.response?.data?.message || 'Failed to create units')
+      console.error('Error saving units:', error)
+      setError(error.response?.data?.message || 'Failed to save units')
     }
   }
 
@@ -143,11 +361,13 @@ const AddUnit = ({ courseId, editMode }) => {
       <Autocomplete
         options={courses}
         value={selectedCourse}
-        disabled={editMode}
+        disabled={editMode || insertMode}
         getOptionLabel={option => option?.name || ''}
         onChange={(_, newValue) => {
           setSelectedCourse(newValue)
-          handleUnitChange(0, 'courseId', newValue?._id)
+          if (!editMode && !insertMode) {
+            handleUnitChange(0, 'courseId', newValue?._id)
+          }
         }}
         renderInput={params => (
           <TextField
@@ -168,24 +388,20 @@ const AddUnit = ({ courseId, editMode }) => {
       {units.map((unit, index) => (
         <Box key={index}>
           <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <Typography
-              sx={{
-                width: '150px',
-                padding: '8px 14px',
-                bgcolor: '#f5f5f5',
-                borderRadius: '8px',
-                border: '1px solid #20202033'
-              }}
-            >
-              Unit No: {unit.number}
-            </Typography>
+            <NumberInput
+              value={unit.number}
+              onChange={(newNumber) => handleNumberChange(unit._id, newNumber)}
+              disabled={!editMode && !insertMode}
+              error={!!numberError}
+              helperText={numberError}
+            />
 
             <TextField
               fullWidth
               size='small'
               label='Unit Name'
               value={unit.name}
-              onChange={e => handleUnitChange(index, 'name', e.target.value)}
+              onChange={e => handleNameChange(index, e.target.value)}
               required
               sx={{
                 '& .MuiOutlinedInput-root': {
@@ -194,18 +410,31 @@ const AddUnit = ({ courseId, editMode }) => {
               }}
             />
 
-            {index > 0 && !editMode && (
-              <>
-                <IconButton
-                  onClick={() => removeUnit(index)}
-                  sx={{
-                    color: 'error.main',
-                    '&:hover': { bgcolor: 'error.light', color: 'white' }
-                  }}
-                >
-                  <DeleteIcon />
-                </IconButton>
-              </>
+            {editMode && (
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => handleSwapClick(unit._id)}
+                sx={{
+                  minWidth: '120px',
+                  bgcolor: selectedUnits.includes(unit._id) ? 'primary.dark' : 'primary.main',
+                  '&:hover': { bgcolor: 'primary.dark' }
+                }}
+              >
+                {swapMode ? 'Select' : 'swapNumbers'}
+              </Button>
+            )}
+
+            {index > 0 && !editMode && !insertMode && (
+              <IconButton
+                onClick={() => removeUnit(index)}
+                sx={{
+                  color: 'error.main',
+                  '&:hover': { bgcolor: 'error.light', color: 'white' }
+                }}
+              >
+                <DeleteIcon />
+              </IconButton>
             )}
           </Box>
         </Box>
@@ -214,12 +443,13 @@ const AddUnit = ({ courseId, editMode }) => {
       <Box
         sx={{
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          mt: 2
         }}
       >
-        {!editMode && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        {!editMode && !insertMode && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 'auto' }}>
             <IconButton
               onClick={addNewUnit}
               sx={{
@@ -233,20 +463,77 @@ const AddUnit = ({ courseId, editMode }) => {
             <Typography sx={{ fontWeight: 'bold', color: 'black' }}>
               Add Another Unit
             </Typography>
+            <Button
+              variant="outlined"
+              onClick={handleInsertClick}
+              sx={{ ml: 2 }}
+            >
+              Insert Unit
+            </Button>
           </Box>
         )}
-        <Button
-          type='submit'
-          variant='contained'
-          sx={{
-            bgcolor: editMode ? 'success.main' : 'primary.main',
-            '&:hover': {
-              bgcolor: editMode ? 'success.dark' : 'primary.dark'
-            }
-          }}
-        >
-          {editMode ? 'Edit' : 'Save All'}
-        </Button>
+
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          {swapMode && (
+            <>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleConfirmSwap}
+                disabled={selectedUnits.length !== 2}
+                sx={{
+                  bgcolor: 'primary.main',
+                  '&:hover': { bgcolor: 'primary.dark' }
+                }}
+              >
+                Confirm Swap
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={handleCancelSwap}
+              >
+                Cancel
+              </Button>
+            </>
+          )}
+          {insertMode && (
+            <>
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={() => {
+                  setInsertMode(false)
+                  setUnits([])
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleInsertSubmit}
+                disabled={!units[0]?.name || !selectedCourse}
+              >
+                Insert
+              </Button>
+            </>
+          )}
+          {!insertMode && (
+            <Button
+              type='submit'
+              variant='contained'
+              sx={{
+                bgcolor: editMode ? 'success.main' : 'primary.main',
+                '&:hover': {
+                  bgcolor: editMode ? 'success.dark' : 'primary.dark'
+                }
+              }}
+            >
+              {editMode ? 'Edit' : 'Save All'}
+            </Button>
+          )}
+        </Box>
       </Box>
     </form>
   )

@@ -126,10 +126,7 @@ export const updateSection = async (req, res) => {
 
     const section = await Section.findByIdAndUpdate(
       id,
-      { 
-        name,
-        updatedAt: Date.now()
-      },
+      { name },
       { new: true }
     )
 
@@ -163,6 +160,177 @@ export const getLatestSectionNumber = async (req, res) => {
     res.status(200).json({
       success: true,
       nextNumber: (latestSection?.number || 0) + 1
+    })
+  } catch (error) {
+    handleError(res, error)
+  }
+}
+
+export const updateSectionNumber = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { newNumber, unitId } = req.body
+
+    // Check for number conflicts
+    const existingSection = await Section.findOne({
+      unitId,
+      number: newNumber,
+      status: 1,
+      _id: { $ne: id }
+    })
+
+    if (existingSection) {
+      return res.status(400).json({
+        success: false,
+        message: `Section number ${newNumber} already exists in this unit`
+      })
+    }
+
+    // Update section number
+    const section = await Section.findByIdAndUpdate(
+      id,
+      { number: newNumber },
+      { new: true }
+    )
+
+    if (!section) {
+      return res.status(404).json({
+        success: false,
+        message: 'Section not found'
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      data: section
+    })
+  } catch (error) {
+    handleError(res, error)
+  }
+}
+
+export const swapSectionNumbers = async (req, res) => {
+  try {
+    const { sectionId1, sectionId2 } = req.body
+
+    const section1 = await Section.findById(sectionId1)
+    const section2 = await Section.findById(sectionId2)
+
+    if (!section1 || !section2) {
+      return res.status(404).json({
+        success: false,
+        message: 'One or both sections not found'
+      })
+    }
+
+    // Start a session for transaction
+    const session = await Section.startSession()
+    session.startTransaction()
+
+    try {
+      // Temporarily set one section's number to a unique value
+      const tempNumber = -1
+      await Section.findByIdAndUpdate(
+        sectionId1,
+        { number: tempNumber },
+        { session }
+      )
+
+      // Update the second section's number to the first section's original number
+      await Section.findByIdAndUpdate(
+        sectionId2,
+        { number: section1.number },
+        { session }
+      )
+
+      // Update the first section's number to the second section's original number
+      await Section.findByIdAndUpdate(
+        sectionId1,
+        { number: section2.number },
+        { session }
+      )
+
+      // Commit the transaction
+      await session.commitTransaction()
+      session.endSession()
+
+      // Fetch the updated sections
+      const updatedSection1 = await Section.findById(sectionId1)
+      const updatedSection2 = await Section.findById(sectionId2)
+
+      res.status(200).json({
+        success: true,
+        data: [updatedSection1, updatedSection2]
+      })
+    } catch (error) {
+      // If any error occurs, abort the transaction
+      await session.abortTransaction()
+      session.endSession()
+      throw error
+    }
+  } catch (error) {
+    handleError(res, error)
+  }
+}
+
+export const insertSection = async (req, res) => {
+  try {
+    const { afterSectionId, newSection } = req.body
+
+    // If afterSectionId is null, we're inserting at the beginning
+    if (!afterSectionId) {
+      // Increment numbers of all sections first
+      await Section.updateMany(
+        {
+          unitId: newSection.unitId,
+          status: 1
+        },
+        { $inc: { number: 1 } }
+      )
+
+      // Create new section with number 1
+      const section = new Section({
+        ...newSection,
+        number: 1,
+        resources: []
+      })
+      await section.save()
+
+      return res.status(201).json({
+        success: true,
+        data: section
+      })
+    }
+
+    const afterSection = await Section.findById(afterSectionId)
+    if (!afterSection) {
+      return res.status(404).json({
+        success: false,
+        message: 'Reference section not found'
+      })
+    }
+
+    // Increment numbers of all sections from the target number onwards first
+    await Section.updateMany(
+      {
+        unitId: afterSection.unitId,
+        number: { $gte: newSection.number },
+        status: 1
+      },
+      { $inc: { number: 1 } }
+    )
+
+    // Create new section with the provided number
+    const section = new Section({
+      ...newSection,
+      unitId: afterSection.unitId,
+      resources: []
+    })
+    await section.save()
+
+    res.status(201).json({
+      success: true,
+      data: section
     })
   } catch (error) {
     handleError(res, error)

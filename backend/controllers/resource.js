@@ -228,4 +228,47 @@ export const getLatestResourceNumber = async (req, res) => {
   } catch (error) {
     handleError(res, error)
   }
+}
+
+export const updateResourceNumber = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { newNumber, sectionId } = req.body
+
+    // Check for number conflicts
+    const existingResource = await Resource.findOne({
+      sectionId,
+      number: newNumber,
+      status: 1,
+      _id: { $ne: id }
+    })
+
+    if (existingResource) {
+      return res.status(400).json({
+        success: false,
+        message: `Resource number ${newNumber} already exists in this section`
+      })
+    }
+
+    // Update resource number
+    const resource = await Resource.findByIdAndUpdate(
+      id,
+      { number: newNumber },
+      { new: true }
+    )
+
+    if (!resource) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resource not found'
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      data: resource
+    })
+  } catch (error) {
+    handleError(res, error)
+  }
 } 

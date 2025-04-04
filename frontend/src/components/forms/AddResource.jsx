@@ -24,6 +24,7 @@ import url from '../config/server-url'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import NumberInput from '../common/NumberInput'
 
 const RESOURCE_TYPES = [
   { value: 'VIDEO', label: 'Video' },
@@ -116,6 +117,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [nextNumber, setNextNumber] = useState(1)
+  const [numberError, setNumberError] = useState('')
 
   useEffect(() => {
     fetchCourses()
@@ -469,6 +471,49 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
     })
   }
 
+  const handleNumberChange = async (resourceId, newNumber) => {
+    try {
+      setNumberError('')
+      
+      // Validate number
+      if (newNumber < 1) {
+        setNumberError('Number must be positive')
+        return
+      }
+
+      // Check for duplicates in current state
+      const isDuplicate = resources.some(
+        resource => resource.number === newNumber && resource._id !== resourceId
+      )
+      if (isDuplicate) {
+        setNumberError('Number already exists')
+        return
+      }
+
+      // Update in backend
+      const response = await putData(`resources/${resourceId}/number`, {
+        newNumber,
+        sectionId: sectionId
+      })
+
+      if (response.status === 200) {
+        // Update local state
+        setResources(prev => {
+          const updated = prev.map(resource => {
+            if (resource._id === resourceId) {
+              return { ...resource, number: newNumber }
+            }
+            return resource
+          })
+          return updated.sort((a, b) => a.number - b.number)
+        })
+      }
+    } catch (error) {
+      console.error('Error updating resource number:', error)
+      setNumberError(error.response?.data?.message || 'Failed to update number')
+    }
+  }
+
   return (
     <>
       <form onSubmit={handleSubmit}>
@@ -601,20 +646,13 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             <AccordionDetails>
               <>
                 <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                  <Typography
-                    sx={{
-                      minWidth: '150px',
-                      padding: '8px 14px',
-                      bgcolor: '#f5f5f5',
-                      borderRadius: '8px',
-                      border: '1px solid #20202033',
-                      whiteSpace: 'nowrap',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}
-                  >
-                    Resource No: {resource.number}
-                  </Typography>
+                  <NumberInput
+                    value={resource.number}
+                    onChange={(newNumber) => handleNumberChange(resource._id, newNumber)}
+                    disabled={!editMode}
+                    error={!!numberError}
+                    helperText={numberError}
+                  />
                   <TextField
                     fullWidth
                     size='small'

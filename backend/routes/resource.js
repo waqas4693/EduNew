@@ -4,7 +4,8 @@ import {
   getSectionResources,
   updateResource,
   getResourcesWithViewStatus,
-  getLatestResourceNumber
+  getLatestResourceNumber,
+  updateResourceNumber
 } from '../controllers/resource.js'
 
 const router = express.Router()
@@ -14,5 +15,6 @@ router.get('/:sectionId', getSectionResources)
 router.put('/:id', updateResource)
 router.get('/:sectionId/student/:studentId/status', getResourcesWithViewStatus)
 router.get('/latest-number/:sectionId', getLatestResourceNumber)
+router.patch('/:id/number', updateResourceNumber)
 
 export default router 

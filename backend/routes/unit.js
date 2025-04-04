@@ -3,14 +3,20 @@ import {
   createUnit, 
   getCourseUnits,
   updateUnit,
-  getLatestUnitNumber
+  getLatestUnitNumber,
+  updateUnitNumber,
+  swapUnitNumbers,
+  insertUnit
 } from '../controllers/unit.js'
 
 const router = express.Router()
 
 router.post('/', createUnit)
 router.get('/:courseId', getCourseUnits)
-router.put('/:id', updateUnit)
+router.patch('/:id', updateUnit)
 router.get('/latest-number/:courseId', getLatestUnitNumber)
+router.patch('/:id/number', updateUnitNumber)
+router.post('/swap-numbers', swapUnitNumbers)
+router.post('/insert', insertUnit)
 
 export default router 

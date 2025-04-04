@@ -118,50 +118,69 @@ const Login = () => {
   }
 
   return (
-    <>
+    <Box
+      sx={{
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: '#ffffff',
+        position: 'relative'
+      }}
+    >
+      {/* Top Bar */}
       <Box
         sx={{
-          height: '60px',
-          bgcolor: 'white',
+          width: '100%',
+          height: '150px',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 1000,
-          boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
+          alignItems: 'center'
         }}
       >
-        <Typography
+        <Box
           sx={{
-            color: '#3366CC',
-            fontSize: '24px',
-            fontWeight: 800
+            mx: 3,
+            width: '10%',
+            height: '35%',
+            backgroundColor: '#ff2b0c'
           }}
-        >
-          Edu Supplements
-        </Typography>
+        />
+        <Box
+          alt='Logo'
+          src='/logo.png'
+          component='img'
+          sx={{
+            px: 1,
+            width: '15%',
+            height: '100%',
+            objectFit: 'contain'
+          }}
+        />
+        <Box
+          sx={{
+            mx: 3,
+            flexGrow: 1,
+            height: '35%',
+            backgroundColor: '#ff2b0c'
+          }}
+        />
       </Box>
 
+      {/* Main Content */}
       <Box
         sx={{
-          height: '100vh',
+          flex: 1,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          backgroundImage: 'url("/background-images/4.jpg")',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          pt: '60px'
+          justifyContent: 'center'
         }}
       >
         <Paper
           sx={{
             p: '60px',
             width: '40%',
-            borderRadius: '16px'
+            borderRadius: '16px',
+            backgroundColor: '#ffffff',
+            boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)'
           }}
         >
           <Typography
@@ -223,13 +242,55 @@ const Login = () => {
                 textTransform: 'none',
                 display: 'block',
                 mx: 'auto',
-                px: '30px'
+                px: '30px',
+                backgroundColor: '#1F7EC2',
+                '&:hover': {
+                  backgroundColor: '#1769aa'
+                }
               }}
             >
               Log In
             </Button>
           </form>
         </Paper>
+      </Box>
+
+      {/* Bottom Bar */}
+      <Box
+        sx={{
+          width: '100%',
+          height: '150px',
+          display: 'flex',
+          alignItems: 'center'
+        }}
+      >
+        <Box
+          sx={{
+            mx: 3,
+            width: '75%',
+            height: '30%',
+            backgroundColor: '#0070c0'
+          }}
+        />
+        <Box
+          alt='Logo'
+          src='/ehouse-logo.svg'
+          component='img'
+          sx={{
+            px: 1,
+            width: '10%',
+            height: '90%',
+            objectFit: 'contain'
+          }}
+        />
+        <Box
+          sx={{
+            mx: 3,
+            flexGrow: 1,
+            height: '30%',
+            backgroundColor: '#0070c0'
+          }}
+        />
       </Box>
 
       <Dialog
@@ -248,11 +309,11 @@ const Login = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog} variant='contained'>
-            OK
+            Close
           </Button>
         </DialogActions>
       </Dialog>
-    </>
+    </Box>
   )
 }
 

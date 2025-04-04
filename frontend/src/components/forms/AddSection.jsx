@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Box,
   TextField,
@@ -8,20 +8,20 @@ import {
   Autocomplete,
   IconButton,
   Divider,
-  Alert
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material'
 import { postData, getData, putData } from '../../api/api'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
+import NumberInput from '../common/NumberInput'
+import { debounce } from 'lodash'
 
 const AddSection = ({ courseId: propsCourseId, editMode }) => {
-  const [sections, setSections] = useState([
-    {
-      name: '',
-      number: null,
-      unitId: null
-    }
-  ])
+  const [sections, setSections] = useState([])
   const [courseId, setCourseId] = useState(null)
   const [courses, setCourses] = useState([])
   const [units, setUnits] = useState([])
@@ -29,13 +29,41 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
   const [selectedUnit, setSelectedUnit] = useState(null)
   const [error, setError] = useState('')
   const [nextNumber, setNextNumber] = useState(1)
+  const [numberError, setNumberError] = useState('')
+  const [swapMode, setSwapMode] = useState(false)
+  const [selectedSections, setSelectedSections] = useState([])
+  const [insertMode, setInsertMode] = useState(false)
+
+  const debouncedNameUpdate = useCallback(
+    debounce(async (sectionId, newName) => {
+      try {
+        const response = await putData(`sections/${sectionId}`, { name: newName })
+        if (response.status === 200) {
+          setSections(prev => prev.map(section => 
+            section._id === sectionId ? { ...section, name: newName } : section
+          ))
+        }
+      } catch (error) {
+        console.error('Error updating section name:', error)
+        setError(error.response?.data?.message || 'Failed to update section name')
+      }
+    }, 500),
+    []
+  )
 
   useEffect(() => {
     fetchCourses()
-    if (editMode && propsCourseId) {
-      setCourseId(propsCourseId)
+  }, [])
+
+  useEffect(() => {
+    if (editMode && propsCourseId && courses.length > 0) {
+      const course = courses.find(c => c._id === propsCourseId)
+      if (course) {
+        setSelectedCourse(course)
+        setCourseId(course._id)
+      }
     }
-  }, [editMode, propsCourseId])
+  }, [editMode, propsCourseId, courses])
 
   useEffect(() => {
     if (courseId) {
@@ -43,15 +71,19 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
     }
   }, [courseId])
 
+  useEffect(() => {
+    if (editMode && units.length > 0) {
+      // Set the first unit as selected by default
+      setSelectedUnit(units[0])
+      fetchExistingSections(units[0]._id)
+    }
+  }, [units, editMode])
+
   const fetchCourses = async () => {
     try {
       const response = await getData('courses')
       if (response.status === 200) {
         setCourses(response.data.data)
-        if (editMode && propsCourseId) {
-          const course = response.data.data.find(c => c._id === propsCourseId)
-          setSelectedCourse(course)
-        }
       }
     } catch (error) {
       console.error('Error fetching courses:', error)
@@ -71,22 +103,215 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
     }
   }
 
+  const fetchExistingSections = async (unitId) => {
+    try {
+      const response = await getData(`sections/${unitId}`)
+      if (response.status === 200) {
+        setSections(response.data.sections)
+      }
+    } catch (error) {
+      console.error('Error fetching existing sections:', error)
+      setError('Failed to fetch existing sections')
+    }
+  }
+
   const fetchNextNumber = async selectedUnitId => {
     try {
       const response = await getData(`sections/latest-number/${selectedUnitId}`)
       if (response.status === 200) {
         setNextNumber(response.data.nextNumber)
-        // Update the first section's number
-        setSections(prev => [
-          {
-            ...prev[0],
-            number: response.data.nextNumber
-          }
-        ])
+        if (!editMode) {
+          setSections([{
+            name: '',
+            number: response.data.nextNumber,
+            unitId: selectedUnitId
+          }])
+        }
       }
     } catch (error) {
       console.error('Error fetching next number:', error)
       setError('Failed to fetch next section number')
+    }
+  }
+
+  const handleNumberChange = async (sectionId, newNumber) => {
+    try {
+      setNumberError('')
+      
+      // Validate number
+      if (newNumber < 1) {
+        setNumberError('Number must be positive')
+        return
+      }
+
+      // Check for duplicates in current state
+      const isDuplicate = sections.some(
+        section => section.number === newNumber && section._id !== sectionId
+      )
+      if (isDuplicate) {
+        setNumberError('Number already exists')
+        return
+      }
+
+      // Only update in backend if not in insert mode
+      if (!insertMode) {
+        // Update in backend
+        const response = await putData(`sections/${sectionId}/number`, {
+          newNumber,
+          unitId: selectedUnit._id
+        })
+
+        if (response.status === 200) {
+          // Update local state
+          setSections(prev => {
+            const updated = prev.map(section => {
+              if (section._id === sectionId) {
+                return { ...section, number: newNumber }
+              }
+              return section
+            })
+            return updated.sort((a, b) => a.number - b.number)
+          })
+        }
+      } else {
+        // In insert mode, just update the local state
+        setSections(prev => prev.map(section => ({
+          ...section,
+          number: newNumber
+        })))
+      }
+    } catch (error) {
+      console.error('Error updating section number:', error)
+      setNumberError(error.response?.data?.message || 'Failed to update number')
+    }
+  }
+
+  const handleNameChange = (index, newName) => {
+    setSections(prev => {
+      const updatedSections = [...prev]
+      updatedSections[index] = {
+        ...updatedSections[index],
+        name: newName
+      }
+      return updatedSections
+    })
+  }
+
+  const handleSwapClick = (sectionId) => {
+    if (swapMode) {
+      // If already in swap mode, add to selection
+      setSelectedSections(prev => {
+        if (prev.includes(sectionId)) {
+          // If already selected, remove it
+          return prev.filter(id => id !== sectionId)
+        }
+        if (prev.length < 2) {
+          // If less than 2 selected, add it
+          return [...prev, sectionId]
+        }
+        return prev
+      })
+    } else {
+      // Start swap mode with this section selected
+      setSwapMode(true)
+      setSelectedSections([sectionId])
+    }
+  }
+
+  const handleConfirmSwap = async () => {
+    if (selectedSections.length !== 2) {
+      setError('Please select exactly two sections to swap')
+      return
+    }
+
+    try {
+      setError('')
+      const response = await postData('sections/swap-numbers', {
+        sectionId1: selectedSections[0],
+        sectionId2: selectedSections[1]
+      })
+      if (response.status === 200) {
+        // Reset swap mode and refresh sections
+        setSwapMode(false)
+        setSelectedSections([])
+        await fetchExistingSections(selectedUnit._id)
+      }
+    } catch (error) {
+      console.error('Error swapping section numbers:', error)
+      setError(error.response?.data?.message || 'Failed to swap section numbers')
+    }
+  }
+
+  const handleCancelSwap = () => {
+    setSwapMode(false)
+    setSelectedSections([])
+  }
+
+  const handleInsertClick = () => {
+    setInsertMode(true)
+    setSections([{
+      name: '',
+      number: 1,
+      unitId: selectedUnit?._id
+    }])
+  }
+
+  const handleInsertSubmit = async () => {
+    try {
+      setError('')
+      
+      // Validate course selection
+      if (!selectedCourse) {
+        setError('Please select a course first')
+        return
+      }
+
+      // Validate unit selection
+      if (!selectedUnit) {
+        setError('Please select a unit first')
+        return
+      }
+
+      // Validate number
+      if (sections[0].number < 1) {
+        setNumberError('Number must be positive')
+        return
+      }
+
+      // Validate name
+      if (!sections[0].name) {
+        setError('Please enter a section name')
+        return
+      }
+
+      // Find the section that comes before our insertion point
+      const response = await getData(`sections/${selectedUnit._id}`)
+      if (response.status === 200 || response.status === 304) {
+        const existingSections = response.data.sections
+        const sectionsBeforeInsert = existingSections.filter(s => s.number < sections[0].number)
+        const afterSectionId = sectionsBeforeInsert.length > 0 
+          ? sectionsBeforeInsert[sectionsBeforeInsert.length - 1]._id 
+          : null
+
+        const insertResponse = await postData('sections/insert', {
+          afterSectionId,
+          newSection: {
+            name: sections[0].name,
+            number: sections[0].number,
+            unitId: selectedUnit._id
+          }
+        })
+        if (insertResponse.status === 201) {
+          setInsertMode(false)
+          setSections([])
+          fetchExistingSections(selectedUnit._id)
+        }
+      } else {
+        setError('Failed to fetch existing sections')
+      }
+    } catch (error) {
+      console.error('Error inserting section:', error)
+      setError(error.response?.data?.message || 'Failed to insert section')
     }
   }
 
@@ -96,7 +321,7 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
       {
         name: '',
         number: nextNumber + prev.length,
-        unitId: prev[0].unitId
+        unitId: selectedUnit._id
       }
     ])
   }
@@ -104,7 +329,6 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
   const removeSection = indexToRemove => {
     setSections(prev => {
       const filtered = prev.filter((_, index) => index !== indexToRemove)
-      // Recalculate numbers for remaining sections
       return filtered.map((section, index) => ({
         ...section,
         number: nextNumber + index
@@ -114,7 +338,6 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
 
   const handleSectionChange = (index, field, value) => {
     if (field === 'unitId') {
-      // When unit changes, fetch new number sequence
       fetchNextNumber(value)
       setSections(prev =>
         prev.map((section, idx) => ({
@@ -140,20 +363,27 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
     setError('')
 
     try {
-      const response = await postData('sections', { sections })
-      if (response.status === 201) {
-        // Reset form
-        setSections([
-          {
-            name: '',
-            number: nextNumber,
-            unitId: selectedUnit?._id
-          }
-        ])
+      if (editMode) {
+        // Update existing sections
+        for (const section of sections) {
+          await putData(`sections/${section._id}`, { name: section.name })
+        }
+      } else {
+        // Create new sections
+        const response = await postData('sections', { sections })
+        if (response.status === 201) {
+          setSections([
+            {
+              name: '',
+              number: nextNumber,
+              unitId: selectedUnit?._id
+            }
+          ])
+        }
       }
     } catch (error) {
-      console.error('Error creating sections:', error)
-      setError(error.response?.data?.message || 'Failed to create sections')
+      console.error('Error saving sections:', error)
+      setError(error.response?.data?.message || 'Failed to save sections')
     }
   }
 
@@ -169,7 +399,7 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
         <Autocomplete
           options={courses}
           value={selectedCourse}
-          disabled={editMode}
+          disabled={editMode || insertMode}
           getOptionLabel={option => option?.name || ''}
           onChange={(_, newValue) => {
             setSelectedCourse(newValue)
@@ -198,13 +428,17 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
           getOptionLabel={option => option?.name || ''}
           onChange={(_, newValue) => {
             setSelectedUnit(newValue)
-            handleSectionChange(0, 'unitId', newValue?._id)
+            if (!editMode && !insertMode) {
+              handleSectionChange(0, 'unitId', newValue?._id)
+            } else {
+              fetchExistingSections(newValue._id)
+            }
           }}
           renderInput={params => (
             <TextField
               {...params}
-              label='Select Unit'
               size='small'
+              label='Select Unit'
               required
               sx={{
                 '& .MuiOutlinedInput-root': {
@@ -220,24 +454,20 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
       {sections.map((section, index) => (
         <Box key={index}>
           <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <Typography
-              sx={{
-                width: '150px',
-                padding: '8px 14px',
-                bgcolor: '#f5f5f5',
-                borderRadius: '8px',
-                border: '1px solid #20202033'
-              }}
-            >
-              Section No: {section.number}
-            </Typography>
+            <NumberInput
+              value={section.number}
+              onChange={(newNumber) => handleNumberChange(section._id, newNumber)}
+              disabled={!editMode && !insertMode}
+              error={!!numberError}
+              helperText={numberError}
+            />
 
             <TextField
               fullWidth
               size='small'
               label='Section Name'
               value={section.name}
-              onChange={e => handleSectionChange(index, 'name', e.target.value)}
+              onChange={e => handleNameChange(index, e.target.value)}
               required
               sx={{
                 '& .MuiOutlinedInput-root': {
@@ -246,18 +476,31 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
               }}
             />
 
-            {index > 0 && !editMode && (
-              <>
-                <IconButton
-                  onClick={() => removeSection(index)}
-                  sx={{
-                    color: 'error.main',
-                    '&:hover': { bgcolor: 'error.light', color: 'white' }
-                  }}
-                >
-                  <DeleteIcon />
-                </IconButton>
-              </>
+            {editMode && (
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => handleSwapClick(section._id)}
+                sx={{
+                  minWidth: '120px',
+                  bgcolor: selectedSections.includes(section._id) ? 'primary.dark' : 'primary.main',
+                  '&:hover': { bgcolor: 'primary.dark' }
+                }}
+              >
+                {swapMode ? 'Select' : 'swapNumbers'}
+              </Button>
+            )}
+
+            {index > 0 && !editMode && !insertMode && (
+              <IconButton
+                onClick={() => removeSection(index)}
+                sx={{
+                  color: 'error.main',
+                  '&:hover': { bgcolor: 'error.light', color: 'white' }
+                }}
+              >
+                <DeleteIcon />
+              </IconButton>
             )}
           </Box>
         </Box>
@@ -266,12 +509,13 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
       <Box
         sx={{
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          mt: 2
         }}
       >
-        {!editMode && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        {!editMode && !insertMode && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 'auto' }}>
             <IconButton
               onClick={addNewSection}
               sx={{
@@ -285,20 +529,77 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
             <Typography sx={{ fontWeight: 'bold', color: 'black' }}>
               Add Another Section
             </Typography>
+            <Button
+              variant="outlined"
+              onClick={handleInsertClick}
+              sx={{ ml: 2 }}
+            >
+              Insert Section
+            </Button>
           </Box>
         )}
-        <Button
-          type='submit'
-          variant='contained'
-          sx={{
-            bgcolor: editMode ? 'success.main' : 'primary.main',
-            '&:hover': {
-              bgcolor: editMode ? 'success.dark' : 'primary.dark'
-            }
-          }}
-        >
-          {editMode ? 'Edit' : 'Save All'}
-        </Button>
+
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          {swapMode && (
+            <>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleConfirmSwap}
+                disabled={selectedSections.length !== 2}
+                sx={{
+                  bgcolor: 'primary.main',
+                  '&:hover': { bgcolor: 'primary.dark' }
+                }}
+              >
+                Confirm Swap
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={handleCancelSwap}
+              >
+                Cancel
+              </Button>
+            </>
+          )}
+          {insertMode && (
+            <>
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={() => {
+                  setInsertMode(false)
+                  setSections([])
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleInsertSubmit}
+                disabled={!sections[0]?.name || !selectedUnit}
+              >
+                Insert
+              </Button>
+            </>
+          )}
+          {!insertMode && (
+            <Button
+              type='submit'
+              variant='contained'
+              sx={{
+                bgcolor: editMode ? 'success.main' : 'primary.main',
+                '&:hover': {
+                  bgcolor: editMode ? 'success.dark' : 'primary.dark'
+                }
+              }}
+            >
+              {editMode ? 'Edit' : 'Save All'}
+            </Button>
+          )}
+        </Box>
       </Box>
     </form>
   )
