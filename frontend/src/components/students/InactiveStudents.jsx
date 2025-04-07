@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Box,
   Typography,
@@ -6,7 +7,6 @@ import {
   IconButton,
   Menu,
   MenuItem,
-  Avatar,
   Table,
   TableBody,
   TableCell,
@@ -19,12 +19,16 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button
+  Button,
+  List,
+  ListItem,
+  ListItemText
 } from '@mui/material'
 import { MoreVert as MoreVertIcon } from '@mui/icons-material'
 import { getData, patchData } from '../../api/api'
 
 const InactiveStudents = () => {
+  const navigate = useNavigate()
   const [students, setStudents] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [anchorEl, setAnchorEl] = useState(null)
@@ -81,6 +85,10 @@ const InactiveStudents = () => {
       setDialogMessage('Error marking student as active')
       setOpenDialog(true)
     }
+  }
+
+  const handleViewProfile = (student) => {
+    navigate(`/admin/students/${student._id}/profile`)
   }
 
   const handleChangePage = (event, newPage) => {
@@ -144,6 +152,7 @@ const InactiveStudents = () => {
                 <TableCell>Name</TableCell>
                 <TableCell>Email</TableCell>
                 <TableCell>Contact Number</TableCell>
+                <TableCell>Enrolled Courses</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -154,15 +163,54 @@ const InactiveStudents = () => {
                   sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
                 >
                   <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar src={student.avatar} alt={student.name} sx={{ backgroundColor: 'primary.main' }}>
-                        {student.name[0]}
-                      </Avatar>
-                      <Typography>{student.name}</Typography>
-                    </Box>
+                    <Typography 
+                      sx={{ 
+                        cursor: 'pointer', 
+                        '&:hover': { 
+                          color: 'primary.main',
+                          textDecoration: 'underline' 
+                        } 
+                      }}
+                      onClick={() => handleViewProfile(student)}
+                    >
+                      {student.name}
+                    </Typography>
                   </TableCell>
                   <TableCell>{student.email}</TableCell>
                   <TableCell>{student.contactNo}</TableCell>
+                  <TableCell>
+                    <List dense sx={{ p: 0, maxHeight: 100, overflowY: 'auto' }}>
+                      {student.courses && student.courses.length > 0 ? (
+                        student.courses
+                          .filter(course => course.courseStatus === 1)
+                          .map((course, index) => (
+                            <ListItem key={index} sx={{ py: 0 }}>
+                              <ListItemText 
+                                primary={course.name}
+                                sx={{
+                                  '& .MuiListItemText-primary': {
+                                    fontSize: '0.875rem',
+                                  } 
+                                }}
+                              />
+                            </ListItem>
+                          ))
+                      ) : (
+                        <ListItem sx={{ py: 0 }}>
+                          <ListItemText 
+                            primary="No courses enrolled"
+                            sx={{
+                              '& .MuiListItemText-primary': {
+                                fontSize: '0.875rem',
+                                color: 'text.secondary',
+                                fontStyle: 'italic'
+                              }
+                            }}
+                          />
+                        </ListItem>
+                      )}
+                    </List>
+                  </TableCell>
                   <TableCell align="right">
                     <IconButton 
                       onClick={(e) => handleMenuOpen(e, student)}
@@ -212,6 +260,10 @@ const InactiveStudents = () => {
           open={Boolean(anchorEl)}
           onClose={handleMenuClose}
         >
+          <MenuItem onClick={() => {
+            handleViewProfile(selectedStudent)
+            handleMenuClose()
+          }}>View Profile</MenuItem>
           <MenuItem onClick={handleMakeActive}>Mark Active</MenuItem>
         </Menu>
       </Paper>

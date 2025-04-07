@@ -25,6 +25,7 @@ import ResourceAnalytics from './components/admin/ResourceAnalytics'
 import StudentAssessments from './components/assessment/StudentAssessments'
 import CreateUser from './components/users/CreateUser'
 import BulkUpload from './components/files/BulkUpload'
+import StudentProfile from './components/students/StudentProfile'
 
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
@@ -153,6 +154,14 @@ function App() {
                               element={
                                 <PrivateRoute requiredRole={[1]}>
                                   <ResourceAnalytics />
+                                </PrivateRoute>
+                              } 
+                            />
+                            <Route 
+                              path="/students/:studentId/profile" 
+                              element={
+                                <PrivateRoute requiredRole={[1]}>
+                                  <StudentProfile />
                                 </PrivateRoute>
                               } 
                             />

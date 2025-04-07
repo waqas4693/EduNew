@@ -54,7 +54,11 @@ const AddCourse = () => {
       if (response.status === 200) {
         setName(response.data.data.name)
         if (response.data.data.thumbnail) {
-          setThumbnailPreview(`${url}resources/files/THUMBNAILS/${response.data.data.thumbnail}`)
+          // Get signed URL for thumbnail
+          const thumbnailResponse = await getData(`resources/files/url/THUMBNAILS/${response.data.data.thumbnail}`)
+          if (thumbnailResponse.status === 200) {
+            setThumbnailPreview(thumbnailResponse.data.signedUrl)
+          }
         }
       }
     } catch (error) {

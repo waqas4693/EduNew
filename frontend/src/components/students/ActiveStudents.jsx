@@ -217,6 +217,10 @@ const ActiveStudents = () => {
     handleMenuClose()
   }
 
+  const handleViewProfile = (student) => {
+    navigate(`/admin/students/${student._id}/profile`)
+  }
+
   return (
     <>
       <Paper elevation={5} sx={{ p: '20px', borderRadius: '16px' }}>
@@ -270,7 +274,18 @@ const ActiveStudents = () => {
                       >
                         {student.name[0]}
                       </Avatar>
-                      <Typography>{student.name}</Typography>
+                      <Typography 
+                        sx={{ 
+                          cursor: 'pointer', 
+                          '&:hover': { 
+                            color: 'primary.main',
+                            textDecoration: 'underline' 
+                          } 
+                        }}
+                        onClick={() => handleViewProfile(student)}
+                      >
+                        {student.name}
+                      </Typography>
                     </Box>
                   </TableCell>
                   <TableCell>{student.email}</TableCell>
@@ -357,6 +372,13 @@ const ActiveStudents = () => {
           open={Boolean(anchorEl)}
           onClose={handleMenuClose}
         >
+          <MenuItem onClick={() => {
+            handleViewProfile(selectedStudent)
+            handleMenuClose()
+          }} sx={{ color: 'primary.main' }}>
+            <EditIcon sx={{ mr: 1, fontSize: 20 }} />
+            View Profile
+          </MenuItem>
           <MenuItem onClick={handleEdit} sx={{ color: 'primary.main' }}>
             <EditIcon sx={{ mr: 1, fontSize: 20 }} />
             Edit

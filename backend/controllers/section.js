@@ -274,65 +274,138 @@ export const swapSectionNumbers = async (req, res) => {
 }
 
 export const insertSection = async (req, res) => {
+  console.log('Starting insertSection with request body:', JSON.stringify(req.body, null, 2));
+  
+  const session = await Section.startSession();
+  session.startTransaction();
+  console.log('MongoDB session started');
+
   try {
-    const { afterSectionId, newSection } = req.body
-
-    // If afterSectionId is null, we're inserting at the beginning
-    if (!afterSectionId) {
-      // Increment numbers of all sections first
-      await Section.updateMany(
-        {
-          unitId: newSection.unitId,
-          status: 1
-        },
-        { $inc: { number: 1 } }
-      )
-
-      // Create new section with number 1
-      const section = new Section({
-        ...newSection,
-        number: 1,
-        resources: []
-      })
-      await section.save()
-
-      return res.status(201).json({
-        success: true,
-        data: section
-      })
+    const { newSection } = req.body;
+    console.log('Processing newSection:', JSON.stringify(newSection, null, 2));
+    
+    // Validate inputs
+    if (!newSection || !newSection.unitId || !newSection.number || !newSection.name) {
+      console.log('Validation failed - missing required fields');
+      throw new Error('Missing required fields');
     }
 
-    const afterSection = await Section.findById(afterSectionId)
-    if (!afterSection) {
-      return res.status(404).json({
-        success: false,
-        message: 'Reference section not found'
-      })
-    }
+    // First, check if a section with the target number exists
+    const existingSection = await Section.findOne({
+      unitId: newSection.unitId,
+      number: newSection.number,
+      status: 1
+    }).session(session);
+    
+    console.log('Existing section check result:', existingSection ? 'Found' : 'Not found');
 
-    // Increment numbers of all sections from the target number onwards first
-    await Section.updateMany(
-      {
-        unitId: afterSection.unitId,
+    if (existingSection) {
+      console.log('Incrementing numbers for sections >=', newSection.number);
+      
+      // First, find all sections that need to be updated
+      const sectionsToUpdate = await Section.find({
+        unitId: newSection.unitId,
         number: { $gte: newSection.number },
         status: 1
-      },
-      { $inc: { number: 1 } }
-    )
+      }).sort({ number: -1 }).session(session);
+      
+      console.log('Found sections to update:', sectionsToUpdate.length);
 
-    // Create new section with the provided number
+      // Update sections one by one in descending order to avoid conflicts
+      for (const section of sectionsToUpdate) {
+        console.log(`Updating section ${section._id} from number ${section.number} to ${section.number + 1}`);
+        await Section.findByIdAndUpdate(
+          section._id,
+          { $inc: { number: 1 } },
+          { session }
+        );
+      }
+    }
+
+    console.log('Creating new section with data:', {
+      name: newSection.name,
+      number: newSection.number,
+      unitId: newSection.unitId
+    });
+
+    // Create the new section
     const section = new Section({
-      ...newSection,
-      unitId: afterSection.unitId,
-      resources: []
-    })
-    await section.save()
+      name: newSection.name,
+      number: newSection.number,
+      unitId: newSection.unitId
+    });
+    
+    try {
+      await section.save({ session });
+      console.log('New section saved successfully:', section);
+    } catch (saveError) {
+      console.error('Error saving new section:', saveError);
+      throw saveError;
+    }
+
+    console.log('Updating unit with new section ID:', section._id);
+    // Update the unit to include the new section
+    const unitUpdate = await Unit.findByIdAndUpdate(
+      newSection.unitId,
+      { $push: { sections: section._id } },
+      { session }
+    );
+    console.log('Unit update result:', unitUpdate ? 'Success' : 'Failed');
+
+    await session.commitTransaction();
+    session.endSession();
+    console.log('Transaction committed successfully');
 
     res.status(201).json({
       success: true,
       data: section
-    })
+    });
   } catch (error) {
-    handleError(res, error)
+    console.error('Error in insertSection:', {
+      error: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    
+    await session.abortTransaction();
+    session.endSession();
+    console.log('Transaction aborted and session ended');
+    
+    if (error.code === 11000) {
+      console.log('Handling duplicate key error');
+      try {
+        console.log('Attempting to find next available number');
+        const nextNumber = await Section.findOne({
+          unitId: newSection.unitId,
+          status: 1
+        })
+        .sort('-number')
+        .select('number')
+        .lean();
+
+        const availableNumber = (nextNumber?.number || 0) + 1;
+        console.log('Next available number:', availableNumber);
+
+        // Create new section with the next available number
+        const section = new Section({
+          ...newSection,
+          number: availableNumber
+        });
+        await section.save();
+        console.log('Section saved with next available number:', section);
+
+        return res.status(201).json({
+          success: true,
+          data: section
+        });
+      } catch (retryError) {
+        console.error('Error in retry attempt:', retryError);
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to insert section. Please try again.'
+        });
+      }
+    }
+    handleError(res, error);
   }
-} 
+}; 

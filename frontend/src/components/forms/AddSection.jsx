@@ -4,15 +4,9 @@ import {
   TextField,
   Button,
   Typography,
-  Paper,
   Autocomplete,
   IconButton,
-  Divider,
   Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions
 } from '@mui/material'
 import { postData, getData, putData } from '../../api/api'
 import AddIcon from '@mui/icons-material/Add'
@@ -260,54 +254,35 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
     try {
       setError('')
       
-      // Validate course selection
-      if (!selectedCourse) {
-        setError('Please select a course first')
-        return
-      }
-
-      // Validate unit selection
+      // Validate inputs
       if (!selectedUnit) {
         setError('Please select a unit first')
         return
       }
 
-      // Validate number
-      if (sections[0].number < 1) {
-        setNumberError('Number must be positive')
-        return
-      }
-
-      // Validate name
       if (!sections[0].name) {
         setError('Please enter a section name')
         return
       }
 
-      // Find the section that comes before our insertion point
-      const response = await getData(`sections/${selectedUnit._id}`)
-      if (response.status === 200 || response.status === 304) {
-        const existingSections = response.data.sections
-        const sectionsBeforeInsert = existingSections.filter(s => s.number < sections[0].number)
-        const afterSectionId = sectionsBeforeInsert.length > 0 
-          ? sectionsBeforeInsert[sectionsBeforeInsert.length - 1]._id 
-          : null
+      if (sections[0].number < 1) {
+        setNumberError('Number must be positive')
+        return
+      }
 
-        const insertResponse = await postData('sections/insert', {
-          afterSectionId,
-          newSection: {
-            name: sections[0].name,
-            number: sections[0].number,
-            unitId: selectedUnit._id
-          }
-        })
-        if (insertResponse.status === 201) {
-          setInsertMode(false)
-          setSections([])
-          fetchExistingSections(selectedUnit._id)
+      // Send insert request
+      const response = await postData('sections/insert', {
+        newSection: {
+          name: sections[0].name,
+          number: sections[0].number,
+          unitId: selectedUnit._id
         }
-      } else {
-        setError('Failed to fetch existing sections')
+      })
+
+      if (response.status === 201) {
+        setInsertMode(false)
+        setSections([])
+        await fetchExistingSections(selectedUnit._id)
       }
     } catch (error) {
       console.error('Error inserting section:', error)

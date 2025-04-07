@@ -115,4 +115,80 @@ export const updatePassword = async (req, res) => {
       message: 'Internal server error'
     });
   }
+};
+
+export const updateProfile = async (req, res) => {
+  try {
+    const { name, email, contactNo, address } = req.body;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    
+    // Update user record
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Update basic user info
+    user.name = name;
+    if (email !== user.email) {
+      // Check if email is already in use
+      const existingUser = await User.findOne({ email, _id: { $ne: userId } });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email is already in use'
+        });
+      }
+      user.email = email;
+    }
+    
+    await user.save();
+
+    // If user is a student, update student record as well
+    if (userRole === 2 && req.user.studentId) {
+      const student = await Student.findById(req.user.studentId);
+      if (student) {
+        student.name = name;
+        student.email = email;
+        student.contactNo = contactNo;
+        student.address = address;
+        await student.save();
+      }
+    }
+
+    // Generate updated user data
+    let userData = {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      name: user.name
+    };
+
+    if (userRole === 2 && req.user.studentId) {
+      userData = {
+        ...userData,
+        studentId: req.user.studentId,
+        contactNo,
+        address
+      };
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        user: userData
+      }
+    });
+  } catch (error) {
+    console.error('Profile update error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
 }; 

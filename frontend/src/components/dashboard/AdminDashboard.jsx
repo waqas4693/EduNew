@@ -29,6 +29,25 @@ const getThumbnailUrl = (fileName) => {
 
 const AdminCourseCard = ({ course, onMenuOpen }) => {
   const [imageError, setImageError] = useState(false)
+  const [thumbnailUrl, setThumbnailUrl] = useState('')
+
+  useEffect(() => {
+    const fetchThumbnailUrl = async () => {
+      if (course.thumbnail) {
+        try {
+          const response = await getData(`resources/files/url/THUMBNAILS/${course.thumbnail}`)
+          if (response.status === 200) {
+            setThumbnailUrl(response.data.signedUrl)
+          }
+        } catch (error) {
+          console.error('Error fetching thumbnail URL:', error)
+          setImageError(true)
+        }
+      }
+    }
+    fetchThumbnailUrl()
+  }, [course.thumbnail])
+
   return (
     <Card
       sx={{
@@ -78,7 +97,7 @@ const AdminCourseCard = ({ course, onMenuOpen }) => {
       >
         {course.thumbnail && !imageError ? (
           <img
-            src={getThumbnailUrl(course.thumbnail)}
+            src={thumbnailUrl}
             alt={course.name}
             onError={() => setImageError(true)}
             style={{

@@ -1,23 +1,33 @@
 import React, { useState, useEffect } from 'react'
 import {
   Box,
-  Card,
   Paper,
   IconButton,
   Typography,
   Menu,
   MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TablePagination,
+  List,
+  ListItem,
+  ListItemText,
 } from '@mui/material'
-import Grid from '@mui/material/Grid2'
 import { getData, patchData } from '../../api/api'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
-import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 
 const InactiveCourses = () => {
   const [courses, setCourses] = useState([])
   const [anchorEl, setAnchorEl] = useState(null)
   const [selectedCourse, setSelectedCourse] = useState(null)
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(5)
+  const [thumbnailUrls, setThumbnailUrls] = useState({})
 
   useEffect(() => {
     fetchInactiveCourses()
@@ -27,7 +37,24 @@ const InactiveCourses = () => {
     try {
       const response = await getData('courses/inactive')
       if (response.status === 200) {
-        setCourses(response.data.data)
+        const coursesData = response.data.data
+        setCourses(coursesData)
+        
+        // Fetch thumbnail URLs for all courses
+        const urls = {}
+        for (const course of coursesData) {
+          if (course.thumbnail) {
+            try {
+              const thumbnailResponse = await getData(`resources/files/url/THUMBNAILS/${course.thumbnail}`)
+              if (thumbnailResponse.status === 200) {
+                urls[course._id] = thumbnailResponse.data.signedUrl
+              }
+            } catch (error) {
+              console.error('Error fetching thumbnail URL:', error)
+            }
+          }
+        }
+        setThumbnailUrls(urls)
       }
     } catch (error) {
       console.error('Error fetching inactive courses:', error)
@@ -63,6 +90,15 @@ const InactiveCourses = () => {
     }
   }
 
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage)
+  }
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10))
+    setPage(0)
+  }
+
   return (
     <Box sx={{ p: 1 }}>
       <Paper 
@@ -81,93 +117,136 @@ const InactiveCourses = () => {
             fontWeight: 'bold'
           }}
         >
-          InActive Courses
+          Inactive Courses
         </Typography>
         
-        <Grid container spacing={2}>
-          {courses.map((course) => (
-            <Grid key={course._id} size={3}>
-              <Card
-                sx={{
-                  p: 2,
-                  height: '100%',
-                  width: '200px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  borderRadius: '12px',
-                  border: '1px solid #3366CC33',
-                  position: 'relative',
-                  boxShadow: '0px 14px 42px 0px #080F340F',
-                  opacity: 0.8,
-                  transition: 'transform 0.2s',
-                  '&:hover': {
-                    transform: 'scale(1.02)',
-                    cursor: 'pointer'
-                  }
-                }}
-              >
-                <IconButton
-                  size="small"
-                  sx={{ 
-                    position: 'absolute', 
-                    top: 8, 
-                    right: 8,
-                    backgroundColor: 'white',
-                    width: '32px',
-                    height: '32px',
-                    '&:hover': {
-                      backgroundColor: 'white',
-                      opacity: 0.9
-                    },
-                    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
-                  }}
-                  onClick={(e) => handleMenuOpen(e, course)}
-                >
-                  <MoreVertIcon sx={{ transform: 'rotate(90deg)' }} />
-                </IconButton>
-                <Box
-                  sx={{
-                    width: '100%',
-                    height: '120px',
-                    bgcolor: course.thumbnail ? 'transparent' : 'primary.light',
-                    borderRadius: '8px',
-                    mb: 2
-                  }}
-                >
-                  {course.thumbnail ? (
-                    <img
-                      src={course.thumbnail}
-                      alt={course.name}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        borderRadius: '8px'
-                      }}
-                    />
-                  ) : (
+        <TableContainer>
+          <Table sx={{ minWidth: 650 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell>Course</TableCell>
+                <TableCell>Name</TableCell>
+                <TableCell>Units</TableCell>
+                <TableCell>Enrolled Students</TableCell>
+                <TableCell align="right">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {courses
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((course) => (
+                <TableRow key={course._id}>
+                  <TableCell>
                     <Box
                       sx={{
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
+                        width: '100px',
+                        height: '60px',
+                        bgcolor: course.thumbnail ? 'transparent' : 'primary.light',
+                        borderRadius: '8px',
+                        overflow: 'hidden'
                       }}
                     >
-                      <MenuBookOutlinedIcon sx={{ fontSize: 40, color: 'primary.main' }} />
+                      {course.thumbnail ? (
+                        <img
+                          src={thumbnailUrls[course._id]}
+                          alt={course.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        <Box
+                          sx={{
+                            height: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            bgcolor: '#e0e0e0'
+                          }}
+                        >
+                          No Image
+                        </Box>
+                      )}
                     </Box>
-                  )}
-                </Box>
-                <Typography variant="h6" sx={{ mb: 1, fontSize: '14px' }}>
-                  {course.name}
-                </Typography>
-                <Typography color="text.secondary" sx={{ fontSize: '12px' }}>
-                  {course.units?.length || 0} Units
-                </Typography>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+                  </TableCell>
+                  <TableCell>{course.name}</TableCell>
+                  <TableCell>{course.units?.length || 0}</TableCell>
+                  <TableCell>
+                    <List dense sx={{ p: 0, maxHeight: 100, overflowY: 'auto' }}>
+                      {course.enrolledStudents && course.enrolledStudents.length > 0 ? (
+                        course.enrolledStudents.map((student, index) => (
+                          <ListItem key={index} sx={{ py: 0 }}>
+                            <ListItemText 
+                              primary={student.name}
+                              sx={{
+                                '& .MuiListItemText-primary': {
+                                  fontSize: '0.875rem',
+                                }
+                              }}
+                            />
+                          </ListItem>
+                        ))
+                      ) : (
+                        <ListItem sx={{ py: 0 }}>
+                          <ListItemText 
+                            primary="No enrolled students"
+                            sx={{
+                              '& .MuiListItemText-primary': {
+                                fontSize: '0.875rem',
+                                color: 'text.secondary',
+                                fontStyle: 'italic'
+                              }
+                            }}
+                          />
+                        </ListItem>
+                      )}
+                    </List>
+                  </TableCell>
+                  <TableCell align="right">
+                    <IconButton
+                      onClick={(e) => handleMenuOpen(e, course)}
+                      sx={{
+                        color: 'primary.main',
+                        '&:hover': {
+                          backgroundColor: 'primary.light'
+                        }
+                      }}
+                    >
+                      <MoreVertIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={courses.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          sx={{
+            '.MuiTablePagination-actions': {
+              '.MuiIconButton-root': {
+                '&.Mui-disabled': {
+                  opacity: 0.5
+                },
+                backgroundColor: 'primary.main',
+                color: 'white',
+                margin: '0 4px',
+                '&:hover': {
+                  backgroundColor: 'primary.dark'
+                }
+              }
+            }
+          }}
+        />
       </Paper>
 
       <Menu

@@ -269,63 +269,138 @@ export const swapUnitNumbers = async (req, res) => {
 }
 
 export const insertUnit = async (req, res) => {
+  console.log('Starting insertUnit with request body:', JSON.stringify(req.body, null, 2));
+  
+  const session = await Unit.startSession();
+  session.startTransaction();
+  console.log('MongoDB session started');
+
   try {
-    const { afterUnitId, newUnit } = req.body
-
-    // If afterUnitId is null, we're inserting at the beginning
-    if (!afterUnitId) {
-      // Increment numbers of all units first
-      await Unit.updateMany(
-        {
-          courseId: newUnit.courseId,
-          status: 1
-        },
-        { $inc: { number: 1 } }
-      )
-
-      // Create new unit with number 1
-      const unit = new Unit({
-        ...newUnit,
-        number: 1
-      })
-      await unit.save()
-
-      return res.status(201).json({
-        success: true,
-        data: unit
-      })
+    const { newUnit } = req.body;
+    console.log('Processing newUnit:', JSON.stringify(newUnit, null, 2));
+    
+    // Validate inputs
+    if (!newUnit || !newUnit.courseId || !newUnit.number || !newUnit.name) {
+      console.log('Validation failed - missing required fields');
+      throw new Error('Missing required fields');
     }
 
-    const afterUnit = await Unit.findById(afterUnitId)
-    if (!afterUnit) {
-      return res.status(404).json({
-        success: false,
-        message: 'Reference unit not found'
-      })
-    }
+    // First, check if a unit with the target number exists
+    const existingUnit = await Unit.findOne({
+      courseId: newUnit.courseId,
+      number: newUnit.number,
+      status: 1
+    }).session(session);
+    
+    console.log('Existing unit check result:', existingUnit ? 'Found' : 'Not found');
 
-    // Increment numbers of all units from the target number onwards first
-    await Unit.updateMany(
-      {
-        courseId: afterUnit.courseId,
+    if (existingUnit) {
+      console.log('Incrementing numbers for units >=', newUnit.number);
+      
+      // First, find all units that need to be updated
+      const unitsToUpdate = await Unit.find({
+        courseId: newUnit.courseId,
         number: { $gte: newUnit.number },
         status: 1
-      },
-      { $inc: { number: 1 } }
-    )
+      }).sort({ number: -1 }).session(session);
+      
+      console.log('Found units to update:', unitsToUpdate.length);
 
-    // Create new unit with the provided number
+      // Update units one by one in descending order to avoid conflicts
+      for (const unit of unitsToUpdate) {
+        console.log(`Updating unit ${unit._id} from number ${unit.number} to ${unit.number + 1}`);
+        await Unit.findByIdAndUpdate(
+          unit._id,
+          { $inc: { number: 1 } },
+          { session }
+        );
+      }
+    }
+
+    console.log('Creating new unit with data:', {
+      name: newUnit.name,
+      number: newUnit.number,
+      courseId: newUnit.courseId
+    });
+
+    // Create the new unit
     const unit = new Unit({
-      ...newUnit,
-      courseId: afterUnit.courseId
-    })
-    await unit.save()
+      name: newUnit.name,
+      number: newUnit.number,
+      courseId: newUnit.courseId
+    });
+    
+    try {
+      await unit.save({ session });
+      console.log('New unit saved successfully:', unit);
+    } catch (saveError) {
+      console.error('Error saving new unit:', saveError);
+      throw saveError;
+    }
+
+    console.log('Updating course with new unit ID:', unit._id);
+    // Update the course to include the new unit
+    const courseUpdate = await Course.findByIdAndUpdate(
+      newUnit.courseId,
+      { $push: { units: unit._id } },
+      { session }
+    );
+    console.log('Course update result:', courseUpdate ? 'Success' : 'Failed');
+
+    await session.commitTransaction();
+    session.endSession();
+    console.log('Transaction committed successfully');
 
     res.status(201).json({
       success: true,
       data: unit
-    })
+    });
   } catch (error) {
-    handleError(res, error)
+    console.error('Error in insertUnit:', {
+      error: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    
+    await session.abortTransaction();
+    session.endSession();
+    console.log('Transaction aborted and session ended');
+    
+    if (error.code === 11000) {
+      console.log('Handling duplicate key error');
+      try {
+        console.log('Attempting to find next available number');
+        const nextNumber = await Unit.findOne({
+          courseId: newUnit.courseId,
+          status: 1
+        })
+        .sort('-number')
+        .select('number')
+        .lean();
+
+        const availableNumber = (nextNumber?.number || 0) + 1;
+        console.log('Next available number:', availableNumber);
+
+        // Create new unit with the next available number
+        const unit = new Unit({
+          ...newUnit,
+          number: availableNumber
+        });
+        await unit.save();
+        console.log('Unit saved with next available number:', unit);
+
+        return res.status(201).json({
+          success: true,
+          data: unit
+        });
+      } catch (retryError) {
+        console.error('Error in retry attempt:', retryError);
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to insert unit. Please try again.'
+        });
+      }
+    }
+    handleError(res, error);
   }
-} 
+}; 

@@ -264,10 +264,28 @@ const CourseRow = ({ course, studentId }) => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const [imageError, setImageError] = useState(false)
+  const [thumbnailUrl, setThumbnailUrl] = useState('')
   const [progress, setProgress] = useState(0)
   const [loading, setLoading] = useState(true)
   const [openDialog, setOpenDialog] = useState(false)
   const [unitsProgress, setUnitsProgress] = useState([])
+
+  useEffect(() => {
+    const fetchThumbnailUrl = async () => {
+      if (course.image) {
+        try {
+          const response = await getData(`resources/files/url/THUMBNAILS/${course.image}`)
+          if (response.status === 200) {
+            setThumbnailUrl(response.data.signedUrl)
+          }
+        } catch (error) {
+          console.error('Error fetching thumbnail URL:', error)
+          setImageError(true)
+        }
+      }
+    }
+    fetchThumbnailUrl()
+  }, [course.image])
 
   useEffect(() => {
     fetchProgress()
@@ -309,7 +327,7 @@ const CourseRow = ({ course, studentId }) => {
       setCurrentCourse({
         id: course.id,
         name: course.name,
-        image: getThumbnailUrl(course.image)
+        image: thumbnailUrl
       })
     )
     navigate(`/units/${course.id}`)
@@ -355,7 +373,7 @@ const CourseRow = ({ course, studentId }) => {
           {course.image && !imageError ? (
             <Box
               component='img'
-              src={getThumbnailUrl(course.image)}
+              src={thumbnailUrl}
               alt={course.name}
               onError={() => setImageError(true)}
               sx={{

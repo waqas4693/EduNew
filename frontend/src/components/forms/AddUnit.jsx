@@ -229,48 +229,35 @@ const AddUnit = ({ courseId, editMode }) => {
     try {
       setError('')
       
-      // Validate course selection
+      // Validate inputs
       if (!selectedCourse) {
         setError('Please select a course first')
         return
       }
 
-      // Validate number
-      if (units[0].number < 1) {
-        setNumberError('Number must be positive')
-        return
-      }
-
-      // Validate name
       if (!units[0].name) {
         setError('Please enter a unit name')
         return
       }
 
-      // Find the unit that comes before our insertion point
-      const response = await getData(`units/${selectedCourse._id}`)
-      if (response.status === 200 || response.status === 304) {
-        const existingUnits = response.data.units
-        const unitsBeforeInsert = existingUnits.filter(u => u.number < units[0].number)
-        const afterUnitId = unitsBeforeInsert.length > 0 
-          ? unitsBeforeInsert[unitsBeforeInsert.length - 1]._id 
-          : null
+      if (units[0].number < 1) {
+        setNumberError('Number must be positive')
+        return
+      }
 
-        const insertResponse = await postData('units/insert', {
-          afterUnitId,
-          newUnit: {
-            name: units[0].name,
-            number: units[0].number,
-            courseId: selectedCourse._id
-          }
-        })
-        if (insertResponse.status === 201) {
-          setInsertMode(false)
-          setUnits([])
-          fetchExistingUnits(selectedCourse._id)
+      // Send insert request
+      const response = await postData('units/insert', {
+        newUnit: {
+          name: units[0].name,
+          number: units[0].number,
+          courseId: selectedCourse._id
         }
-      } else {
-        setError('Failed to fetch existing units')
+      })
+
+      if (response.status === 201) {
+        setInsertMode(false)
+        setUnits([])
+        await fetchExistingUnits(selectedCourse._id)
       }
     } catch (error) {
       console.error('Error inserting unit:', error)

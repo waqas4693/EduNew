@@ -16,7 +16,8 @@ import {
   Checkbox,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
+  Alert
 } from '@mui/material'
 import { postData, getData, putData } from '../../api/api'
 import axios from 'axios'
@@ -78,36 +79,7 @@ const chunk = (arr, size) =>
   )
 
 const AddResource = ({ courseId: propsCourseId, editMode }) => {
-  const [resources, setResources] = useState([
-    {
-      name: '',
-      number: null,
-      resourceType: '',
-      content: {
-        fileName: '',
-        questions: [
-          { question: '', answer: '' },
-          { question: '', answer: '' },
-          { question: '', answer: '' }
-        ],
-        backgroundImage: '',
-        file: null,
-        thumbnail: null,
-        externalLinks: [
-          { name: '', url: '' },
-          { name: '', url: '' },
-          { name: '', url: '' }
-        ],
-        mcq: {
-          question: '',
-          options: ['', '', '', ''],
-          numberOfCorrectAnswers: 1,
-          correctAnswers: [],
-          imageFile: null
-        }
-      }
-    }
-  ])
+  const [resources, setResources] = useState([])
   const [courseId, setCourseId] = useState(null)
   const [unitId, setUnitId] = useState(null)
   const [sectionId, setSectionId] = useState(null)
@@ -118,6 +90,8 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [nextNumber, setNextNumber] = useState(1)
   const [numberError, setNumberError] = useState('')
+  const [error, setError] = useState('')
+  const [insertMode, setInsertMode] = useState(false)
 
   useEffect(() => {
     fetchCourses()
@@ -490,27 +464,115 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         return
       }
 
-      // Update in backend
-      const response = await putData(`resources/${resourceId}/number`, {
-        newNumber,
-        sectionId: sectionId
-      })
-
-      if (response.status === 200) {
-        // Update local state
-        setResources(prev => {
-          const updated = prev.map(resource => {
-            if (resource._id === resourceId) {
-              return { ...resource, number: newNumber }
-            }
-            return resource
-          })
-          return updated.sort((a, b) => a.number - b.number)
+      // Only update in backend if not in insert mode
+      if (!insertMode) {
+        // Update in backend
+        const response = await putData(`resources/${resourceId}/number`, {
+          newNumber,
+          sectionId: sectionId
         })
+
+        if (response.status === 200) {
+          // Update local state
+          setResources(prev => {
+            const updated = prev.map(resource => {
+              if (resource._id === resourceId) {
+                return { ...resource, number: newNumber }
+              }
+              return resource
+            })
+            return updated.sort((a, b) => a.number - b.number)
+          })
+        }
+      } else {
+        // In insert mode, just update the local state
+        setResources(prev => prev.map(resource => ({
+          ...resource,
+          number: newNumber
+        })))
       }
     } catch (error) {
       console.error('Error updating resource number:', error)
       setNumberError(error.response?.data?.message || 'Failed to update number')
+    }
+  }
+
+  const handleInsertClick = () => {
+    setInsertMode(true)
+    setResources([{
+      name: '',
+      number: 1,
+      resourceType: '',
+      content: {
+        fileName: '',
+        questions: [
+          { question: '', answer: '' },
+          { question: '', answer: '' },
+          { question: '', answer: '' }
+        ],
+        backgroundImage: '',
+        file: null,
+        thumbnail: null,
+        externalLinks: [
+          { name: '', url: '' },
+          { name: '', url: '' },
+          { name: '', url: '' }
+        ],
+        mcq: {
+          question: '',
+          options: ['', '', '', ''],
+          numberOfCorrectAnswers: 1,
+          correctAnswers: [],
+          imageFile: null
+        }
+      }
+    }])
+  }
+
+  const handleInsertSubmit = async () => {
+    try {
+      setError('')
+      
+      // Validate inputs
+      if (!sectionId) {
+        setError('Please select a section first')
+        return
+      }
+
+      if (!resources[0].name) {
+        setError('Please enter a resource name')
+        return
+      }
+
+      if (!resources[0].resourceType) {
+        setError('Please select a resource type')
+        return
+      }
+
+      if (resources[0].number < 1) {
+        setNumberError('Number must be positive')
+        return
+      }
+
+      // Send insert request
+      const response = await postData('resources/insert', {
+        newResource: {
+          name: resources[0].name,
+          number: resources[0].number,
+          sectionId: sectionId,
+          resourceType: resources[0].resourceType,
+          content: resources[0].content
+        }
+      })
+
+      if (response.status === 201) {
+        setInsertMode(false)
+        setResources([])
+        await fetchResources(sectionId)
+      }
+    } catch (error) {
+      console.error('Error inserting resource:', error)
+      setError(error.response?.data?.message || 'Failed to insert resource')
     }
   }
 
@@ -524,7 +586,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             options={courses}
             getOptionLabel={option => option.name}
             onChange={(_, newValue) => setCourseId(newValue?._id)}
-            disabled={editMode}
+            disabled={editMode || insertMode}
             renderInput={params => (
               <TextField
                 {...params}
@@ -544,7 +606,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             options={units}
             getOptionLabel={option => option.name}
             onChange={(_, newValue) => setUnitId(newValue?._id)}
-            disabled={!courseId}
+            disabled={!courseId || insertMode}
             renderInput={params => (
               <TextField
                 {...params}
@@ -565,7 +627,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             options={sections}
             getOptionLabel={option => option.name}
             onChange={(_, newValue) => handleSectionSelect(newValue)}
-            disabled={!unitId}
+            disabled={!unitId || insertMode}
             renderInput={params => (
               <TextField
                 {...params}
@@ -581,6 +643,12 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             )}
           />
         </Box>
+
+        {error && (
+          <Alert severity='error' sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
         {resources.map((resource, index) => (
           <Accordion
@@ -649,9 +717,19 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                   <NumberInput
                     value={resource.number}
                     onChange={(newNumber) => handleNumberChange(resource._id, newNumber)}
-                    disabled={!editMode}
+                    disabled={!editMode && !insertMode}
                     error={!!numberError}
                     helperText={numberError}
+                    sx={{ 
+                      minWidth: '200px',
+                      '& .MuiInputBase-root': {
+                        height: '40px'
+                      },
+                      '& .MuiInputBase-input': {
+                        textAlign: 'center',
+                        padding: '8px 0'
+                      }
+                    }}
                   />
                   <TextField
                     fullWidth
@@ -1225,7 +1303,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             alignItems: 'center'
           }}
         >
-          {!editMode && (
+          {!editMode && !insertMode && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <IconButton
                 onClick={addNewResource}
@@ -1240,20 +1318,51 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
               <Typography sx={{ fontWeight: 'bold', color: 'black' }}>
                 Add Another Resource
               </Typography>
+              <Button
+                variant="outlined"
+                onClick={handleInsertClick}
+                sx={{ ml: 2 }}
+              >
+                Insert Resource
+              </Button>
             </Box>
           )}
-          <Button
-            type='submit'
-            variant='contained'
-            sx={{
-              bgcolor: editMode ? 'success.main' : 'primary.main',
-              '&:hover': {
-                bgcolor: editMode ? 'success.dark' : 'primary.dark'
-              }
-            }}
-          >
-            {editMode ? 'Edit' : 'Save All'}
-          </Button>
+          {insertMode && (
+            <>
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={() => {
+                  setInsertMode(false)
+                  setResources([])
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleInsertSubmit}
+                disabled={!resources[0]?.name || !sectionId || !resources[0]?.resourceType}
+              >
+                Insert
+              </Button>
+            </>
+          )}
+          {!insertMode && (
+            <Button
+              type='submit'
+              variant='contained'
+              sx={{
+                bgcolor: editMode ? 'success.main' : 'primary.main',
+                '&:hover': {
+                  bgcolor: editMode ? 'success.dark' : 'primary.dark'
+                }
+              }}
+            >
+              {editMode ? 'Edit' : 'Save All'}
+            </Button>
+          )}
         </Box>
       </form>
 
