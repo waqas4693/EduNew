@@ -265,6 +265,7 @@ const CourseRow = ({ course, studentId }) => {
   const navigate = useNavigate()
   const [imageError, setImageError] = useState(false)
   const [thumbnailUrl, setThumbnailUrl] = useState('')
+  const [thumbnailLoading, setThumbnailLoading] = useState(true)
   const [progress, setProgress] = useState(0)
   const [loading, setLoading] = useState(true)
   const [openDialog, setOpenDialog] = useState(false)
@@ -274,14 +275,21 @@ const CourseRow = ({ course, studentId }) => {
     const fetchThumbnailUrl = async () => {
       if (course.image) {
         try {
+          setThumbnailLoading(true)
           const response = await getData(`resources/files/url/THUMBNAILS/${course.image}`)
           if (response.status === 200) {
             setThumbnailUrl(response.data.signedUrl)
+            setImageError(false)
           }
         } catch (error) {
           console.error('Error fetching thumbnail URL:', error)
           setImageError(true)
+        } finally {
+          setThumbnailLoading(false)
         }
+      } else {
+        setImageError(true)
+        setThumbnailLoading(false)
       }
     }
     fetchThumbnailUrl()
@@ -323,11 +331,14 @@ const CourseRow = ({ course, studentId }) => {
   }
 
   const handleThumbnailClick = () => {
+    // Debug log to check course object structure
+    console.log('Course data:', course)
+    
     dispatch(
       setCurrentCourse({
         id: course.id,
         name: course.name,
-        image: thumbnailUrl
+        image: thumbnailUrl // Using the fetched signed URL instead of the image filename
       })
     )
     navigate(`/units/${course.id}`)
@@ -367,10 +378,15 @@ const CourseRow = ({ course, studentId }) => {
             aspectRatio: '1/1',
             borderRadius: '8px',
             overflow: 'hidden',
-            bgcolor: 'white'
+            bgcolor: 'white',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
           }}
         >
-          {course.image && !imageError ? (
+          {thumbnailLoading ? (
+            <CircularProgress size={32} />
+          ) : course.image && !imageError && thumbnailUrl ? (
             <Box
               component='img'
               src={thumbnailUrl}

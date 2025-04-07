@@ -7,7 +7,8 @@ import {
   Typography,
   Menu,
   MenuItem,
-  Tooltip
+  Tooltip,
+  CircularProgress
 } from '@mui/material'
 import { getData, patchData } from '../../api/api'
 import { useNavigate } from 'react-router-dom'
@@ -30,19 +31,27 @@ const getThumbnailUrl = (fileName) => {
 const AdminCourseCard = ({ course, onMenuOpen }) => {
   const [imageError, setImageError] = useState(false)
   const [thumbnailUrl, setThumbnailUrl] = useState('')
+  const [thumbnailLoading, setThumbnailLoading] = useState(true)
 
   useEffect(() => {
     const fetchThumbnailUrl = async () => {
       if (course.thumbnail) {
         try {
+          setThumbnailLoading(true)
           const response = await getData(`resources/files/url/THUMBNAILS/${course.thumbnail}`)
           if (response.status === 200) {
             setThumbnailUrl(response.data.signedUrl)
+            setImageError(false)
           }
         } catch (error) {
           console.error('Error fetching thumbnail URL:', error)
           setImageError(true)
+        } finally {
+          setThumbnailLoading(false)
         }
+      } else {
+        setImageError(true)
+        setThumbnailLoading(false)
       }
     }
     fetchThumbnailUrl()
@@ -92,10 +101,15 @@ const AdminCourseCard = ({ course, onMenuOpen }) => {
           height: '120px',
           bgcolor: course.thumbnail && !imageError ? 'transparent' : 'primary.light',
           borderRadius: '8px',
-          mb: 2
+          mb: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}
       >
-        {course.thumbnail && !imageError ? (
+        {thumbnailLoading ? (
+          <CircularProgress size={32} />
+        ) : course.thumbnail && !imageError && thumbnailUrl ? (
           <img
             src={thumbnailUrl}
             alt={course.name}
