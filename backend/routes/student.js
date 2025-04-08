@@ -8,7 +8,9 @@ import {
   assignCourse,
   removeCourse,
   getCourseStudents,
-  getUnitProgress
+  getUnitProgress,
+  getStudentById,
+  getDashboardStats
 } from '../controllers/student.js'
 import { verifyToken } from '../middleware/auth.js'
 
@@ -17,6 +19,8 @@ const router = express.Router()
 router.post('/', newStudent)
 
 router.get('/', verifyToken, getAllStudents)
+router.get('/stats', verifyToken, getDashboardStats)
+router.get('/:id', verifyToken, getStudentById)
 router.get('/:id/courses', getStudentCourses)
 router.get('/:id/dashboard', verifyToken, getDashboardData)
 router.get('/course/:courseId', verifyToken, getAllStudents)

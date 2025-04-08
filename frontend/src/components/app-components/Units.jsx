@@ -277,7 +277,7 @@ const Units = () => {
                   </Box>
                   <ChevronRight sx={{ color: 'primary.main' }} />
                 </ListItem>
-                <Typography
+                {/* <Typography
                   sx={{
                     mb: 1,
                     fontSize: '14px',
@@ -288,14 +288,14 @@ const Units = () => {
                     Due Date:
                   </Box>{' '}
                   {unit.dueDate || '20/11/2024'}
-                </Typography>
-                <Box
+                </Typography> */}
+                {/* <Box
                   sx={{
                     border: '1px solid #0000001A',
                     width: '100%',
                     mb: 3
                   }}
-                />
+                /> */}
               </>
             ))
           )}

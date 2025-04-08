@@ -141,7 +141,7 @@ const Login = () => {
             mx: 3,
             width: '10%',
             height: '35%',
-            backgroundColor: '#ff2b0c'
+            background: 'linear-gradient(90deg, #ff2b0c 0%, #ff6b0c 100%)'
           }}
         />
         <Box
@@ -160,7 +160,7 @@ const Login = () => {
             mx: 3,
             flexGrow: 1,
             height: '35%',
-            backgroundColor: '#ff2b0c'
+            background: 'linear-gradient(90deg, #ff2b0c 0%, #ff6b0c 100%)'
           }}
         />
       </Box>
@@ -269,7 +269,7 @@ const Login = () => {
             mx: 3,
             width: '75%',
             height: '30%',
-            backgroundColor: '#0070c0'
+            background: 'linear-gradient(90deg, #0070c0 0%, #00a0c0 100%)'
           }}
         />
         <Box
@@ -288,7 +288,7 @@ const Login = () => {
             mx: 3,
             flexGrow: 1,
             height: '30%',
-            backgroundColor: '#0070c0'
+            background: 'linear-gradient(90deg, #0070c0 0%, #00a0c0 100%)'
           }}
         />
       </Box>

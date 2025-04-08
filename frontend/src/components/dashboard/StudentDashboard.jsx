@@ -269,6 +269,7 @@ const CourseRow = ({ course, studentId }) => {
   const [progress, setProgress] = useState(0)
   const [loading, setLoading] = useState(true)
   const [openDialog, setOpenDialog] = useState(false)
+  const [openAIDialog, setOpenAIDialog] = useState(false)
   const [unitsProgress, setUnitsProgress] = useState([])
 
   useEffect(() => {
@@ -354,9 +355,17 @@ const CourseRow = ({ course, studentId }) => {
     })
   }
 
+  const handleAIDialogOpen = (e) => {
+    e.stopPropagation()
+    setOpenAIDialog(true)
+  }
+
+  const handleAIDialogClose = () => {
+    setOpenAIDialog(false)
+  }
+
   return (
     <Card
-      onClick={handleThumbnailClick}
       sx={{
         mb: 2,
         width: '100%',
@@ -366,13 +375,13 @@ const CourseRow = ({ course, studentId }) => {
         color: 'white',
         display: 'flex',
         flexDirection: 'column',
-        cursor: 'pointer',
       }}
     >
       {/* Main content container */}
       <Box sx={{ display: 'flex', p: 2, gap: 2 }}>
         {/* Thumbnail Box */}
         <Box
+          onClick={handleThumbnailClick}
           sx={{
             flex: 1,
             aspectRatio: '1/1',
@@ -381,7 +390,11 @@ const CourseRow = ({ course, studentId }) => {
             bgcolor: 'white',
             display: 'flex',
             justifyContent: 'center',
-            alignItems: 'center'
+            alignItems: 'center',
+            cursor: 'pointer',
+            '&:hover': {
+              opacity: 0.9
+            }
           }}
         >
           {thumbnailLoading ? (
@@ -517,10 +530,15 @@ const CourseRow = ({ course, studentId }) => {
             component='img'
             src='/ai-education.png'
             alt="AI Education"
+            onClick={handleAIDialogOpen}
             sx={{
               width: '100%',
               height: '100%',
-              objectFit: 'cover'
+              objectFit: 'cover',
+              cursor: 'pointer',
+              '&:hover': {
+                opacity: 0.9
+              }
             }}
           />
         </Box>
@@ -706,6 +724,80 @@ const CourseRow = ({ course, studentId }) => {
             }}
           >
             Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* AI Dialog */}
+      <Dialog
+        open={openAIDialog}
+        onClose={handleAIDialogClose}
+        PaperProps={{
+          sx: {
+            borderRadius: '12px',
+            p: 3,
+            maxWidth: '400px',
+            width: '100%'
+          }
+        }}
+      >
+        <DialogTitle>
+          <Typography
+            variant="h6"
+            sx={{
+              fontSize: '20px',
+              fontWeight: 'bold',
+              textAlign: 'center',
+              color: 'primary.main'
+            }}
+          >
+            AI Tutor Feature
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 2,
+              py: 2
+            }}
+          >
+            <Box
+              component="img"
+              src="/ai-education.png"
+              alt="AI Education"
+              sx={{
+                width: '120px',
+                height: '120px',
+                objectFit: 'contain'
+              }}
+            />
+            <Typography
+              variant="body1"
+              sx={{
+                textAlign: 'center',
+                color: 'text.secondary',
+                fontSize: '16px'
+              }}
+            >
+              Coming Soon! Our AI tutor feature will help you learn more effectively with personalized assistance.
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', pb: 2 }}>
+          <Button
+            onClick={handleAIDialogClose}
+            variant="contained"
+            sx={{
+              bgcolor: 'primary.main',
+              '&:hover': {
+                bgcolor: 'primary.dark'
+              }
+            }}
+          >
+            Got it!
           </Button>
         </DialogActions>
       </Dialog>

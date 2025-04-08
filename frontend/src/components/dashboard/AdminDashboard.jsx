@@ -159,20 +159,37 @@ const AdminDashboard = () => {
   const [courses, setCourses] = useState([])
   const [anchorEl, setAnchorEl] = useState(null)
   const [selectedCourse, setSelectedCourse] = useState(null)
+  const [stats, setStats] = useState({
+    totalCourses: 0,
+    totalStudents: 0,
+    activeCourses: 0,
+    activeStudents: 0
+  })
+  const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
   useEffect(() => {
-    fetchCourses()
+    fetchDashboardData()
   }, [])
 
-  const fetchCourses = async () => {
+  const fetchDashboardData = async () => {
     try {
-      const response = await getData('courses')
-      if (response.status === 200) {
-        setCourses(response.data.data)
+      const [coursesResponse, statsResponse] = await Promise.all([
+        getData('courses'),
+        getData('student/stats')
+      ])
+
+      if (coursesResponse.status === 200) {
+        setCourses(coursesResponse.data.data)
+      }
+
+      if (statsResponse.status === 200) {
+        setStats(statsResponse.data.data)
       }
     } catch (error) {
-      console.error('Error fetching courses:', error)
+      console.error('Error fetching dashboard data:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -210,7 +227,7 @@ const AdminDashboard = () => {
         })
 
         if (response.status === 200) {
-          fetchCourses()
+          fetchDashboardData()
           alert('Course marked as inactive successfully')
         }
       }
@@ -278,16 +295,32 @@ const AdminDashboard = () => {
         <Grid container spacing={3}>
           {/* Stats Section */}
           <Grid size={3}>
-            <StatCard title="Total Courses" value="12" icon={<MenuBookOutlinedIcon />} />
+            <StatCard 
+              title="Total Courses" 
+              value={stats.totalCourses} 
+              icon={<MenuBookOutlinedIcon />} 
+            />
           </Grid>
           <Grid size={3}>
-            <StatCard title="Total Students" value="12" icon={<GroupOutlinedIcon />} />
+            <StatCard 
+              title="Total Students" 
+              value={stats.totalStudents} 
+              icon={<GroupOutlinedIcon />} 
+            />
           </Grid>
           <Grid size={3}>
-            <StatCard title="Total Active Courses" value="12" icon={<PersonOutlineOutlinedIcon />} />
+            <StatCard 
+              title="Total Active Courses" 
+              value={stats.activeCourses} 
+              icon={<PersonOutlineOutlinedIcon />} 
+            />
           </Grid>
           <Grid size={3}>
-            <StatCard title="Total Active Students" value="12" icon={<ArchiveOutlinedIcon />} />
+            <StatCard 
+              title="Total Active Students" 
+              value={stats.activeStudents} 
+              icon={<ArchiveOutlinedIcon />} 
+            />
           </Grid>
 
           {/* Courses Section */}

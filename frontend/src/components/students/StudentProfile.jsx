@@ -52,9 +52,9 @@ const StudentProfile = () => {
   const fetchStudentDetails = async () => {
     try {
       setLoading(true)
-      const response = await getData(`student?id=${studentId}`)
-      if (response.status === 200 && response.data.data.students && response.data.data.students.length > 0) {
-        const studentData = response.data.data.students[0]
+      const response = await getData(`student/${studentId}`)
+      if (response.status === 200 && response.data.data) {
+        const studentData = response.data.data
         console.log('Student data from API:', studentData)
         setStudent(studentData)
         setProfileData({

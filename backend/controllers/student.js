@@ -401,3 +401,68 @@ export const getUnitProgress = async (req, res) => {
     })
   }
 }
+
+export const getStudentById = async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const student = await Student.findById(id)
+      .populate({
+        path: 'courses.courseId',
+        select: 'name thumbnail status'
+      })
+      .lean()
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found'
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      data: student
+    })
+  } catch (error) {
+    console.error('Error fetching student:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    })
+  }
+}
+
+export const getDashboardStats = async (req, res) => {
+  try {
+    // Get total courses count
+    const totalCourses = await Course.countDocuments()
+    
+    // Get total students count
+    const totalStudents = await Student.countDocuments()
+    
+    // Get active courses count (status = 1)
+    const activeCourses = await Course.countDocuments({ status: 1 })
+    
+    // Get active students count (status = 1)
+    const activeStudents = await Student.countDocuments({ status: 1 })
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalCourses,
+        totalStudents,
+        activeCourses,
+        activeStudents
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    })
+  }
+}
