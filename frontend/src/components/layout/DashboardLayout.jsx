@@ -15,7 +15,7 @@ const DashboardLayout = ({ children }) => {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile)
-  const [background, setBackground] = useState(`/background-images/${backgroundImages[0]}`)
+  const [background, setBackground] = useState(`/background-images/${backgroundImages[3]}`)
   const [openDialog, setOpenDialog] = useState(false)
 
   const handleImageSelect = (image) => {

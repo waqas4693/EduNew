@@ -138,7 +138,7 @@ const Login = () => {
       >
         <Box
           sx={{
-            mx: 3,
+            mr: 3,
             width: '10%',
             height: '35%',
             background: 'linear-gradient(90deg, #ff2b0c 0%, #ff6b0c 100%)'
@@ -157,7 +157,7 @@ const Login = () => {
         />
         <Box
           sx={{
-            mx: 3,
+            ml: 3,
             flexGrow: 1,
             height: '35%',
             background: 'linear-gradient(90deg, #ff2b0c 0%, #ff6b0c 100%)'
@@ -266,7 +266,7 @@ const Login = () => {
       >
         <Box
           sx={{
-            mx: 3,
+            mr: 3,
             width: '75%',
             height: '30%',
             background: 'linear-gradient(90deg, #0070c0 0%, #00a0c0 100%)'
@@ -285,7 +285,7 @@ const Login = () => {
         />
         <Box
           sx={{
-            mx: 3,
+            ml: 3,
             flexGrow: 1,
             height: '30%',
             background: 'linear-gradient(90deg, #0070c0 0%, #00a0c0 100%)'

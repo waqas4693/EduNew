@@ -1,5 +1,5 @@
-import { AppBar, IconButton, Toolbar, Typography } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
+import { AppBar, IconButton, Toolbar, Typography } from '@mui/material'
 
 const Navbar = ({ onMenuClick, children }) => {
   return (
@@ -34,4 +34,4 @@ const Navbar = ({ onMenuClick, children }) => {
   )
 }
 
-export default Navbar 
+export default Navbar
