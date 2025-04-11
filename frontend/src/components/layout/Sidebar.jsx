@@ -119,7 +119,7 @@ const Sidebar = ({ open, onClose }) => {
   ]
 
   const getMenuItems = () => {
-    switch(user?.role) {
+    switch (user?.role) {
       case ADMIN_ROLE:
         return adminMenuItems
       case STUDENT_ROLE:
@@ -136,7 +136,7 @@ const Sidebar = ({ open, onClose }) => {
   const menuItems = getMenuItems()
 
   const getRoleName = (roleId) => {
-    switch(roleId) {
+    switch (roleId) {
       case ADMIN_ROLE:
         return 'Administrator'
       case STUDENT_ROLE:
@@ -172,9 +172,9 @@ const Sidebar = ({ open, onClose }) => {
       }}
     >
       <Box sx={{ overflow: 'auto', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ 
-          p: 2, 
-          display: 'flex', 
+        <Box sx={{
+          p: 2,
+          display: 'flex',
           alignItems: 'center',
           borderBottom: '1px solid rgba(255, 255, 255, 0.12)'
         }}>
@@ -183,8 +183,8 @@ const Sidebar = ({ open, onClose }) => {
           </Avatar>
           {open && (
             <Box sx={{ overflow: 'hidden' }}>
-              <Typography 
-                sx={{ 
+              <Typography
+                sx={{
                   color: 'white',
                   fontSize: '16px',
                   fontWeight: 'bold'
@@ -192,8 +192,8 @@ const Sidebar = ({ open, onClose }) => {
               >
                 {getRoleName(user?.role)}
               </Typography>
-              <Typography 
-                sx={{ 
+              <Typography
+                sx={{
                   color: 'rgba(255, 255, 255, 0.7)',
                   fontSize: '14px',
                   lineHeight: 1
@@ -248,42 +248,42 @@ const Sidebar = ({ open, onClose }) => {
                     >
                       {item.icon}
                     </ListItemIcon>
-                    <ListItemText 
-                      primary={item.text} 
-                      sx={{ 
+                    <ListItemText
+                      primary={item.text}
+                      sx={{
                         opacity: open ? 1 : 0,
                         '& .MuiTypography-root': {
                           color: 'white',
                           fontSize: '16px'
                         }
-                      }} 
+                      }}
                     />
                     {open && (
                       item.text === 'Courses' ? (openCourses ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />) :
-                      item.text === 'Students' ? (openStudents ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />) :
-                      item.text === 'Assessment' ? (openAssessment ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />) :
-                      item.text === 'Accounts' ? (openAccounts ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />) :
-                      null
+                        item.text === 'Students' ? (openStudents ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />) :
+                          item.text === 'Assessment' ? (openAssessment ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />) :
+                            item.text === 'Accounts' ? (openAccounts ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />) :
+                              null
                     )}
                   </ListItem>
-                  <Collapse 
+                  <Collapse
                     in={
                       item.text === 'Courses' ? openCourses :
-                      item.text === 'Students' ? openStudents :
-                      item.text === 'Assessment' ? openAssessment :
-                      item.text === 'Accounts' ? openAccounts :
-                      false
-                    } 
-                    timeout="auto" 
+                        item.text === 'Students' ? openStudents :
+                          item.text === 'Assessment' ? openAssessment :
+                            item.text === 'Accounts' ? openAccounts :
+                              false
+                    }
+                    timeout="auto"
                     unmountOnExit
                   >
-                    <List 
-                      component="div" 
+                    <List
+                      component="div"
                       disablePadding
-                      sx={{ 
-                        '& .MuiListItem-root': { 
+                      sx={{
+                        '& .MuiListItem-root': {
                           py: 0.5  // Reduced padding top and bottom
-                        } 
+                        }
                       }}
                     >
                       {item.subItems.map((subItem) => (
@@ -301,16 +301,16 @@ const Sidebar = ({ open, onClose }) => {
                             }
                           }}
                         >
-                          <ListItemText 
-                            primary={subItem.text} 
-                            sx={{ 
+                          <ListItemText
+                            primary={subItem.text}
+                            sx={{
                               opacity: open ? 1 : 0,
                               display: open ? 'block' : 'none',
                               '& .MuiTypography-root': {
                                 color: 'white',
                                 fontSize: '14px'
                               }
-                            }} 
+                            }}
                           />
                         </ListItem>
                       ))}
@@ -340,64 +340,66 @@ const Sidebar = ({ open, onClose }) => {
                   >
                     {item.icon}
                   </ListItemIcon>
-                  <ListItemText 
-                    primary={item.text} 
-                    sx={{ 
+                  <ListItemText
+                    primary={item.text}
+                    sx={{
                       opacity: open ? 1 : 0,
                       '& .MuiTypography-root': {
                         color: 'white',
                         fontSize: '16px'
                       }
-                    }} 
+                    }}
                   />
                 </ListItem>
               )}
             </div>
           ))}
         </List>
-        
-        <Box sx={{ 
+
+        <Box sx={{
           borderTop: '1px solid rgba(255, 255, 255, 0.12)',
           mt: 2
         }}>
-          <ListItem
-            button
-            component={Link}
-            to={user?.role === STUDENT_ROLE ? '/profile' : '/admin/profile'}
-            sx={{
-              minHeight: 48,
-              justifyContent: open ? 'initial' : 'center',
-              px: 2.5,
-              '&:hover': {
-                bgcolor: 'primary.dark'
-              }
-            }}
-          >
-            <ListItemIcon
+          {!user?.isDemo && (
+            <ListItem
+              button
+              component={Link}
+              to={user?.role === STUDENT_ROLE ? '/profile' : '/admin/profile'}
               sx={{
-                minWidth: 0,
-                mr: open ? 3 : 'auto',
-                justifyContent: 'center',
-                color: 'white'
+                minHeight: 48,
+                justifyContent: open ? 'initial' : 'center',
+                px: 2.5,
+                '&:hover': {
+                  bgcolor: 'primary.dark'
+                }
               }}
             >
-              <ProfileIcon />
-            </ListItemIcon>
-            <ListItemText 
-              primary="Profile" 
-              sx={{ 
-                opacity: open ? 1 : 0,
-                '& .MuiTypography-root': {
-                  color: 'white',
-                  fontSize: '16px'
-                }
-              }} 
-            />
-          </ListItem>
+              <ListItemIcon
+                sx={{
+                  minWidth: 0,
+                  mr: open ? 3 : 'auto',
+                  justifyContent: 'center',
+                  color: 'white'
+                }}
+              >
+                <ProfileIcon />
+              </ListItemIcon>
+              <ListItemText
+                primary="Profile"
+                sx={{
+                  opacity: open ? 1 : 0,
+                  '& .MuiTypography-root': {
+                    color: 'white',
+                    fontSize: '16px'
+                  }
+                }}
+              />
+            </ListItem>
+          )}
         </Box>
 
-        <Box sx={{ 
-          mt: 'auto', 
+        <Box sx={{
+          mt: 'auto',
           p: 2,
           borderTop: '1px solid rgba(255, 255, 255, 0.12)'
         }}>

@@ -60,8 +60,14 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('enrollmentDates', JSON.stringify(enrollmentDates))
       }
       
-      setUser(userData)
-      localStorage.setItem('user', JSON.stringify(userData))
+      // Ensure isDemo is set
+      const userWithDemo = {
+        ...userData,
+        isDemo: userData.isDemo || false
+      }
+      
+      setUser(userWithDemo)
+      localStorage.setItem('user', JSON.stringify(userWithDemo))
       localStorage.setItem('token', token)
     } catch (error) {
       console.error('Error saving user data:', error)

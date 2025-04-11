@@ -76,8 +76,19 @@ const Login = () => {
           localStorage.setItem('enrollmentDates', JSON.stringify(enrollmentDates))
         }
 
+        // Ensure isDemo is included in user data
+
+        console.log('user for checking the demo parameter')
+        console.log(user)
+
+
+        const userWithDemo = {
+          ...user,
+          isDemo: user.isDemo || false
+        }
+
         // Login with user data and token
-        login(user, token)
+        login(userWithDemo, token)
 
         // Navigate based on role
         switch(user.role) {

@@ -6,7 +6,12 @@ import {
   Typography,
   Alert,
   Paper,
-  Autocomplete
+  Autocomplete,
+  FormControlLabel,
+  Radio,
+  RadioGroup,
+  FormControl,
+  FormLabel
 } from '@mui/material'
 import { getData, postData } from '../../api/api'
 
@@ -17,7 +22,8 @@ const InviteStudent = () => {
     password: '',
     contactNo: '',
     address: '',
-    courseId: null
+    courseId: null,
+    isDemo: false
   })
   const [courses, setCourses] = useState([])
   const [error, setError] = useState('')
@@ -45,6 +51,13 @@ const InviteStudent = () => {
     })
   }
 
+  const handleDemoChange = e => {
+    setFormData({
+      ...formData,
+      isDemo: e.target.value === 'true'
+    })
+  }
+
   const handleSubmit = async e => {
     e.preventDefault()
     try {
@@ -56,7 +69,8 @@ const InviteStudent = () => {
         password: '',
         contactNo: '',
         address: '',
-        courseId: null
+        courseId: null,
+        isDemo: false
       })
       setError('')
     } catch (err) {
@@ -234,6 +248,21 @@ const InviteStudent = () => {
               }
             }}
           />
+        </Box>
+
+        <Box sx={{ mb: 2 }}>
+          <FormControl component="fieldset">
+            <FormLabel component="legend">Account Type</FormLabel>
+            <RadioGroup
+              row
+              name="isDemo"
+              value={formData.isDemo.toString()}
+              onChange={handleDemoChange}
+            >
+              <FormControlLabel value="false" control={<Radio />} label="Regular Account" />
+              <FormControlLabel value="true" control={<Radio />} label="Demo Account" />
+            </RadioGroup>
+          </FormControl>
         </Box>
 
         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>

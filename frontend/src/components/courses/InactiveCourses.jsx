@@ -137,31 +137,31 @@ const InactiveCourses = () => {
                 .map((course) => (
                 <TableRow key={course._id}>
                   <TableCell>
-                    <Box
-                      sx={{
+                <Box
+                  sx={{
                         width: '100px',
                         height: '60px',
-                        bgcolor: course.thumbnail ? 'transparent' : 'primary.light',
-                        borderRadius: '8px',
+                    bgcolor: course.thumbnail ? 'transparent' : 'primary.light',
+                    borderRadius: '8px',
                         overflow: 'hidden'
-                      }}
-                    >
-                      {course.thumbnail ? (
-                        <img
+                  }}
+                >
+                  {course.thumbnail ? (
+                    <img
                           src={thumbnailUrls[course._id]}
-                          alt={course.name}
-                          style={{
-                            width: '100%',
-                            height: '100%',
+                      alt={course.name}
+                      style={{
+                        width: '100%',
+                        height: '100%',
                             objectFit: 'cover'
-                          }}
-                        />
-                      ) : (
-                        <Box
-                          sx={{
-                            height: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
+                      }}
+                    />
+                  ) : (
+                    <Box
+                      sx={{
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
                             justifyContent: 'center',
                             bgcolor: '#e0e0e0'
                           }}

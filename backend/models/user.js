@@ -24,6 +24,10 @@ const userSchema = new mongoose.Schema(
       type: Number,
       enum: [1, 2],
       default: 1
+    },
+    isDemo: {
+      type: Boolean,
+      default: false
     }
   },
   { timestamps: false }

@@ -8,7 +8,7 @@ import ResourceView from '../models/resourceView.js'
 
 export const newStudent = async (req, res) => {
   try {
-    const { name, email, password, contactNo, address, courseId } = req.body
+    const { name, email, password, contactNo, address, courseId, isDemo } = req.body
 
     const existingUser = await User.findOne({ email })
     if (existingUser) {
@@ -19,7 +19,8 @@ export const newStudent = async (req, res) => {
       email,
       password: password,
       role: 2,
-      status: 1
+      status: 1,
+      isDemo: isDemo || false
     })
     await user.save()
 
@@ -29,6 +30,7 @@ export const newStudent = async (req, res) => {
       contactNo,
       address,
       status: 1,
+      isDemo: isDemo || false,
       courses: [{
         courseId: courseId,
         courseStatus: 1,
@@ -45,6 +47,7 @@ export const newStudent = async (req, res) => {
         contactNo: student.contactNo,
         address: student.address,
         status: student.status,
+        isDemo: student.isDemo,
         courses: student.courses
       }
     })

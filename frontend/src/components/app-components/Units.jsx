@@ -79,7 +79,8 @@ const Units = () => {
   const handleUnitClick = (unitId, unitName) => {
     dispatch(setCurrentUnit({
       id: unitId,
-      name: unitName
+      name: unitName,
+      isFirstUnit: units[0]._id === unitId
     }))
     navigate(`/units/${courseId}/section/${unitId}`)
   }

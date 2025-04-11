@@ -32,7 +32,8 @@ export const loginUser = async (req, res) => {
     let userData = {
       id: user._id,
       email: user.email,
-      role: user.role
+      role: user.role,
+      isDemo: user.isDemo || false
     }
 
     // Only fetch student data if user is a student
@@ -46,6 +47,7 @@ export const loginUser = async (req, res) => {
           name: student.name,
           contactNo: student.contactNo,
           address: student.address,
+          isDemo: student.isDemo || false,
           courseIds: student.courses
             .filter(course => course.courseStatus === 1)
             .map(course => ({

@@ -9,7 +9,11 @@ import {
   LinearProgress,
   Tooltip,
   Badge,
-  CircularProgress
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material'
 import { getData } from '../../api/api'
 import { useState, useEffect } from 'react'
@@ -35,6 +39,7 @@ const Section = () => {
   const [unlockedSections, setUnlockedSections] = useState([])
   const [completedSections, setCompletedSections] = useState([])
   const [loadingUnlockStatus, setLoadingUnlockStatus] = useState(true)
+  const [showRestrictionDialog, setShowRestrictionDialog] = useState(false)
   const { user } = useAuth()
 
   const { courseId, unitId } = useParams()
@@ -135,6 +140,15 @@ const Section = () => {
     return completedSections.includes(sectionId)
   }
 
+  const isSectionAccessible = (sectionIndex) => {
+    if (!user?.isDemo) return true
+    return currentUnit?.isFirstUnit && sectionIndex === 0
+  }
+
+  const handleRestrictedClick = () => {
+    setShowRestrictionDialog(true)
+  }
+
   return (
     <Grid container spacing={2}>
       <Grid size={7.5}>
@@ -219,9 +233,11 @@ const Section = () => {
                   <Skeleton variant='rectangular' height={1} sx={{ mb: 3 }} />
                 </Box>
               ))
-            : sections.map(section => {
-                const isUnlocked = isSectionUnlocked(section._id);
-                const isCompleted = isSectionCompleted(section._id);
+            : sections.map((section, index) => {
+                const isUnlocked = isSectionUnlocked(section._id)
+                const isCompleted = isSectionCompleted(section._id)
+                const isAccessible = isSectionAccessible(index)
+
                 return (
                   <ListItem
                     key={section._id}
@@ -229,7 +245,7 @@ const Section = () => {
                       pl: '80px',
                       pr: 2,
                       py: 2.5,
-                      bgcolor: '#F5F5F5', // No more greying out
+                      bgcolor: '#F5F5F5',
                       borderRadius: '6px',
                       boxShadow: '0px 1px 3px rgba(0,0,0,0.1)',
                       mb: 1,
@@ -315,78 +331,112 @@ const Section = () => {
 
                     <Box sx={{ display: 'flex', gap: 2, alignSelf: 'flex-end' }}>
                       {section.resources.length > 0 && (
-                        <Button
-                          variant='contained'
-                          startIcon={isUnlocked ? <MenuBook /> : <LockOutlined />}
-                          onClick={() => {
-                            if (isUnlocked) {
-                              navigate(
-                                `/units/${courseId}/section/${unitId}/learn/${section._id}`
-                              )
-                            }
-                          }}
-                          disabled={!isUnlocked}
-                          sx={{
-                            bgcolor: isCompleted ? 'success.main' : isUnlocked ? '#4169e1' : '#9e9e9e',
-                            color: 'white',
-                            borderRadius: '8px',
-                            textTransform: 'none',
-                            '&:hover': {
-                              bgcolor: isCompleted ? 'success.dark' : isUnlocked ? '#3557c5' : '#9e9e9e'
-                            }
-                          }}
+                        <Tooltip 
+                          title={!isAccessible ? "Contact admin@example.com for full access" : ""}
+                          placement="top"
                         >
-                          {isCompleted ? 'Completed' : 'Learning'}
-                        </Button>
+                          <span>
+                            <Button
+                              variant='contained'
+                              startIcon={isUnlocked ? <MenuBook /> : <LockOutlined />}
+                              onClick={() => {
+                                if (!isAccessible) {
+                                  handleRestrictedClick()
+                                  return
+                                }
+                                if (isUnlocked) {
+                                  navigate(
+                                    `/units/${courseId}/section/${unitId}/learn/${section._id}`
+                                  )
+                                }
+                              }}
+                              disabled={!isUnlocked || !isAccessible}
+                              sx={{
+                                bgcolor: isCompleted ? 'success.main' : isUnlocked ? '#4169e1' : '#9e9e9e',
+                                color: 'white',
+                                borderRadius: '8px',
+                                textTransform: 'none',
+                                '&:hover': {
+                                  bgcolor: isCompleted ? 'success.dark' : isUnlocked ? '#3557c5' : '#9e9e9e'
+                                }
+                              }}
+                            >
+                              {isCompleted ? 'Completed' : 'Learning'}
+                            </Button>
+                          </span>
+                        </Tooltip>
                       )}
 
-                      <Button
-                        variant='outlined'
-                        startIcon={<SmartToyOutlined />}
-                        disabled={!isUnlocked}
-                        sx={{
-                          color: isUnlocked ? '#4169e1' : '#9e9e9e',
-                          borderColor: isUnlocked ? '#4169e1' : '#9e9e9e',
-                          borderRadius: '8px',
-                          textTransform: 'none',
-                          '&:hover': {
-                            borderColor: isUnlocked ? '#4169e1' : '#9e9e9e',
-                            backgroundColor: isUnlocked ? 'rgba(65, 105, 225, 0.04)' : 'transparent'
-                          }
-                        }}
+                      <Tooltip 
+                        title={!isAccessible ? "Contact admin@example.com for full access" : ""}
+                        placement="top"
                       >
-                        AI Practice
-                      </Button>
+                        <span>
+                          <Button
+                            variant='outlined'
+                            startIcon={<SmartToyOutlined />}
+                            disabled={!isUnlocked || !isAccessible}
+                            onClick={() => {
+                              if (!isAccessible) {
+                                handleRestrictedClick()
+                              }
+                            }}
+                            sx={{
+                              color: isUnlocked ? '#4169e1' : '#9e9e9e',
+                              borderColor: isUnlocked ? '#4169e1' : '#9e9e9e',
+                              borderRadius: '8px',
+                              textTransform: 'none',
+                              '&:hover': {
+                                borderColor: isUnlocked ? '#4169e1' : '#9e9e9e',
+                                backgroundColor: isUnlocked ? 'rgba(65, 105, 225, 0.04)' : 'transparent'
+                              }
+                            }}
+                          >
+                            AI Practice
+                          </Button>
+                        </span>
+                      </Tooltip>
 
                       {section.assessments && section.assessments.length > 0 && (
-                        <Button
-                          variant='outlined'
-                          startIcon={<AssignmentOutlined />}
-                          onClick={() => {
-                            if (isUnlocked) {
-                              navigate(
-                                `/units/${courseId}/section/${unitId}/assessment/${section._id}`
-                              )
-                            }
-                          }}
-                          disabled={!isUnlocked}
-                          sx={{
-                            color: isUnlocked ? '#4169e1' : '#9e9e9e',
-                            borderColor: isUnlocked ? '#4169e1' : '#9e9e9e',
-                            borderRadius: '8px',
-                            textTransform: 'none',
-                            '&:hover': {
-                              borderColor: isUnlocked ? '#4169e1' : '#9e9e9e',
-                              backgroundColor: isUnlocked ? 'rgba(65, 105, 225, 0.04)' : 'transparent'
-                            }
-                          }}
+                        <Tooltip 
+                          title={!isAccessible ? "Contact admin@example.com for full access" : ""}
+                          placement="top"
                         >
-                          Assessment
-                        </Button>
+                          <span>
+                            <Button
+                              variant='outlined'
+                              startIcon={<AssignmentOutlined />}
+                              onClick={() => {
+                                if (!isAccessible) {
+                                  handleRestrictedClick()
+                                  return
+                                }
+                                if (isUnlocked) {
+                                  navigate(
+                                    `/units/${courseId}/section/${unitId}/assessment/${section._id}`
+                                  )
+                                }
+                              }}
+                              disabled={!isUnlocked || !isAccessible}
+                              sx={{
+                                color: isUnlocked ? '#4169e1' : '#9e9e9e',
+                                borderColor: isUnlocked ? '#4169e1' : '#9e9e9e',
+                                borderRadius: '8px',
+                                textTransform: 'none',
+                                '&:hover': {
+                                  borderColor: isUnlocked ? '#4169e1' : '#9e9e9e',
+                                  backgroundColor: isUnlocked ? 'rgba(65, 105, 225, 0.04)' : 'transparent'
+                                }
+                              }}
+                            >
+                              Assessment
+                            </Button>
+                          </span>
+                        </Tooltip>
                       )}
                     </Box>
                   </ListItem>
-                );
+                )
               })}
         </Paper>
       </Grid>
@@ -403,6 +453,29 @@ const Section = () => {
           <Calendar />
         </Paper>
       </Grid>
+
+      <Dialog
+        open={showRestrictionDialog}
+        onClose={() => setShowRestrictionDialog(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            minWidth: 300
+          }
+        }}
+      >
+        <DialogTitle>Access Restricted</DialogTitle>
+        <DialogContent>
+          <Typography>
+            This content is not available in the demo version. Please contact admin@example.com for full access.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowRestrictionDialog(false)} variant='contained'>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Grid>
   )
 }

@@ -40,6 +40,10 @@ const studentSchema = new mongoose.Schema({
     enum: [1, 2],
     default: 1
   },
+  isDemo: {
+    type: Boolean,
+    default: false
+  },
   courses: [courseSchema]
 }, { timestamps: false })
 
