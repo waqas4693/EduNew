@@ -162,7 +162,7 @@ const ResourceRenderer = ({
   }
 
   const renderMCQ = () => {
-    const alphabet = ['A', 'B', 'C', 'D'];
+    const alphabet = ['A', 'B', 'C', 'D', 'E', 'F'];
     
     if (mcqProgress?.completed && !hasSubmitted) {
       return (
