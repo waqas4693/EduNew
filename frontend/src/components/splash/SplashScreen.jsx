@@ -122,8 +122,8 @@ const SplashScreen = () => {
       >
         <Box
           sx={{
-            width: '80%',
-            height: '300',
+            width: '90%',
+            height: '400',
             display: 'flex',
             maxWidth: '800px',
             overflow: 'hidden',

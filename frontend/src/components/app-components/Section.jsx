@@ -82,13 +82,18 @@ const Section = () => {
 
   useEffect(() => {
     if (user?.studentId && sections.length > 0) {
-      fetchUnlockedSections()
-      fetchCompletedSections()
+      if (!user?.isDemo) {
+        fetchUnlockedSections()
+        fetchCompletedSections()
+      } else {
+        setLoadingUnlockStatus(false)
+      }
     }
   }, [unitId, user?.studentId, sections.length])
 
   const fetchUnitSections = async () => {
     try {
+      setLoading(true)
       const response = await getData(`sections/${unitId}`)
       if (response.status === 200) {
         setSections(response.data.sections)
@@ -116,7 +121,6 @@ const Section = () => {
 
   const fetchCompletedSections = async () => {
     try {
-      // Fetch completed sections for each section
       const completedSectionsArray = []
       
       for (const section of sections) {
@@ -133,10 +137,12 @@ const Section = () => {
   }
 
   const isSectionUnlocked = (sectionId) => {
+    if (user?.isDemo) return true // Always return true for demo accounts
     return unlockedSections.includes(sectionId)
   }
 
   const isSectionCompleted = (sectionId) => {
+    if (user?.isDemo) return false // Always return false for demo accounts
     return completedSections.includes(sectionId)
   }
 
@@ -147,6 +153,30 @@ const Section = () => {
 
   const handleRestrictedClick = () => {
     setShowRestrictionDialog(true)
+  }
+
+  const handleSectionClick = (section, isUnlocked) => {
+    if (!isSectionAccessible(sections.indexOf(section))) {
+      handleRestrictedClick()
+      return
+    }
+    if (isUnlocked) {
+      navigate(
+        `/units/${courseId}/section/${unitId}/learn/${section._id}`
+      )
+    }
+  }
+
+  const handleAssessmentClick = (section, isUnlocked) => {
+    if (!isSectionAccessible(sections.indexOf(section))) {
+      handleRestrictedClick()
+      return
+    }
+    if (isUnlocked) {
+      navigate(
+        `/units/${courseId}/section/${unitId}/assessment/${section._id}`
+      )
+    }
   }
 
   return (
@@ -211,7 +241,7 @@ const Section = () => {
             {unitName || 'Unit Name Not Available'}
           </Typography>
 
-          {loading || loadingUnlockStatus
+          {loading
             ? [...Array(3)].map((_, index) => (
                 <Box key={index} sx={{ mb: 3 }}>
                   <Skeleton
@@ -339,18 +369,8 @@ const Section = () => {
                             <Button
                               variant='contained'
                               startIcon={isUnlocked ? <MenuBook /> : <LockOutlined />}
-                              onClick={() => {
-                                if (!isAccessible) {
-                                  handleRestrictedClick()
-                                  return
-                                }
-                                if (isUnlocked) {
-                                  navigate(
-                                    `/units/${courseId}/section/${unitId}/learn/${section._id}`
-                                  )
-                                }
-                              }}
-                              disabled={!isUnlocked || !isAccessible}
+                              onClick={() => handleSectionClick(section, isUnlocked)}
+                              disabled={!isUnlocked}
                               sx={{
                                 bgcolor: isCompleted ? 'success.main' : isUnlocked ? '#4169e1' : '#9e9e9e',
                                 color: 'white',
@@ -375,7 +395,7 @@ const Section = () => {
                           <Button
                             variant='outlined'
                             startIcon={<SmartToyOutlined />}
-                            disabled={!isUnlocked || !isAccessible}
+                            disabled={!isUnlocked}
                             onClick={() => {
                               if (!isAccessible) {
                                 handleRestrictedClick()
@@ -406,18 +426,8 @@ const Section = () => {
                             <Button
                               variant='outlined'
                               startIcon={<AssignmentOutlined />}
-                              onClick={() => {
-                                if (!isAccessible) {
-                                  handleRestrictedClick()
-                                  return
-                                }
-                                if (isUnlocked) {
-                                  navigate(
-                                    `/units/${courseId}/section/${unitId}/assessment/${section._id}`
-                                  )
-                                }
-                              }}
-                              disabled={!isUnlocked || !isAccessible}
+                              onClick={() => handleAssessmentClick(section, isUnlocked)}
+                              disabled={!isUnlocked}
                               sx={{
                                 color: isUnlocked ? '#4169e1' : '#9e9e9e',
                                 borderColor: isUnlocked ? '#4169e1' : '#9e9e9e',

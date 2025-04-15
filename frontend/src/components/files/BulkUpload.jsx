@@ -333,8 +333,8 @@ const BulkUpload = () => {
           .map(mcq => {
             const lines = mcq.split('\n').map(line => line.trim())
             const question = lines[0]
-            const options = lines.filter(line => /^[A-D]\./.test(line))
-              .map(line => line.replace(/^[A-D]\./, '').trim())
+            const options = lines.filter(line => /^[A-F]\./.test(line))
+              .map(line => line.replace(/^[A-F]\./, '').trim())
             const answerLine = lines.find(line => line.startsWith('Answer:'))
             const correctAnswers = answerLine
               ? answerLine.replace('Answer:', '')
@@ -508,7 +508,7 @@ const BulkUpload = () => {
 
           // Create a mapping of letter options to full text
           const optionMap = {}
-          const letters = ['A', 'B', 'C', 'D']
+          const letters = ['A', 'B', 'C', 'D', 'E', 'F']
           mcq.options.forEach((opt, index) => {
             optionMap[letters[index]] = opt.trim()
           })
