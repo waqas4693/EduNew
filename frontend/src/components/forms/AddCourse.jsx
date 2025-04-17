@@ -28,13 +28,14 @@ const TabPanel = ({ children, value, index }) => (
 const AddCourse = () => {
   const location = useLocation()
   const navigate = useNavigate()
-  const editMode = location.state?.courseId ? true : false
+  const editMode = location.state?.editMode || false
   const courseId = location.state?.courseId
+  const initialTabIndex = location.state?.tabIndex || 0
 
   const [name, setName] = useState('')
   const [thumbnail, setThumbnail] = useState(null)
   const [thumbnailPreview, setThumbnailPreview] = useState('')
-  const [activeTab, setActiveTab] = useState(0)
+  const [activeTab, setActiveTab] = useState(initialTabIndex)
   const [editedData, setEditedData] = useState({
     units: null,
     sections: null,

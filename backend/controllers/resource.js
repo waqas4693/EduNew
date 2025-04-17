@@ -103,14 +103,70 @@ export const createResource = async (req, res) => {
 export const getResources = async (req, res) => {
   try {
     const { sectionId } = req.query
-    const resources = await Resource.find({ 
-      sectionId,
-      status: 1 
-    }).sort('number') // Sort by number
+    const page = parseInt(req.query.page) || 1
+    const limit = parseInt(req.query.limit) || 20
+    const skip = (page - 1) * limit
+
+    const [resources, total] = await Promise.all([
+      Resource.find({ 
+        sectionId,
+        status: 1 
+      })
+      .sort('number')
+      .skip(skip)
+      .limit(limit),
+      Resource.countDocuments({ 
+        sectionId,
+        status: 1 
+      })
+    ])
+
+    // Properly serialize each resource's content
+    const serializedResources = resources.map(resource => {
+      const serializedContent = {
+        ...resource.content.toObject(),
+        // Handle MCQ content
+        mcq: resource.content.mcq ? {
+          question: resource.content.mcq.question || '',
+          options: resource.content.mcq.options || [],
+          numberOfCorrectAnswers: resource.content.mcq.numberOfCorrectAnswers || 1,
+          correctAnswers: resource.content.mcq.correctAnswers || [],
+          imageFile: resource.content.mcq.imageFile || null,
+          audioFile: resource.content.mcq.audioFile || null
+        } : null,
+        // Handle questions array
+        questions: resource.content.questions ? resource.content.questions.map(q => ({
+          question: q.question || '',
+          answer: q.answer || ''
+        })) : [],
+        // Handle external links
+        externalLinks: resource.content.externalLinks ? resource.content.externalLinks.map(link => ({
+          name: link.name || '',
+          url: link.url || ''
+        })) : [],
+        // Handle other content fields
+        fileName: resource.content.fileName || '',
+        backgroundImage: resource.content.backgroundImage || '',
+        repeatCount: resource.content.repeatCount || 1
+      }
+
+      return {
+        ...resource.toObject(),
+        content: serializedContent
+      }
+    })
     
     res.status(200).json({
       success: true,
-      data: resources
+      data: {
+        resources: serializedResources,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit)
+        }
+      }
     })
   } catch (error) {
     handleError(res, error)
@@ -138,12 +194,15 @@ export const updateResource = async (req, res) => {
     const { id } = req.params
     const { name, resourceType, content } = req.body
 
+    // Parse the content string back into an object if it's a string
+    const parsedContent = typeof content === 'string' ? JSON.parse(content) : content
+
     const resource = await Resource.findByIdAndUpdate(
       id,
       { 
         name,
         resourceType,
-        content,
+        content: parsedContent,
         updatedAt: Date.now()
       },
       { new: true }

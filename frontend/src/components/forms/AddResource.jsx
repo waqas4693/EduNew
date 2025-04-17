@@ -26,6 +26,9 @@ import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import NumberInput from '../common/NumberInput'
+import { useNavigate, useLocation } from 'react-router-dom'
+import EditIcon from '@mui/icons-material/Edit'
+import CloseIcon from '@mui/icons-material/Close'
 
 const RESOURCE_TYPES = [
   { value: 'VIDEO', label: 'Video' },
@@ -37,11 +40,10 @@ const RESOURCE_TYPES = [
   { value: 'MCQ', label: 'Multiple Choice Question' }
 ]
 
-const UploadButton = ({ label, onChange, value, accept }) => (
+const UploadButton = ({ label, onChange, value, accept, editMode, existingFile }) => (
   <Button
     variant='outlined'
     component='label'
-    fullWidth
     sx={{
       backgroundColor: '#f5f5f5',
       height: '36px',
@@ -49,6 +51,7 @@ const UploadButton = ({ label, onChange, value, accept }) => (
       border: '1px solid #20202033',
       overflow: 'hidden',
       padding: '6px 16px',
+      flex: 1,
       minWidth: 0
     }}
   >
@@ -63,13 +66,37 @@ const UploadButton = ({ label, onChange, value, accept }) => (
         textTransform: 'none'
       }}
     >
-      {value
-        ? value.name.length > 20
-          ? `${value.name.slice(0, 20)}...`
-          : value.name
-        : label}
+      {editMode && existingFile ? 'Re-Pick' : (value ? (value.name.length > 20 ? `${value.name.slice(0, 20)}...` : value.name) : label)}
     </Typography>
     <input type='file' hidden accept={accept} onChange={onChange} />
+  </Button>
+)
+
+const ViewButton = ({ onClick, label }) => (
+  <Button
+    variant='contained'
+    onClick={onClick}
+    sx={{
+      height: '36px',
+      borderRadius: '8px',
+      padding: '6px 16px',
+      minWidth: '100px',
+      ml: 1
+    }}
+  >
+    <Typography
+      noWrap
+      sx={{
+        width: '100%',
+        textOverflow: 'ellipsis',
+        overflow: 'hidden',
+        maxWidth: '200px',
+        display: 'block',
+        textTransform: 'none'
+      }}
+    >
+      View
+    </Typography>
   </Button>
 )
 
@@ -80,6 +107,8 @@ const chunk = (arr, size) =>
 
 const AddResource = ({ courseId: propsCourseId, editMode }) => {
   const [resources, setResources] = useState([])
+  const [editingResourceId, setEditingResourceId] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
   const [courseId, setCourseId] = useState(null)
   const [unitId, setUnitId] = useState(null)
   const [sectionId, setSectionId] = useState(null)
@@ -92,13 +121,29 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
   const [numberError, setNumberError] = useState('')
   const [error, setError] = useState('')
   const [insertMode, setInsertMode] = useState(false)
+  const [selectedCourse, setSelectedCourse] = useState(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [coursesFetched, setCoursesFetched] = useState(false)
 
   useEffect(() => {
-    fetchCourses()
+    if (!coursesFetched) {
+      fetchCourses()
+      setCoursesFetched(true)
+    }
+    
     if (editMode && propsCourseId) {
       setCourseId(propsCourseId)
+      // Find and set the selected course
+      const course = courses.find(c => c._id === propsCourseId)
+      if (course) {
+        setSelectedCourse(course)
+      }
     }
-  }, [editMode, propsCourseId])
+  }, [editMode, propsCourseId, courses, coursesFetched])
 
   useEffect(() => {
     if (courseId) {
@@ -151,12 +196,13 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
     }
   }
 
-  const fetchResources = async () => {
+  const fetchResources = async (page = 1) => {
     if (editMode && sectionId) {
       try {
-        const response = await getData(`resources/${sectionId}`)
-        if (response.status === 200 && response.data.resources) {
-          const formattedResources = await Promise.all(response.data.resources.map(async resource => {
+        setIsLoading(true)
+        const response = await getData(`resources/${sectionId}?page=${page}&limit=20`)
+        if (response.status === 200 && response.data.data.resources) {
+          const formattedResources = await Promise.all(response.data.data.resources.map(async resource => {
             // Get signed URLs for any existing files
             const content = { ...resource.content }
             
@@ -177,15 +223,51 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
               content.mcq.audioFileUrl = mcqAudioResponse.data.signedUrl
             }
 
+            // Ensure proper structure for MCQ content
+            if (content.mcq) {
+              content.mcq = {
+                ...content.mcq,
+                options: content.mcq.options || [],
+                correctAnswers: content.mcq.correctAnswers || [],
+                numberOfCorrectAnswers: content.mcq.numberOfCorrectAnswers || 1
+              }
+            }
+
+            // Ensure proper structure for questions
+            if (content.questions) {
+              content.questions = content.questions.map(q => ({
+                question: q.question || '',
+                answer: q.answer || ''
+              }))
+            }
+
+            // Ensure proper structure for external links
+            if (content.externalLinks) {
+              content.externalLinks = content.externalLinks.map(link => ({
+                name: link.name || '',
+                url: link.url || ''
+              }))
+            }
+
             return {
               ...resource,
               content
             }
           }))
-          setResources(formattedResources)
+          
+          if (page === 1) {
+            setResources(formattedResources)
+          } else {
+            setResources(prev => [...prev, ...formattedResources])
+          }
+          
+          setHasMore(page < response.data.data.pagination.totalPages)
+          setCurrentPage(page)
         }
       } catch (error) {
         console.error('Error fetching resources:', error)
+      } finally {
+        setIsLoading(false)
       }
     }
   }
@@ -213,6 +295,38 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
     setSectionId(newSection?._id)
     if (newSection?._id) {
       fetchNextNumber(newSection._id)
+      // Add initial resource form when section is selected
+      if (!editMode && !insertMode) {
+        setResources([{
+          name: '',
+          number: nextNumber,
+          resourceType: '',
+          content: {
+            fileName: '',
+            questions: [
+              { question: '', answer: '' },
+              { question: '', answer: '' },
+              { question: '', answer: '' }
+            ],
+            backgroundImage: '',
+            previewImage: '',
+            file: null,
+            thumbnail: null,
+            externalLinks: [
+              { name: '', url: '' },
+              { name: '', url: '' },
+              { name: '', url: '' }
+            ],
+            mcq: {
+              question: '',
+              options: ['', '', '', ''],
+              numberOfCorrectAnswers: 1,
+              correctAnswers: [],
+              imageFile: null
+            }
+          }
+        }])
+      }
     }
   }
 
@@ -373,7 +487,26 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
 
       if (editMode) {
         const updatePromises = resources.map(async resource => {
-          const formData = await processResource(resource)
+          // Create a clean content object without URLs and extra fields
+          const cleanContent = {
+            ...resource.content,
+            fileUrl: undefined,
+            backgroundImageUrl: undefined,
+            mcq: resource.content.mcq ? {
+              question: resource.content.mcq.question,
+              options: resource.content.mcq.options,
+              numberOfCorrectAnswers: resource.content.mcq.numberOfCorrectAnswers,
+              correctAnswers: resource.content.mcq.correctAnswers,
+              imageFile: resource.content.mcq.imageFile,
+              audioFile: resource.content.mcq.audioFile
+            } : null
+          }
+
+          const formData = await processResource({
+            ...resource,
+            content: cleanContent
+          })
+          
           return axios.put(`${url}resources/${resource._id}`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
           })
@@ -393,40 +526,37 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         alert('Resources added successfully')
       }
 
-      setResources([
-        {
-          name: '',
-          number: null,
-          resourceType: '',
-          content: {
-            fileName: '',
-            questions: [
-              { question: '', answer: '' },
-              { question: '', answer: '' },
-              { question: '', answer: '' }
-            ],
-            backgroundImage: '',
-            previewImage: '',
-            file: null,
-            thumbnail: null,
-            externalLinks: [
-              { name: '', url: '' },
-              { name: '', url: '' },
-              { name: '', url: '' }
-            ],
-            mcq: {
-              question: '',
-              options: ['', '', '', ''],
-              numberOfCorrectAnswers: 1,
-              correctAnswers: [],
-              imageFile: null
-            }
+      // Reset form with proper initial state
+      setResources([{
+        name: '',
+        number: null,
+        resourceType: '',
+        content: {
+          fileName: '',
+          questions: [
+            { question: '', answer: '' },
+            { question: '', answer: '' },
+            { question: '', answer: '' }
+          ],
+          backgroundImage: '',
+          previewImage: '',
+          file: null,
+          thumbnail: null,
+          externalLinks: [
+            { name: '', url: '' },
+            { name: '', url: '' },
+            { name: '', url: '' }
+          ],
+          mcq: {
+            question: '',
+            options: ['', '', '', ''],
+            numberOfCorrectAnswers: 1,
+            correctAnswers: [],
+            imageFile: null,
+            audioFile: null
           }
         }
-      ])
-      // setSectionId(null)
-      // setUnitId(null)
-      // setCourseId(null)
+      }])
     } catch (error) {
       console.error('Error:', error)
       alert('Error uploading resources')
@@ -576,8 +706,116 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
     }
   }
 
+  const handleEditResource = (resourceId) => {
+    setEditingResourceId(resourceId)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingResourceId(null)
+    // Optionally refresh the resource data
+    if (sectionId) {
+      fetchResources()
+    }
+  }
+
+  const handleSaveResource = async (resource) => {
+    setIsSaving(true)
+    try {
+
+      console.log('resource for editing: ')
+      console.log(resource)
+
+      // Create a clean content object without URLs and extra fields
+      const cleanContent = {
+        ...resource.content,
+        fileUrl: undefined,
+        backgroundImageUrl: undefined,
+        mcq: resource.content.mcq ? {
+          ...resource.content.mcq,
+          imageFileUrl: undefined,
+          audioFileUrl: undefined
+        } : null
+      }
+
+      const formData = await processResource({
+        ...resource,
+        content: cleanContent
+      })
+
+      console.log('formData: ')
+      console.log(formData)
+
+      await axios.put(`${url}resources/${resource._id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+
+      setEditingResourceId(null)
+      alert('Resource updated successfully')
+      // Refresh the resource data
+      if (sectionId) {
+        fetchResources()
+      }
+    } catch (error) {
+      console.error('Error updating resource:', error)
+      alert('Error updating resource')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleCourseSelect = (newValue) => {
+    setCourseId(newValue?._id)
+    setSelectedCourse(newValue)
+    setUnitId(null)
+    setSectionId(null)
+  }
+
+  const handleEditClick = () => {
+    if (selectedCourse) {
+      if (editMode) {
+        // Cancel edit mode by navigating back to AddCourse with the same course but no edit mode
+        navigate('/admin/add-course', {
+          state: { 
+            courseId: selectedCourse._id,
+            tabIndex: 2 // 2 is the index for Learning Material tab
+          }
+        })
+      } else {
+        // Enter edit mode
+        navigate('/admin/add-course', {
+          state: { 
+            courseId: selectedCourse._id,
+            editMode: true,
+            tabIndex: 2
+          }
+        })
+      }
+    }
+  }
+
+  const handleLoadMore = () => {
+    fetchResources(currentPage + 1)
+  }
+
   return (
     <>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
+        {selectedCourse && (
+          <IconButton
+            onClick={handleEditClick}
+            sx={{
+              bgcolor: editMode ? 'error.main' : 'primary.main',
+              color: 'white',
+              '&:hover': {
+                bgcolor: editMode ? 'error.dark' : 'primary.dark'
+              }
+            }}
+          >
+            {editMode ? <CloseIcon /> : <EditIcon />}
+          </IconButton>
+        )}
+      </Box>
+
       <form onSubmit={handleSubmit}>
         <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
           <Autocomplete
@@ -585,8 +823,9 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             size='small'
             options={courses}
             getOptionLabel={option => option.name}
-            onChange={(_, newValue) => setCourseId(newValue?._id)}
-            disabled={editMode || insertMode}
+            onChange={(_, newValue) => handleCourseSelect(newValue)}
+            value={selectedCourse}
+            disabled={editMode}
             renderInput={params => (
               <TextField
                 {...params}
@@ -652,7 +891,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
 
         {resources.map((resource, index) => (
           <Accordion
-            key={index}
+            key={resource._id || index}
             defaultExpanded={index === 0}
             sx={{
               mb: 2,
@@ -673,61 +912,61 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                   '& .MuiAccordionSummary-content': {
                     margin: '12px 0'
                   }
-                },
-                '& .MuiAccordionSummary-expandIconWrapper': {
-                  marginLeft: '8px'
                 }
               }}
             >
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  width: '100%',
-                  justifyContent: 'space-between'
-                }}
-              >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
                 <Typography>
-                  Resource {resource.number} -{' '}
-                  {resource.name || `(Unnamed Resource ${index + 1})`}
+                  Resource {resource.number} - {resource.name || `(Unnamed Resource ${index + 1})`}
                 </Typography>
-                {index > 0 && (
-                  <IconButton
-                    onClick={e => {
-                      e.stopPropagation()
-                      removeResource(index)
-                    }}
-                    sx={{
-                      color: 'error.main',
-                      '&:hover': {
-                        bgcolor: 'error.light',
-                        color: 'white'
-                      }
-                    }}
-                    size='small'
-                  >
-                    <DeleteIcon />
-                  </IconButton>
+                {editMode && (
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    {editingResourceId === resource._id ? (
+                      <>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          size="small"
+                          onClick={() => handleSaveResource(resource)}
+                          disabled={isSaving}
+                        >
+                          {isSaving ? 'Saving...' : 'Save'}
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          size="small"
+                          onClick={handleCancelEdit}
+                        >
+                          Cancel
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => handleEditResource(resource._id)}
+                      >
+                        Edit
+                      </Button>
+                    )}
+                  </Box>
                 )}
               </Box>
             </AccordionSummary>
             <AccordionDetails>
-              <>
+              <Box sx={{ opacity: editingResourceId === resource._id ? 1 : 0.7 }}>
                 <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                  <NumberInput
+                  <TextField
+                    type="number"
+                    size="small"
+                    label="Resource Number"
                     value={resource.number}
-                    onChange={(newNumber) => handleNumberChange(resource._id, newNumber)}
-                    disabled={!editMode && !insertMode}
-                    error={!!numberError}
-                    helperText={numberError}
+                    disabled
                     sx={{ 
-                      minWidth: '200px',
-                      '& .MuiInputBase-root': {
-                        height: '40px'
-                      },
-                      '& .MuiInputBase-input': {
-                        textAlign: 'center',
-                        padding: '8px 0'
+                      minWidth: '120px',
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '8px'
                       }
                     }}
                   />
@@ -779,94 +1018,151 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                   </FormControl>
                 </Box>
 
-                <Box
-                  sx={{
-                    display: 'flex',
-                    gap: 2,
-                    mb: resource.resourceType ? 2 : 0
-                  }}
-                >
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
                   {resource.resourceType === 'VIDEO' && (
-                    <UploadButton
-                      label='Choose Video'
-                      value={resource.content.file}
-                      accept='video/*'
-                      onChange={e =>
-                        handleContentChange(index, 'file', e.target.files[0])
-                      }
-                    />
+                    <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
+                      <UploadButton
+                        label='Choose Video'
+                        value={resource.content.file}
+                        accept='video/*'
+                        onChange={e =>
+                          handleContentChange(index, 'file', e.target.files[0])
+                        }
+                        editMode={editMode}
+                        existingFile={resource.content.fileName}
+                      />
+                      {editMode && resource.content.fileName && (
+                        <ViewButton
+                          onClick={() => window.open(`${url}resources/files/url/${resource.resourceType}/${resource.content.fileName}`, '_blank')}
+                        />
+                      )}
+                    </Box>
                   )}
 
                   {resource.resourceType === 'AUDIO' && (
                     <>
-                      <UploadButton
-                        label='Choose Audio'
-                        value={resource.content.file}
-                        accept='audio/*'
-                        onChange={e =>
-                          handleContentChange(index, 'file', e.target.files[0])
-                        }
-                      />
-                      <UploadButton
-                        label='Choose Background'
-                        value={resource.content.backgroundImage}
-                        accept='image/*'
-                        onChange={e =>
-                          handleContentChange(
-                            index,
-                            'backgroundImage',
-                            e.target.files[0]
-                          )
-                        }
-                      />
+                      <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
+                        <UploadButton
+                          label='Choose Audio'
+                          value={resource.content.file}
+                          accept='audio/*'
+                          onChange={e =>
+                            handleContentChange(index, 'file', e.target.files[0])
+                          }
+                          editMode={editMode}
+                          existingFile={resource.content.fileName}
+                        />
+                        {editMode && resource.content.fileName && (
+                          <ViewButton
+                            onClick={() => window.open(`${url}resources/files/url/${resource.resourceType}/${resource.content.fileName}`, '_blank')}
+                          />
+                        )}
+                      </Box>
+                      <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
+                        <UploadButton
+                          label='Choose Background'
+                          value={resource.content.backgroundImage}
+                          accept='image/*'
+                          onChange={e =>
+                            handleContentChange(
+                              index,
+                              'backgroundImage',
+                              e.target.files[0]
+                            )
+                          }
+                          editMode={editMode}
+                          existingFile={resource.content.backgroundImage}
+                        />
+                        {editMode && resource.content.backgroundImage && (
+                          <ViewButton
+                            onClick={() => window.open(`${url}resources/files/url/BACKGROUNDS/${resource.content.backgroundImage}`, '_blank')}
+                          />
+                        )}
+                      </Box>
                     </>
                   )}
 
                   {resource.resourceType === 'PPT' && (
-                    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                      <UploadButton
-                        label='Choose PPT'
-                        value={resource.content.file}
-                        accept='.ppt,.pptx'
-                        onChange={e =>
-                          handleContentChange(index, 'file', e.target.files[0])
-                        }
-                      />
-                      <UploadButton
-                        label='Choose Preview'
-                        value={resource.content.backgroundImage}
-                        accept='image/*'
-                        onChange={e =>
-                          handleContentChange(
-                            index,
-                            'backgroundImage',
-                            e.target.files[0]
-                          )
-                        }
-                      />
-                    </Box>
+                    <>
+                      <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
+                        <UploadButton
+                          label='Choose PPT'
+                          value={resource.content.file}
+                          accept='.ppt,.pptx'
+                          onChange={e =>
+                            handleContentChange(index, 'file', e.target.files[0])
+                          }
+                          editMode={editMode}
+                          existingFile={resource.content.fileName}
+                        />
+                        {editMode && resource.content.fileName && (
+                          <ViewButton
+                            onClick={() => window.open(`${url}resources/files/url/${resource.resourceType}/${resource.content.fileName}`, '_blank')}
+                          />
+                        )}
+                      </Box>
+                      <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
+                        <UploadButton
+                          label='Choose Preview'
+                          value={resource.content.backgroundImage}
+                          accept='image/*'
+                          onChange={e =>
+                            handleContentChange(
+                              index,
+                              'backgroundImage',
+                              e.target.files[0]
+                            )
+                          }
+                          editMode={editMode}
+                          existingFile={resource.content.backgroundImage}
+                        />
+                        {editMode && resource.content.backgroundImage && (
+                          <ViewButton
+                            onClick={() => window.open(`${url}resources/files/url/BACKGROUNDS/${resource.content.backgroundImage}`, '_blank')}
+                          />
+                        )}
+                      </Box>
+                    </>
                   )}
 
                   {resource.resourceType === 'PDF' && (
-                    <UploadButton
-                      label='Choose PDF'
-                      value={resource.content.file}
-                      accept='.pdf'
-                      onChange={e =>
-                        handleContentChange(index, 'file', e.target.files[0])
-                      }
-                    />
+                    <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
+                      <UploadButton
+                        label='Choose PDF'
+                        value={resource.content.file}
+                        accept='.pdf'
+                        onChange={e =>
+                          handleContentChange(index, 'file', e.target.files[0])
+                        }
+                        editMode={editMode}
+                        existingFile={resource.content.fileName}
+                      />
+                      {editMode && resource.content.fileName && (
+                        <ViewButton
+                          onClick={() => window.open(`${url}resources/files/url/${resource.resourceType}/${resource.content.fileName}`, '_blank')}
+                        />
+                      )}
+                    </Box>
                   )}
 
                   {resource.resourceType === 'IMAGE' && (
-                    <UploadButton
-                      label='Choose Image'
-                      value={resource.content.file}
-                      accept='image/*'
-                      onChange={e =>
-                        handleContentChange(index, 'file', e.target.files[0])
-                      }
-                    />
+                    <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
+                      <UploadButton
+                        label='Choose Image'
+                        value={resource.content.file}
+                        accept='image/*'
+                        onChange={e =>
+                          handleContentChange(index, 'file', e.target.files[0])
+                        }
+                        editMode={editMode}
+                        existingFile={resource.content.fileName}
+                      />
+                      {editMode && resource.content.fileName && (
+                        <ViewButton
+                          onClick={() => window.open(`${url}resources/files/url/${resource.resourceType}/${resource.content.fileName}`, '_blank')}
+                        />
+                      )}
+                    </Box>
                   )}
 
                   {resource.resourceType === 'TEXT' && (
@@ -881,34 +1177,54 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                           e.target.files[0]
                         )
                       }
+                      editMode={editMode}
+                      existingFile={resource.content.backgroundImage}
                     />
                   )}
 
                   {resource.resourceType === 'MCQ' && (
-                    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                      <UploadButton
-                        label='Choose Question Image'
-                        value={resource.content.mcq?.imageFile}
-                        accept='image/*'
-                        onChange={e =>
-                          handleContentChange(index, 'mcq', {
-                            ...resource.content.mcq,
-                            imageFile: e.target.files[0]
-                          })
-                        }
-                      />
-                      <UploadButton
-                        label='Choose Audio'
-                        value={resource.content.mcq?.audioFile}
-                        accept='audio/*'
-                        onChange={e =>
-                          handleContentChange(index, 'mcq', {
-                            ...resource.content.mcq,
-                            audioFile: e.target.files[0]
-                          })
-                        }
-                      />
-                    </Box>
+                    <>
+                      <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
+                        <UploadButton
+                          label='Choose Question Image'
+                          value={resource.content.mcq?.imageFile}
+                          accept='image/*'
+                          onChange={e =>
+                            handleContentChange(index, 'mcq', {
+                              ...resource.content.mcq,
+                              imageFile: e.target.files[0]
+                            })
+                          }
+                          editMode={editMode}
+                          existingFile={resource.content.mcq?.imageFile}
+                        />
+                        {editMode && resource.content.mcq?.imageFile && (
+                          <ViewButton
+                            onClick={() => window.open(`${url}resources/files/url/MCQ_IMAGES/${resource.content.mcq.imageFile}`, '_blank')}
+                          />
+                        )}
+                      </Box>
+                      <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
+                        <UploadButton
+                          label='Choose Audio'
+                          value={resource.content.mcq?.audioFile}
+                          accept='audio/*'
+                          onChange={e =>
+                            handleContentChange(index, 'mcq', {
+                              ...resource.content.mcq,
+                              audioFile: e.target.files[0]
+                            })
+                          }
+                          editMode={editMode}
+                          existingFile={resource.content.mcq?.audioFile}
+                        />
+                        {editMode && resource.content.mcq?.audioFile && (
+                          <ViewButton
+                            onClick={() => window.open(`${url}resources/files/url/MCQ_AUDIO/${resource.content.mcq.audioFile}`, '_blank')}
+                          />
+                        )}
+                      </Box>
+                    </>
                   )}
                 </Box>
 
@@ -1291,7 +1607,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                     </Box>
                   ))}
                 </Box>
-              </>
+              </Box>
             </AccordionDetails>
           </Accordion>
         ))}
@@ -1382,6 +1698,19 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             />
           </Box>
         </Backdrop>
+      )}
+
+      {hasMore && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={handleLoadMore}
+            disabled={isLoading}
+            sx={{ minWidth: '200px' }}
+          >
+            {isLoading ? 'Loading...' : 'Load More'}
+          </Button>
+        </Box>
       )}
     </>
   )
