@@ -103,23 +103,10 @@ export const createResource = async (req, res) => {
 export const getResources = async (req, res) => {
   try {
     const { sectionId } = req.query
-    const page = parseInt(req.query.page) || 1
-    const limit = parseInt(req.query.limit) || 20
-    const skip = (page - 1) * limit
-
-    const [resources, total] = await Promise.all([
-      Resource.find({ 
-        sectionId,
-        status: 1 
-      })
-      .sort('number')
-      .skip(skip)
-      .limit(limit),
-      Resource.countDocuments({ 
-        sectionId,
-        status: 1 
-      })
-    ])
+    const resources = await Resource.find({ 
+      sectionId,
+      status: 1 
+    }).sort('number')
 
     // Properly serialize each resource's content
     const serializedResources = resources.map(resource => {
@@ -158,15 +145,7 @@ export const getResources = async (req, res) => {
     
     res.status(200).json({
       success: true,
-      data: {
-        resources: serializedResources,
-        pagination: {
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit)
-        }
-      }
+      data: serializedResources
     })
   } catch (error) {
     handleError(res, error)

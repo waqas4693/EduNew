@@ -26,9 +26,6 @@ import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import NumberInput from '../common/NumberInput'
-import { useNavigate, useLocation } from 'react-router-dom'
-import EditIcon from '@mui/icons-material/Edit'
-import CloseIcon from '@mui/icons-material/Close'
 
 const RESOURCE_TYPES = [
   { value: 'VIDEO', label: 'Video' },
@@ -121,29 +118,13 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
   const [numberError, setNumberError] = useState('')
   const [error, setError] = useState('')
   const [insertMode, setInsertMode] = useState(false)
-  const [selectedCourse, setSelectedCourse] = useState(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [hasMore, setHasMore] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const location = useLocation()
-  const navigate = useNavigate()
-  const [coursesFetched, setCoursesFetched] = useState(false)
 
   useEffect(() => {
-    if (!coursesFetched) {
-      fetchCourses()
-      setCoursesFetched(true)
-    }
-    
+    fetchCourses()
     if (editMode && propsCourseId) {
       setCourseId(propsCourseId)
-      // Find and set the selected course
-      const course = courses.find(c => c._id === propsCourseId)
-      if (course) {
-        setSelectedCourse(course)
-      }
     }
-  }, [editMode, propsCourseId, courses, coursesFetched])
+  }, [editMode, propsCourseId])
 
   useEffect(() => {
     if (courseId) {
@@ -196,13 +177,12 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
     }
   }
 
-  const fetchResources = async (page = 1) => {
+  const fetchResources = async () => {
     if (editMode && sectionId) {
       try {
-        setIsLoading(true)
-        const response = await getData(`resources/${sectionId}?page=${page}&limit=20`)
-        if (response.status === 200 && response.data.data.resources) {
-          const formattedResources = await Promise.all(response.data.data.resources.map(async resource => {
+        const response = await getData(`resources/${sectionId}`)
+        if (response.status === 200 && response.data.resources) {
+          const formattedResources = await Promise.all(response.data.resources.map(async resource => {
             // Get signed URLs for any existing files
             const content = { ...resource.content }
             
@@ -254,20 +234,10 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
               content
             }
           }))
-          
-          if (page === 1) {
-            setResources(formattedResources)
-          } else {
-            setResources(prev => [...prev, ...formattedResources])
-          }
-          
-          setHasMore(page < response.data.data.pagination.totalPages)
-          setCurrentPage(page)
+          setResources(formattedResources)
         }
       } catch (error) {
         console.error('Error fetching resources:', error)
-      } finally {
-        setIsLoading(false)
       }
     }
   }
@@ -763,59 +733,8 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
     }
   }
 
-  const handleCourseSelect = (newValue) => {
-    setCourseId(newValue?._id)
-    setSelectedCourse(newValue)
-    setUnitId(null)
-    setSectionId(null)
-  }
-
-  const handleEditClick = () => {
-    if (selectedCourse) {
-      if (editMode) {
-        // Cancel edit mode by navigating back to AddCourse with the same course but no edit mode
-        navigate('/admin/add-course', {
-          state: { 
-            courseId: selectedCourse._id,
-            tabIndex: 2 // 2 is the index for Learning Material tab
-          }
-        })
-      } else {
-        // Enter edit mode
-        navigate('/admin/add-course', {
-          state: { 
-            courseId: selectedCourse._id,
-            editMode: true,
-            tabIndex: 2
-          }
-        })
-      }
-    }
-  }
-
-  const handleLoadMore = () => {
-    fetchResources(currentPage + 1)
-  }
-
   return (
     <>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
-        {selectedCourse && (
-          <IconButton
-            onClick={handleEditClick}
-            sx={{
-              bgcolor: editMode ? 'error.main' : 'primary.main',
-              color: 'white',
-              '&:hover': {
-                bgcolor: editMode ? 'error.dark' : 'primary.dark'
-              }
-            }}
-          >
-            {editMode ? <CloseIcon /> : <EditIcon />}
-          </IconButton>
-        )}
-      </Box>
-
       <form onSubmit={handleSubmit}>
         <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
           <Autocomplete
@@ -823,9 +742,8 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             size='small'
             options={courses}
             getOptionLabel={option => option.name}
-            onChange={(_, newValue) => handleCourseSelect(newValue)}
-            value={selectedCourse}
-            disabled={editMode}
+            onChange={(_, newValue) => setCourseId(newValue?._id)}
+            disabled={editMode || insertMode}
             renderInput={params => (
               <TextField
                 {...params}
@@ -1698,19 +1616,6 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             />
           </Box>
         </Backdrop>
-      )}
-
-      {hasMore && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-          <Button
-            variant="outlined"
-            onClick={handleLoadMore}
-            disabled={isLoading}
-            sx={{ minWidth: '200px' }}
-          >
-            {isLoading ? 'Loading...' : 'Load More'}
-          </Button>
-        </Box>
       )}
     </>
   )
