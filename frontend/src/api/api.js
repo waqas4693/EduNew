@@ -6,7 +6,6 @@ const API_URL = 'https://edusupplements.co.uk/api/'
 export const postData = async (endpoint, data, config = {}) => {
   try {
     const token = localStorage.getItem('token')
-    console.log('Token for postData:', token)
     const headers = {
       'Content-Type': 'application/json',
       ...(token && { 'Authorization': `Bearer ${token}` }),
@@ -31,7 +30,6 @@ export const getData = async (endpoint) => {
         'Authorization': `Bearer ${token}`
       }
     })
-    console.log('Response:', response)
     return response
   } catch (error) {
     throw error.response || error
@@ -41,7 +39,6 @@ export const getData = async (endpoint) => {
 export const putData = async (endpoint, data) => {
   try {
     const token = localStorage.getItem('token')
-    console.log('Token:', token)
     const response = await axios.put(`${API_URL}${endpoint}`, data, {
       headers: {
         'Authorization': `Bearer ${token}`
@@ -56,7 +53,6 @@ export const putData = async (endpoint, data) => {
 export const patchData = async (endpoint, data) => {
   try {
     const token = localStorage.getItem('token')
-    console.log('Token:', token)
     const response = await axios.patch(`${API_URL}${endpoint}`, data, {
       headers: {
         'Authorization': `Bearer ${token}`
@@ -71,7 +67,6 @@ export const patchData = async (endpoint, data) => {
 export const deleteData = async (endpoint) => {
   try {
     const token = localStorage.getItem('token')
-    console.log('Token:', token)
     const response = await axios.delete(`${API_URL}${endpoint}`, {
       headers: {
         'Authorization': `Bearer ${token}`

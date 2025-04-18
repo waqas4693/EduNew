@@ -1,31 +1,32 @@
-import { useState, useEffect } from 'react'
 import {
   Box,
-  TextField,
-  Button,
-  Typography,
+  Alert,
   Paper,
-  Autocomplete,
-  MenuItem,
+  Button,
   Select,
-  FormControl,
-  InputLabel,
+  MenuItem,
   Backdrop,
-  LinearProgress,
-  IconButton,
   Checkbox,
+  TextField,
   Accordion,
+  Typography,
+  InputLabel,
+  IconButton,
+  FormControl,
+  Autocomplete,
+  LinearProgress,
   AccordionSummary,
   AccordionDetails,
-  Alert
+  CircularProgress,
 } from '@mui/material'
+import { useState, useEffect } from 'react'
 import { postData, getData, putData } from '../../api/api'
+
 import axios from 'axios'
 import url from '../config/server-url'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import NumberInput from '../common/NumberInput'
 
 const RESOURCE_TYPES = [
   { value: 'VIDEO', label: 'Video' },
@@ -118,13 +119,24 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
   const [numberError, setNumberError] = useState('')
   const [error, setError] = useState('')
   const [insertMode, setInsertMode] = useState(false)
+  const [selectedCourse, setSelectedCourse] = useState(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [showSearchBackend, setShowSearchBackend] = useState(false)
+  const [allResources, setAllResources] = useState([])
 
   useEffect(() => {
     fetchCourses()
     if (editMode && propsCourseId) {
       setCourseId(propsCourseId)
+      const course = courses.find(c => c._id === propsCourseId)
+      if (course) {
+        setSelectedCourse(course)
+      }
     }
-  }, [editMode, propsCourseId])
+  }, [editMode, propsCourseId, courses])
 
   useEffect(() => {
     if (courseId) {
@@ -177,68 +189,78 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
     }
   }
 
-  const fetchResources = async () => {
-    if (editMode && sectionId) {
-      try {
-        const response = await getData(`resources/${sectionId}`)
-        if (response.status === 200 && response.data.resources) {
-          const formattedResources = await Promise.all(response.data.resources.map(async resource => {
-            // Get signed URLs for any existing files
-            const content = { ...resource.content }
-            
-            if (content.fileName) {
-              const fileResponse = await axios.get(`${url}resources/files/url/${resource.resourceType}/${content.fileName}`)
-              content.fileUrl = fileResponse.data.signedUrl
-            }
-            if (content.backgroundImage) {
-              const bgResponse = await axios.get(`${url}resources/files/url/BACKGROUNDS/${content.backgroundImage}`)
-              content.backgroundImageUrl = bgResponse.data.signedUrl
-            }
-            if (content.mcq?.imageFile) {
-              const mcqImgResponse = await axios.get(`${url}resources/files/url/MCQ_IMAGES/${content.mcq.imageFile}`)
-              content.mcq.imageFileUrl = mcqImgResponse.data.signedUrl
-            }
-            if (content.mcq?.audioFile) {
-              const mcqAudioResponse = await axios.get(`${url}resources/files/url/MCQ_AUDIO/${content.mcq.audioFile}`)
-              content.mcq.audioFileUrl = mcqAudioResponse.data.signedUrl
-            }
+  const fetchResources = async (page = 1, search = '') => {
+    if (!sectionId) return
+    
+    setIsLoading(true)
+    try {
+      const response = await getData(`resources/${sectionId}?page=${page}&limit=15&search=${search}`)
+      if (response.status === 200) {
+        // Format the resources with proper content structure
+        const formattedResources = await Promise.all(response.data.resources.map(async resource => {
+          // Get signed URLs for any existing files
+          const content = { ...resource.content }
+          
+          if (content.fileName) {
+            const fileResponse = await axios.get(`${url}resources/files/url/${resource.resourceType}/${content.fileName}`)
+            content.fileUrl = fileResponse.data.signedUrl
+          }
+          if (content.backgroundImage) {
+            const bgResponse = await axios.get(`${url}resources/files/url/BACKGROUNDS/${content.backgroundImage}`)
+            content.backgroundImageUrl = bgResponse.data.signedUrl
+          }
+          if (content.mcq?.imageFile) {
+            const mcqImgResponse = await axios.get(`${url}resources/files/url/MCQ_IMAGES/${content.mcq.imageFile}`)
+            content.mcq.imageFileUrl = mcqImgResponse.data.signedUrl
+          }
+          if (content.mcq?.audioFile) {
+            const mcqAudioResponse = await axios.get(`${url}resources/files/url/MCQ_AUDIO/${content.mcq.audioFile}`)
+            content.mcq.audioFileUrl = mcqAudioResponse.data.signedUrl
+          }
 
-            // Ensure proper structure for MCQ content
-            if (content.mcq) {
-              content.mcq = {
-                ...content.mcq,
-                options: content.mcq.options || [],
-                correctAnswers: content.mcq.correctAnswers || [],
-                numberOfCorrectAnswers: content.mcq.numberOfCorrectAnswers || 1
-              }
+          // Ensure proper structure for MCQ content
+          if (content.mcq) {
+            content.mcq = {
+              ...content.mcq,
+              options: content.mcq.options || [],
+              correctAnswers: content.mcq.correctAnswers || [],
+              numberOfCorrectAnswers: content.mcq.numberOfCorrectAnswers || 1
             }
+          }
 
-            // Ensure proper structure for questions
-            if (content.questions) {
-              content.questions = content.questions.map(q => ({
-                question: q.question || '',
-                answer: q.answer || ''
-              }))
-            }
+          // Ensure proper structure for questions
+          if (content.questions) {
+            content.questions = content.questions.map(q => ({
+              question: q.question || '',
+              answer: q.answer || ''
+            }))
+          }
 
-            // Ensure proper structure for external links
-            if (content.externalLinks) {
-              content.externalLinks = content.externalLinks.map(link => ({
-                name: link.name || '',
-                url: link.url || ''
-              }))
-            }
+          // Ensure proper structure for external links
+          content.externalLinks = content.externalLinks || [
+            { name: '', url: '' },
+            { name: '', url: '' },
+            { name: '', url: '' }
+          ]
 
-            return {
-              ...resource,
-              content
-            }
-          }))
+          return {
+            ...resource,
+            content
+          }
+        }))
+
+        if (page === 1) {
           setResources(formattedResources)
+        } else {
+          setResources(prev => [...prev, ...formattedResources])
         }
-      } catch (error) {
-        console.error('Error fetching resources:', error)
+        setHasMore(response.data.hasMore)
+        setAllResources(formattedResources)
       }
+    } catch (error) {
+      console.error('Error fetching resources:', error)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -733,6 +755,114 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
     }
   }
 
+  const handleCourseSelect = (_, newValue) => {
+    setCourseId(newValue?._id)
+    setSelectedCourse(newValue)
+  }
+
+  // Handle search
+  const handleSearch = (e) => {
+    const term = e.target.value
+    setSearchTerm(term)
+    setShowSearchBackend(false)
+    
+    // First, filter loaded resources
+    const filtered = allResources.filter(resource => 
+      resource.name.toLowerCase().includes(term.toLowerCase())
+    )
+    
+    if (filtered.length === 0 && term.length > 0) {
+      setShowSearchBackend(true)
+    }
+    
+    setResources(filtered)
+  }
+
+  // Handle backend search
+  const handleBackendSearch = async () => {
+    setIsLoading(true)
+    try {
+      const response = await getData(`resources/${sectionId}/search?name=${searchTerm}`)
+      if (response.status === 200) {
+        // Format the searched resources
+        const formattedResources = await Promise.all(response.data.data.map(async resource => {
+          const content = { ...resource.content }
+          
+          if (content.fileName) {
+            const fileResponse = await axios.get(`${url}resources/files/url/${resource.resourceType}/${content.fileName}`)
+            content.fileUrl = fileResponse.data.signedUrl
+          }
+          if (content.backgroundImage) {
+            const bgResponse = await axios.get(`${url}resources/files/url/BACKGROUNDS/${content.backgroundImage}`)
+            content.backgroundImageUrl = bgResponse.data.signedUrl
+          }
+          if (content.mcq?.imageFile) {
+            const mcqImgResponse = await axios.get(`${url}resources/files/url/MCQ_IMAGES/${content.mcq.imageFile}`)
+            content.mcq.imageFileUrl = mcqImgResponse.data.signedUrl
+          }
+          if (content.mcq?.audioFile) {
+            const mcqAudioResponse = await axios.get(`${url}resources/files/url/MCQ_AUDIO/${content.mcq.audioFile}`)
+            content.mcq.audioFileUrl = mcqAudioResponse.data.signedUrl
+          }
+
+          // Ensure proper structure for MCQ content
+          if (content.mcq) {
+            content.mcq = {
+              ...content.mcq,
+              options: content.mcq.options || [],
+              correctAnswers: content.mcq.correctAnswers || [],
+              numberOfCorrectAnswers: content.mcq.numberOfCorrectAnswers || 1
+            }
+          }
+
+          // Ensure proper structure for questions
+          if (content.questions) {
+            content.questions = content.questions.map(q => ({
+              question: q.question || '',
+              answer: q.answer || ''
+            }))
+          }
+
+          // Ensure proper structure for external links
+          content.externalLinks = content.externalLinks || [
+            { name: '', url: '' },
+            { name: '', url: '' },
+            { name: '', url: '' }
+          ]
+
+          return {
+            ...resource,
+            content
+          }
+        }))
+        
+        setResources(formattedResources)
+        setShowSearchBackend(false)
+      }
+    } catch (error) {
+      console.error('Error searching resources:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Handle scroll to load more
+  const handleScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.target
+    if (scrollHeight - scrollTop === clientHeight && hasMore && !isLoading && !searchTerm) {
+      setCurrentPage(prev => prev + 1)
+      fetchResources(currentPage + 1)
+    }
+  }
+
+  // Add useEffect for initial load
+  useEffect(() => {
+    if (sectionId) {
+      setCurrentPage(1)
+      fetchResources(1)
+    }
+  }, [sectionId])
+
   return (
     <>
       <form onSubmit={handleSubmit}>
@@ -742,7 +872,8 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             size='small'
             options={courses}
             getOptionLabel={option => option.name}
-            onChange={(_, newValue) => setCourseId(newValue?._id)}
+            value={selectedCourse}
+            onChange={handleCourseSelect}
             disabled={editMode || insertMode}
             renderInput={params => (
               <TextField
@@ -807,367 +938,708 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
           </Alert>
         )}
 
-        {resources.map((resource, index) => (
-          <Accordion
-            key={resource._id || index}
-            defaultExpanded={index === 0}
-            sx={{
-              mb: 2,
-              boxShadow: 'none',
-              '&:before': {
-                display: 'none'
-              },
-              borderRadius: '8px'
-            }}
-          >
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
+        {editMode && (
+          <Box sx={{ mb: 2 }}>
+            <TextField
+              fullWidth
+              size="small"
+              label="Search Resources"
+              value={searchTerm}
+              onChange={handleSearch}
+              sx={{ mb: 2 }}
+            />
+            {showSearchBackend && (
+              <Button
+                variant="outlined"
+                onClick={handleBackendSearch}
+                sx={{ mb: 2 }}
+              >
+                Search in all resources
+              </Button>
+            )}
+          </Box>
+        )}
+
+        <Box 
+          sx={{ 
+            maxHeight: '500px', 
+            overflow: 'auto',
+            mb: 2
+          }}
+          onScroll={handleScroll}
+        >
+          {resources.map((resource, index) => (
+            <Accordion
+              key={resource._id || index}
+              defaultExpanded={index === 0}
               sx={{
-                bgcolor: 'grey.200',
-                borderRadius: '8px',
-                '&.Mui-expanded': {
-                  minHeight: '48px',
-                  '& .MuiAccordionSummary-content': {
-                    margin: '12px 0'
-                  }
-                }
+                mb: 2,
+                boxShadow: 'none',
+                '&:before': {
+                  display: 'none'
+                },
+                borderRadius: '8px'
               }}
             >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                <Typography>
-                  Resource {resource.number} - {resource.name || `(Unnamed Resource ${index + 1})`}
-                </Typography>
-                {editMode && (
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    {editingResourceId === resource._id ? (
-                      <>
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          size="small"
-                          onClick={() => handleSaveResource(resource)}
-                          disabled={isSaving}
-                        >
-                          {isSaving ? 'Saving...' : 'Save'}
-                        </Button>
+              <AccordionSummary
+                expandIcon={<ExpandMoreIcon />}
+                sx={{
+                  bgcolor: 'grey.200',
+                  borderRadius: '8px',
+                  '&.Mui-expanded': {
+                    minHeight: '48px',
+                    '& .MuiAccordionSummary-content': {
+                      margin: '12px 0'
+                    }
+                  }
+                }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                  <Typography>
+                    Resource {resource.number} - {resource.name || `(Unnamed Resource ${index + 1})`}
+                  </Typography>
+                  {editMode && (
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      {editingResourceId === resource._id ? (
+                        <>
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            size="small"
+                            onClick={() => handleSaveResource(resource)}
+                            disabled={isSaving}
+                          >
+                            {isSaving ? 'Saving...' : 'Save'}
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            size="small"
+                            onClick={handleCancelEdit}
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
                         <Button
                           variant="outlined"
-                          color="error"
                           size="small"
-                          onClick={handleCancelEdit}
+                          onClick={() => handleEditResource(resource._id)}
                         >
-                          Cancel
+                          Edit
                         </Button>
-                      </>
-                    ) : (
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={() => handleEditResource(resource._id)}
-                      >
-                        Edit
-                      </Button>
-                    )}
-                  </Box>
-                )}
-              </Box>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Box sx={{ opacity: editingResourceId === resource._id ? 1 : 0.7 }}>
-                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                  <TextField
-                    type="number"
-                    size="small"
-                    label="Resource Number"
-                    value={resource.number}
-                    disabled
-                    sx={{ 
-                      minWidth: '120px',
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: '8px'
-                      }
-                    }}
-                  />
-                  <TextField
-                    fullWidth
-                    size='small'
-                    label='Resource Name'
-                    value={resource.name}
-                    onChange={e =>
-                      handleFormChange(index, 'name', e.target.value)
-                    }
-                    required
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: '8px'
-                      }
-                    }}
-                  />
-                  <FormControl fullWidth size='small'>
-                    <InputLabel
-                      sx={{
-                        color: '#8F8F8F',
-                        backgroundColor: 'white',
-                        padding: '0 4px'
+                      )}
+                    </Box>
+                  )}
+                </Box>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Box sx={{ opacity: editingResourceId === resource._id ? 1 : 0.7 }}>
+                  <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                    <TextField
+                      type="number"
+                      size="small"
+                      label="Resource Number"
+                      value={resource.number}
+                      disabled
+                      sx={{ 
+                        minWidth: '120px',
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '8px'
+                        }
                       }}
-                    >
-                      Resource Type
-                    </InputLabel>
-                    <Select
-                      value={resource.resourceType}
+                    />
+                    <TextField
+                      fullWidth
+                      size='small'
+                      label='Resource Name'
+                      value={resource.name}
                       onChange={e =>
-                        handleFormChange(index, 'resourceType', e.target.value)
+                        handleFormChange(index, 'name', e.target.value)
                       }
                       required
                       sx={{
-                        borderRadius: '8px',
-                        border: '1px solid #20202033',
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          border: 'none'
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '8px'
                         }
                       }}
-                    >
-                      {RESOURCE_TYPES.map(type => (
-                        <MenuItem key={type.value} value={type.value}>
-                          {type.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Box>
-
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
-                  {resource.resourceType === 'VIDEO' && (
-                    <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
-                      <UploadButton
-                        label='Choose Video'
-                        value={resource.content.file}
-                        accept='video/*'
+                    />
+                    <FormControl fullWidth size='small'>
+                      <InputLabel
+                        sx={{
+                          color: '#8F8F8F',
+                          backgroundColor: 'white',
+                          padding: '0 4px'
+                        }}
+                      >
+                        Resource Type
+                      </InputLabel>
+                      <Select
+                        value={resource.resourceType}
                         onChange={e =>
-                          handleContentChange(index, 'file', e.target.files[0])
+                          handleFormChange(index, 'resourceType', e.target.value)
+                        }
+                        required
+                        sx={{
+                          borderRadius: '8px',
+                          border: '1px solid #20202033',
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            border: 'none'
+                          }
+                        }}
+                      >
+                        {RESOURCE_TYPES.map(type => (
+                          <MenuItem key={type.value} value={type.value}>
+                            {type.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
+                    {resource.resourceType === 'VIDEO' && (
+                      <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
+                        <UploadButton
+                          label='Choose Video'
+                          value={resource.content.file}
+                          accept='video/*'
+                          onChange={e =>
+                            handleContentChange(index, 'file', e.target.files[0])
+                          }
+                          editMode={editMode}
+                          existingFile={resource.content.fileName}
+                        />
+                        {editMode && resource.content.fileName && (
+                          <ViewButton
+                            onClick={() => window.open(`${url}resources/files/url/${resource.resourceType}/${resource.content.fileName}`, '_blank')}
+                          />
+                        )}
+                      </Box>
+                    )}
+
+                    {resource.resourceType === 'AUDIO' && (
+                      <>
+                        <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
+                          <UploadButton
+                            label='Choose Audio'
+                            value={resource.content.file}
+                            accept='audio/*'
+                            onChange={e =>
+                              handleContentChange(index, 'file', e.target.files[0])
+                            }
+                            editMode={editMode}
+                            existingFile={resource.content.fileName}
+                          />
+                          {editMode && resource.content.fileName && (
+                            <ViewButton
+                              onClick={() => window.open(`${url}resources/files/url/${resource.resourceType}/${resource.content.fileName}`, '_blank')}
+                            />
+                          )}
+                        </Box>
+                        <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
+                          <UploadButton
+                            label='Choose Background'
+                            value={resource.content.backgroundImage}
+                            accept='image/*'
+                            onChange={e =>
+                              handleContentChange(
+                                index,
+                                'backgroundImage',
+                                e.target.files[0]
+                              )
+                            }
+                            editMode={editMode}
+                            existingFile={resource.content.backgroundImage}
+                          />
+                          {editMode && resource.content.backgroundImage && (
+                            <ViewButton
+                              onClick={() => window.open(`${url}resources/files/url/BACKGROUNDS/${resource.content.backgroundImage}`, '_blank')}
+                            />
+                          )}
+                        </Box>
+                      </>
+                    )}
+
+                    {resource.resourceType === 'PPT' && (
+                      <>
+                        <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
+                          <UploadButton
+                            label='Choose PPT'
+                            value={resource.content.file}
+                            accept='.ppt,.pptx'
+                            onChange={e =>
+                              handleContentChange(index, 'file', e.target.files[0])
+                            }
+                            editMode={editMode}
+                            existingFile={resource.content.fileName}
+                          />
+                          {editMode && resource.content.fileName && (
+                            <ViewButton
+                              onClick={() => window.open(`${url}resources/files/url/${resource.resourceType}/${resource.content.fileName}`, '_blank')}
+                            />
+                          )}
+                        </Box>
+                        <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
+                          <UploadButton
+                            label='Choose Preview'
+                            value={resource.content.backgroundImage}
+                            accept='image/*'
+                            onChange={e =>
+                              handleContentChange(
+                                index,
+                                'backgroundImage',
+                                e.target.files[0]
+                              )
+                            }
+                            editMode={editMode}
+                            existingFile={resource.content.backgroundImage}
+                          />
+                          {editMode && resource.content.backgroundImage && (
+                            <ViewButton
+                              onClick={() => window.open(`${url}resources/files/url/BACKGROUNDS/${resource.content.backgroundImage}`, '_blank')}
+                            />
+                          )}
+                        </Box>
+                      </>
+                    )}
+
+                    {resource.resourceType === 'PDF' && (
+                      <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
+                        <UploadButton
+                          label='Choose PDF'
+                          value={resource.content.file}
+                          accept='.pdf'
+                          onChange={e =>
+                            handleContentChange(index, 'file', e.target.files[0])
+                          }
+                          editMode={editMode}
+                          existingFile={resource.content.fileName}
+                        />
+                        {editMode && resource.content.fileName && (
+                          <ViewButton
+                            onClick={() => window.open(`${url}resources/files/url/${resource.resourceType}/${resource.content.fileName}`, '_blank')}
+                          />
+                        )}
+                      </Box>
+                    )}
+
+                    {resource.resourceType === 'IMAGE' && (
+                      <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
+                        <UploadButton
+                          label='Choose Image'
+                          value={resource.content.file}
+                          accept='image/*'
+                          onChange={e =>
+                            handleContentChange(index, 'file', e.target.files[0])
+                          }
+                          editMode={editMode}
+                          existingFile={resource.content.fileName}
+                        />
+                        {editMode && resource.content.fileName && (
+                          <ViewButton
+                            onClick={() => window.open(`${url}resources/files/url/${resource.resourceType}/${resource.content.fileName}`, '_blank')}
+                          />
+                        )}
+                      </Box>
+                    )}
+
+                    {resource.resourceType === 'TEXT' && (
+                      <UploadButton
+                        label='Choose Background'
+                        value={resource.content.backgroundImage}
+                        accept='image/*'
+                        onChange={e =>
+                          handleContentChange(
+                            index,
+                            'backgroundImage',
+                            e.target.files[0]
+                          )
                         }
                         editMode={editMode}
-                        existingFile={resource.content.fileName}
+                        existingFile={resource.content.backgroundImage}
                       />
-                      {editMode && resource.content.fileName && (
-                        <ViewButton
-                          onClick={() => window.open(`${url}resources/files/url/${resource.resourceType}/${resource.content.fileName}`, '_blank')}
-                        />
-                      )}
+                    )}
+
+                    {resource.resourceType === 'MCQ' && (
+                      <>
+                        <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
+                          <UploadButton
+                            label='Choose Question Image'
+                            value={resource.content.mcq?.imageFile}
+                            accept='image/*'
+                            onChange={e =>
+                              handleContentChange(index, 'mcq', {
+                                ...resource.content.mcq,
+                                imageFile: e.target.files[0]
+                              })
+                            }
+                            editMode={editMode}
+                            existingFile={resource.content.mcq?.imageFile}
+                          />
+                          {editMode && resource.content.mcq?.imageFile && (
+                            <ViewButton
+                              onClick={() => window.open(`${url}resources/files/url/MCQ_IMAGES/${resource.content.mcq.imageFile}`, '_blank')}
+                            />
+                          )}
+                        </Box>
+                        <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
+                          <UploadButton
+                            label='Choose Audio'
+                            value={resource.content.mcq?.audioFile}
+                            accept='audio/*'
+                            onChange={e =>
+                              handleContentChange(index, 'mcq', {
+                                ...resource.content.mcq,
+                                audioFile: e.target.files[0]
+                              })
+                            }
+                            editMode={editMode}
+                            existingFile={resource.content.mcq?.audioFile}
+                          />
+                          {editMode && resource.content.mcq?.audioFile && (
+                            <ViewButton
+                              onClick={() => window.open(`${url}resources/files/url/MCQ_AUDIO/${resource.content.mcq.audioFile}`, '_blank')}
+                            />
+                          )}
+                        </Box>
+                      </>
+                    )}
+                  </Box>
+
+                  {resource.resourceType === 'TEXT' && (
+                    <>
+                      {resource.content.questions.map((q, qIndex) => (
+                        <Box key={qIndex} sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                          <TextField
+                            fullWidth
+                            size='small'
+                            label={`Question ${qIndex + 1}`}
+                            value={q.question}
+                            onChange={e => {
+                              const newQuestions = [...resource.content.questions]
+                              newQuestions[qIndex] = {
+                                ...newQuestions[qIndex],
+                                question: e.target.value
+                              }
+                              handleContentChange(
+                                index,
+                                'questions',
+                                newQuestions
+                              )
+                            }}
+                            required
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: '8px',
+                                border: '1px solid #20202033',
+                                '& fieldset': {
+                                  border: 'none'
+                                }
+                              },
+                              '& .MuiInputLabel-root': {
+                                color: '#8F8F8F',
+                                backgroundColor: 'white',
+                                padding: '0 4px'
+                              }
+                            }}
+                          />
+                          <TextField
+                            fullWidth
+                            size='small'
+                            label={`Answer ${qIndex + 1}`}
+                            value={q.answer}
+                            onChange={e => {
+                              const newQuestions = [...resource.content.questions]
+                              newQuestions[qIndex] = {
+                                ...newQuestions[qIndex],
+                                answer: e.target.value
+                              }
+                              handleContentChange(
+                                index,
+                                'questions',
+                                newQuestions
+                              )
+                            }}
+                            required
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: '8px',
+                                border: '1px solid #20202033',
+                                '& fieldset': {
+                                  border: 'none'
+                                }
+                              },
+                              '& .MuiInputLabel-root': {
+                                color: '#8F8F8F',
+                                backgroundColor: 'white',
+                                padding: '0 4px'
+                              }
+                            }}
+                          />
+                        </Box>
+                      ))}
+                    </>
+                  )}
+
+                  {resource.resourceType === 'MCQ' && (
+                    <Box sx={{ mt: 2 }}>
+                      <TextField
+                        fullWidth
+                        size='small'
+                        label='Question'
+                        value={resource.content.mcq?.question || ''}
+                        onChange={e =>
+                          handleContentChange(index, 'mcq', {
+                            ...resource.content.mcq,
+                            question: e.target.value
+                          })
+                        }
+                        required
+                        sx={{
+                          mb: 2,
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: '8px',
+                            border: '1px solid #20202033',
+                            '& fieldset': {
+                              border: 'none'
+                            }
+                          },
+                          '& .MuiInputLabel-root': {
+                            color: '#8F8F8F',
+                            backgroundColor: 'white',
+                            padding: '0 4px'
+                          }
+                        }}
+                      />
+
+                      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                        <FormControl fullWidth size='small'>
+                          <InputLabel
+                            sx={{
+                              color: '#8F8F8F',
+                              backgroundColor: 'white',
+                              padding: '0 4px'
+                            }}
+                          >
+                            Number of Options
+                          </InputLabel>
+                          <Select
+                            value={resource.content.mcq?.options?.length || 4}
+                            onChange={e => {
+                              const numOptions = e.target.value
+                              const currentOptions =
+                                resource.content.mcq?.options || []
+                              const newOptions = Array(numOptions)
+                                .fill('')
+                                .map((_, i) => currentOptions[i] || '')
+                              handleContentChange(index, 'mcq', {
+                                ...resource.content.mcq,
+                                options: newOptions
+                              })
+                            }}
+                            sx={{
+                              borderRadius: '8px',
+                              border: '1px solid #20202033',
+                              '& .MuiOutlinedInput-notchedOutline': {
+                                border: 'none'
+                              }
+                            }}
+                          >
+                            {[2, 3, 4, 5, 6].map(num => (
+                              <MenuItem key={num} value={num}>
+                                {num} Options
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+
+                        <FormControl fullWidth size='small'>
+                          <InputLabel
+                            sx={{
+                              color: '#8F8F8F',
+                              backgroundColor: 'white',
+                              padding: '0 4px'
+                            }}
+                          >
+                            Number of Correct Answers
+                          </InputLabel>
+                          <Select
+                            value={
+                              resource.content.mcq?.numberOfCorrectAnswers || 1
+                            }
+                            onChange={e =>
+                              handleContentChange(index, 'mcq', {
+                                ...resource.content.mcq,
+                                numberOfCorrectAnswers: e.target.value,
+                                correctAnswers: []
+                              })
+                            }
+                            sx={{
+                              borderRadius: '8px',
+                              border: '1px solid #20202033',
+                              '& .MuiOutlinedInput-notchedOutline': {
+                                border: 'none'
+                              }
+                            }}
+                          >
+                            {[1, 2, 3, 4, 5, 6].map(num => (
+                              <MenuItem key={num} value={num}>
+                                {num} Correct Answers
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Box>
+
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 2,
+                          mb: 2
+                        }}
+                      >
+                        {chunk(resource.content.mcq?.options || [], 2).map(
+                          (optionPair, pairIndex) => (
+                            <Box key={pairIndex} sx={{ display: 'flex', gap: 2 }}>
+                              {optionPair.map((option, optionIndex) => (
+                                <TextField
+                                  key={pairIndex * 2 + optionIndex}
+                                  fullWidth
+                                  size='small'
+                                  label={`Option ${
+                                    pairIndex * 2 + optionIndex + 1
+                                  }`}
+                                  value={option}
+                                  onChange={e => {
+                                    const newOptions = [
+                                      ...(resource.content.mcq?.options || [])
+                                    ]
+                                    newOptions[pairIndex * 2 + optionIndex] =
+                                      e.target.value
+                                    handleContentChange(index, 'mcq', {
+                                      ...resource.content.mcq,
+                                      options: newOptions
+                                    })
+                                  }}
+                                  required
+                                  sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                      borderRadius: '8px',
+                                      border: '1px solid #20202033',
+                                      '& fieldset': {
+                                        border: 'none'
+                                      }
+                                    },
+                                    '& .MuiInputLabel-root': {
+                                      color: '#8F8F8F',
+                                      backgroundColor: 'white',
+                                      padding: '0 4px'
+                                    }
+                                  }}
+                                />
+                              ))}
+                            </Box>
+                          )
+                        )}
+                      </Box>
+
+                      <FormControl fullWidth size='small' sx={{ mb: 2 }}>
+                        <InputLabel
+                          sx={{
+                            color: '#8F8F8F',
+                            backgroundColor: 'white',
+                            padding: '0 4px'
+                          }}
+                        >
+                          Correct Answers
+                        </InputLabel>
+                        <Select
+                          multiple
+                          value={resource.content.mcq?.correctAnswers || []}
+                          onChange={e =>
+                            handleContentChange(index, 'mcq', {
+                              ...resource.content.mcq,
+                              correctAnswers: e.target.value
+                            })
+                          }
+                          required
+                          sx={{
+                            borderRadius: '8px',
+                            border: '1px solid #20202033',
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              border: 'none'
+                            }
+                          }}
+                          renderValue={selected => selected.join(', ')}
+                        >
+                          {resource.content.mcq?.options?.map(
+                            (option, optIndex) => (
+                              <MenuItem key={optIndex} value={option}>
+                                <Checkbox
+                                  checked={resource.content.mcq?.correctAnswers.includes(
+                                    option
+                                  )}
+                                />
+                                Option {optIndex + 1}: {option}
+                              </MenuItem>
+                            )
+                          )}
+                        </Select>
+                      </FormControl>
                     </Box>
                   )}
 
                   {resource.resourceType === 'AUDIO' && (
-                    <>
-                      <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
-                        <UploadButton
-                          label='Choose Audio'
-                          value={resource.content.file}
-                          accept='audio/*'
-                          onChange={e =>
-                            handleContentChange(index, 'file', e.target.files[0])
-                          }
-                          editMode={editMode}
-                          existingFile={resource.content.fileName}
-                        />
-                        {editMode && resource.content.fileName && (
-                          <ViewButton
-                            onClick={() => window.open(`${url}resources/files/url/${resource.resourceType}/${resource.content.fileName}`, '_blank')}
-                          />
-                        )}
-                      </Box>
-                      <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
-                        <UploadButton
-                          label='Choose Background'
-                          value={resource.content.backgroundImage}
-                          accept='image/*'
-                          onChange={e =>
-                            handleContentChange(
-                              index,
-                              'backgroundImage',
-                              e.target.files[0]
-                            )
-                          }
-                          editMode={editMode}
-                          existingFile={resource.content.backgroundImage}
-                        />
-                        {editMode && resource.content.backgroundImage && (
-                          <ViewButton
-                            onClick={() => window.open(`${url}resources/files/url/BACKGROUNDS/${resource.content.backgroundImage}`, '_blank')}
-                          />
-                        )}
-                      </Box>
-                    </>
-                  )}
-
-                  {resource.resourceType === 'PPT' && (
-                    <>
-                      <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
-                        <UploadButton
-                          label='Choose PPT'
-                          value={resource.content.file}
-                          accept='.ppt,.pptx'
-                          onChange={e =>
-                            handleContentChange(index, 'file', e.target.files[0])
-                          }
-                          editMode={editMode}
-                          existingFile={resource.content.fileName}
-                        />
-                        {editMode && resource.content.fileName && (
-                          <ViewButton
-                            onClick={() => window.open(`${url}resources/files/url/${resource.resourceType}/${resource.content.fileName}`, '_blank')}
-                          />
-                        )}
-                      </Box>
-                      <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
-                        <UploadButton
-                          label='Choose Preview'
-                          value={resource.content.backgroundImage}
-                          accept='image/*'
-                          onChange={e =>
-                            handleContentChange(
-                              index,
-                              'backgroundImage',
-                              e.target.files[0]
-                            )
-                          }
-                          editMode={editMode}
-                          existingFile={resource.content.backgroundImage}
-                        />
-                        {editMode && resource.content.backgroundImage && (
-                          <ViewButton
-                            onClick={() => window.open(`${url}resources/files/url/BACKGROUNDS/${resource.content.backgroundImage}`, '_blank')}
-                          />
-                        )}
-                      </Box>
-                    </>
-                  )}
-
-                  {resource.resourceType === 'PDF' && (
-                    <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
-                      <UploadButton
-                        label='Choose PDF'
-                        value={resource.content.file}
-                        accept='.pdf'
-                        onChange={e =>
-                          handleContentChange(index, 'file', e.target.files[0])
-                        }
-                        editMode={editMode}
-                        existingFile={resource.content.fileName}
-                      />
-                      {editMode && resource.content.fileName && (
-                        <ViewButton
-                          onClick={() => window.open(`${url}resources/files/url/${resource.resourceType}/${resource.content.fileName}`, '_blank')}
-                        />
-                      )}
-                    </Box>
-                  )}
-
-                  {resource.resourceType === 'IMAGE' && (
-                    <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
-                      <UploadButton
-                        label='Choose Image'
-                        value={resource.content.file}
-                        accept='image/*'
-                        onChange={e =>
-                          handleContentChange(index, 'file', e.target.files[0])
-                        }
-                        editMode={editMode}
-                        existingFile={resource.content.fileName}
-                      />
-                      {editMode && resource.content.fileName && (
-                        <ViewButton
-                          onClick={() => window.open(`${url}resources/files/url/${resource.resourceType}/${resource.content.fileName}`, '_blank')}
-                        />
-                      )}
-                    </Box>
-                  )}
-
-                  {resource.resourceType === 'TEXT' && (
-                    <UploadButton
-                      label='Choose Background'
-                      value={resource.content.backgroundImage}
-                      accept='image/*'
+                    <TextField
+                      fullWidth
+                      size='small'
+                      type='number'
+                      label='Repeat Count'
+                      value={resource.content.repeatCount || 1}
                       onChange={e =>
                         handleContentChange(
                           index,
-                          'backgroundImage',
-                          e.target.files[0]
+                          'repeatCount',
+                          parseInt(e.target.value)
                         )
                       }
-                      editMode={editMode}
-                      existingFile={resource.content.backgroundImage}
+                      slotProps={{
+                        input: { min: 1, max: 11 }
+                      }}
+                      sx={{
+                        mb: 2,
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '8px'
+                        }
+                      }}
                     />
                   )}
 
-                  {resource.resourceType === 'MCQ' && (
-                    <>
-                      <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
-                        <UploadButton
-                          label='Choose Question Image'
-                          value={resource.content.mcq?.imageFile}
-                          accept='image/*'
-                          onChange={e =>
-                            handleContentChange(index, 'mcq', {
-                              ...resource.content.mcq,
-                              imageFile: e.target.files[0]
-                            })
-                          }
-                          editMode={editMode}
-                          existingFile={resource.content.mcq?.imageFile}
-                        />
-                        {editMode && resource.content.mcq?.imageFile && (
-                          <ViewButton
-                            onClick={() => window.open(`${url}resources/files/url/MCQ_IMAGES/${resource.content.mcq.imageFile}`, '_blank')}
-                          />
-                        )}
-                      </Box>
-                      <Box sx={{ display: 'flex', width: '100%', gap: 1 }}>
-                        <UploadButton
-                          label='Choose Audio'
-                          value={resource.content.mcq?.audioFile}
-                          accept='audio/*'
-                          onChange={e =>
-                            handleContentChange(index, 'mcq', {
-                              ...resource.content.mcq,
-                              audioFile: e.target.files[0]
-                            })
-                          }
-                          editMode={editMode}
-                          existingFile={resource.content.mcq?.audioFile}
-                        />
-                        {editMode && resource.content.mcq?.audioFile && (
-                          <ViewButton
-                            onClick={() => window.open(`${url}resources/files/url/MCQ_AUDIO/${resource.content.mcq.audioFile}`, '_blank')}
-                          />
-                        )}
-                      </Box>
-                    </>
-                  )}
-                </Box>
-
-                {resource.resourceType === 'TEXT' && (
-                  <>
-                    {resource.content.questions.map((q, qIndex) => (
-                      <Box key={qIndex} sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                  <Box sx={{ mb: 2 }}>
+                    {resource.content.externalLinks.map((link, linkIndex) => (
+                      <Box
+                        key={linkIndex}
+                        sx={{
+                          display: 'flex',
+                          gap: 2,
+                          mb: linkIndex < 2 ? 2 : 0
+                        }}
+                      >
                         <TextField
                           fullWidth
                           size='small'
-                          label={`Question ${qIndex + 1}`}
-                          value={q.question}
+                          label={`Link ${linkIndex + 1} Name`}
+                          value={link.name}
                           onChange={e => {
-                            const newQuestions = [...resource.content.questions]
-                            newQuestions[qIndex] = {
-                              ...newQuestions[qIndex],
-                              question: e.target.value
+                            const newLinks = [...resource.content.externalLinks]
+                            newLinks[linkIndex] = {
+                              ...newLinks[linkIndex],
+                              name: e.target.value
                             }
-                            handleContentChange(
-                              index,
-                              'questions',
-                              newQuestions
-                            )
+                            handleContentChange(index, 'externalLinks', newLinks)
                           }}
-                          required
                           sx={{
                             '& .MuiOutlinedInput-root': {
                               borderRadius: '8px',
@@ -1186,21 +1658,16 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                         <TextField
                           fullWidth
                           size='small'
-                          label={`Answer ${qIndex + 1}`}
-                          value={q.answer}
+                          label={`External Link ${linkIndex + 1}`}
+                          value={link.url}
                           onChange={e => {
-                            const newQuestions = [...resource.content.questions]
-                            newQuestions[qIndex] = {
-                              ...newQuestions[qIndex],
-                              answer: e.target.value
+                            const newLinks = [...resource.content.externalLinks]
+                            newLinks[linkIndex] = {
+                              ...newLinks[linkIndex],
+                              url: e.target.value
                             }
-                            handleContentChange(
-                              index,
-                              'questions',
-                              newQuestions
-                            )
+                            handleContentChange(index, 'externalLinks', newLinks)
                           }}
-                          required
                           sx={{
                             '& .MuiOutlinedInput-root': {
                               borderRadius: '8px',
@@ -1218,317 +1685,18 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                         />
                       </Box>
                     ))}
-                  </>
-                )}
-
-                {resource.resourceType === 'MCQ' && (
-                  <Box sx={{ mt: 2 }}>
-                    <TextField
-                      fullWidth
-                      size='small'
-                      label='Question'
-                      value={resource.content.mcq?.question || ''}
-                      onChange={e =>
-                        handleContentChange(index, 'mcq', {
-                          ...resource.content.mcq,
-                          question: e.target.value
-                        })
-                      }
-                      required
-                      sx={{
-                        mb: 2,
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: '8px',
-                          border: '1px solid #20202033',
-                          '& fieldset': {
-                            border: 'none'
-                          }
-                        },
-                        '& .MuiInputLabel-root': {
-                          color: '#8F8F8F',
-                          backgroundColor: 'white',
-                          padding: '0 4px'
-                        }
-                      }}
-                    />
-
-                    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                      <FormControl fullWidth size='small'>
-                        <InputLabel
-                          sx={{
-                            color: '#8F8F8F',
-                            backgroundColor: 'white',
-                            padding: '0 4px'
-                          }}
-                        >
-                          Number of Options
-                        </InputLabel>
-                        <Select
-                          value={resource.content.mcq?.options?.length || 4}
-                          onChange={e => {
-                            const numOptions = e.target.value
-                            const currentOptions =
-                              resource.content.mcq?.options || []
-                            const newOptions = Array(numOptions)
-                              .fill('')
-                              .map((_, i) => currentOptions[i] || '')
-                            handleContentChange(index, 'mcq', {
-                              ...resource.content.mcq,
-                              options: newOptions
-                            })
-                          }}
-                          sx={{
-                            borderRadius: '8px',
-                            border: '1px solid #20202033',
-                            '& .MuiOutlinedInput-notchedOutline': {
-                              border: 'none'
-                            }
-                          }}
-                        >
-                          {[2, 3, 4, 5, 6].map(num => (
-                            <MenuItem key={num} value={num}>
-                              {num} Options
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-
-                      <FormControl fullWidth size='small'>
-                        <InputLabel
-                          sx={{
-                            color: '#8F8F8F',
-                            backgroundColor: 'white',
-                            padding: '0 4px'
-                          }}
-                        >
-                          Number of Correct Answers
-                        </InputLabel>
-                        <Select
-                          value={
-                            resource.content.mcq?.numberOfCorrectAnswers || 1
-                          }
-                          onChange={e =>
-                            handleContentChange(index, 'mcq', {
-                              ...resource.content.mcq,
-                              numberOfCorrectAnswers: e.target.value,
-                              correctAnswers: []
-                            })
-                          }
-                          sx={{
-                            borderRadius: '8px',
-                            border: '1px solid #20202033',
-                            '& .MuiOutlinedInput-notchedOutline': {
-                              border: 'none'
-                            }
-                          }}
-                        >
-                          {[1, 2, 3, 4, 5, 6].map(num => (
-                            <MenuItem key={num} value={num}>
-                              {num} Correct Answers
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Box>
-
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 2,
-                        mb: 2
-                      }}
-                    >
-                      {chunk(resource.content.mcq?.options || [], 2).map(
-                        (optionPair, pairIndex) => (
-                          <Box key={pairIndex} sx={{ display: 'flex', gap: 2 }}>
-                            {optionPair.map((option, optionIndex) => (
-                              <TextField
-                                key={pairIndex * 2 + optionIndex}
-                                fullWidth
-                                size='small'
-                                label={`Option ${
-                                  pairIndex * 2 + optionIndex + 1
-                                }`}
-                                value={option}
-                                onChange={e => {
-                                  const newOptions = [
-                                    ...(resource.content.mcq?.options || [])
-                                  ]
-                                  newOptions[pairIndex * 2 + optionIndex] =
-                                    e.target.value
-                                  handleContentChange(index, 'mcq', {
-                                    ...resource.content.mcq,
-                                    options: newOptions
-                                  })
-                                }}
-                                required
-                                sx={{
-                                  '& .MuiOutlinedInput-root': {
-                                    borderRadius: '8px',
-                                    border: '1px solid #20202033',
-                                    '& fieldset': {
-                                      border: 'none'
-                                    }
-                                  },
-                                  '& .MuiInputLabel-root': {
-                                    color: '#8F8F8F',
-                                    backgroundColor: 'white',
-                                    padding: '0 4px'
-                                  }
-                                }}
-                              />
-                            ))}
-                          </Box>
-                        )
-                      )}
-                    </Box>
-
-                    <FormControl fullWidth size='small' sx={{ mb: 2 }}>
-                      <InputLabel
-                        sx={{
-                          color: '#8F8F8F',
-                          backgroundColor: 'white',
-                          padding: '0 4px'
-                        }}
-                      >
-                        Correct Answers
-                      </InputLabel>
-                      <Select
-                        multiple
-                        value={resource.content.mcq?.correctAnswers || []}
-                        onChange={e =>
-                          handleContentChange(index, 'mcq', {
-                            ...resource.content.mcq,
-                            correctAnswers: e.target.value
-                          })
-                        }
-                        required
-                        sx={{
-                          borderRadius: '8px',
-                          border: '1px solid #20202033',
-                          '& .MuiOutlinedInput-notchedOutline': {
-                            border: 'none'
-                          }
-                        }}
-                        renderValue={selected => selected.join(', ')}
-                      >
-                        {resource.content.mcq?.options?.map(
-                          (option, optIndex) => (
-                            <MenuItem key={optIndex} value={option}>
-                              <Checkbox
-                                checked={resource.content.mcq?.correctAnswers.includes(
-                                  option
-                                )}
-                              />
-                              Option {optIndex + 1}: {option}
-                            </MenuItem>
-                          )
-                        )}
-                      </Select>
-                    </FormControl>
                   </Box>
-                )}
-
-                {resource.resourceType === 'AUDIO' && (
-                  <TextField
-                    fullWidth
-                    size='small'
-                    type='number'
-                    label='Repeat Count'
-                    value={resource.content.repeatCount || 1}
-                    onChange={e =>
-                      handleContentChange(
-                        index,
-                        'repeatCount',
-                        parseInt(e.target.value)
-                      )
-                    }
-                    slotProps={{
-                      input: { min: 1, max: 11 }
-                    }}
-                    sx={{
-                      mb: 2,
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: '8px'
-                      }
-                    }}
-                  />
-                )}
-
-                <Box sx={{ mb: 2 }}>
-                  {resource.content.externalLinks.map((link, linkIndex) => (
-                    <Box
-                      key={linkIndex}
-                      sx={{
-                        display: 'flex',
-                        gap: 2,
-                        mb: linkIndex < 2 ? 2 : 0
-                      }}
-                    >
-                      <TextField
-                        fullWidth
-                        size='small'
-                        label={`Link ${linkIndex + 1} Name`}
-                        value={link.name}
-                        onChange={e => {
-                          const newLinks = [...resource.content.externalLinks]
-                          newLinks[linkIndex] = {
-                            ...newLinks[linkIndex],
-                            name: e.target.value
-                          }
-                          handleContentChange(index, 'externalLinks', newLinks)
-                        }}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            borderRadius: '8px',
-                            border: '1px solid #20202033',
-                            '& fieldset': {
-                              border: 'none'
-                            }
-                          },
-                          '& .MuiInputLabel-root': {
-                            color: '#8F8F8F',
-                            backgroundColor: 'white',
-                            padding: '0 4px'
-                          }
-                        }}
-                      />
-                      <TextField
-                        fullWidth
-                        size='small'
-                        label={`External Link ${linkIndex + 1}`}
-                        value={link.url}
-                        onChange={e => {
-                          const newLinks = [...resource.content.externalLinks]
-                          newLinks[linkIndex] = {
-                            ...newLinks[linkIndex],
-                            url: e.target.value
-                          }
-                          handleContentChange(index, 'externalLinks', newLinks)
-                        }}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            borderRadius: '8px',
-                            border: '1px solid #20202033',
-                            '& fieldset': {
-                              border: 'none'
-                            }
-                          },
-                          '& .MuiInputLabel-root': {
-                            color: '#8F8F8F',
-                            backgroundColor: 'white',
-                            padding: '0 4px'
-                          }
-                        }}
-                      />
-                    </Box>
-                  ))}
                 </Box>
-              </Box>
-            </AccordionDetails>
-          </Accordion>
-        ))}
+              </AccordionDetails>
+            </Accordion>
+          ))}
+          
+          {isLoading && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+              <CircularProgress size={24} />
+            </Box>
+          )}
+        </Box>
 
         <Box
           sx={{

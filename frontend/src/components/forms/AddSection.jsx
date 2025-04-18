@@ -462,7 +462,7 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
                   '&:hover': { bgcolor: 'primary.dark' }
                 }}
               >
-                {swapMode ? 'Select' : 'swapNumbers'}
+                {swapMode ? 'Select' : 'Swap Numbers'}
               </Button>
             )}
 
