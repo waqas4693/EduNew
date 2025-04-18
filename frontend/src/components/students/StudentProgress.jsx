@@ -3,10 +3,11 @@ import CancelIcon from '@mui/icons-material/Cancel'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CustomDataGrid from '../reusable-components/CustomDataGrid'
 import { Tooltip } from '@mui/material'
+import ChevronLeft from '@mui/icons-material/ChevronLeft'
 
 import { getData } from '../../api/api'
 import { useState, useEffect } from 'react'
-import { useParams, useLocation } from 'react-router-dom'
+import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import { Box, Chip, Paper, Typography, CircularProgress } from '@mui/material'
 
 const formatDate = (dateString) => {
@@ -22,6 +23,7 @@ const formatDate = (dateString) => {
 const StudentProgress = () => {
   const { id: studentId, courseId } = useParams()
   const location = useLocation()
+  const navigate = useNavigate()
 
   const [loading, setLoading] = useState({
     units: false,
@@ -114,7 +116,7 @@ const StudentProgress = () => {
     setLoading(prev => ({ ...prev, resources: true }))
     try {
       const response = await getData(
-        `resources/${section._id}/student/${studentId}/status`
+        `student-progress/${studentId}/${courseId}/${selectedUnit._id}/${section._id}`
       )
       setResources(response.data.data || [])
     } catch (error) {
@@ -170,6 +172,10 @@ const StudentProgress = () => {
     }
   ]
 
+  const handleBackToDashboard = () => {
+    navigate('/dashboard')
+  }
+
   return (
     <>
       <Paper
@@ -180,6 +186,23 @@ const StudentProgress = () => {
           backgroundColor: 'white'
         }}
       >
+        <Box sx={{ mb: 1 }}>
+          <Typography
+            variant='body2'
+            sx={{
+              cursor: 'pointer',
+              color: 'primary.main',
+              display: 'inline-flex',
+              alignItems: 'center',
+              width: 'fit-content',
+              gap: 0
+            }}
+            onClick={handleBackToDashboard}
+          >
+            <ChevronLeft sx={{ ml: -1 }} /> Back To Dashboard
+          </Typography>
+        </Box>
+
         <Box sx={{ mb: 3 }}>
           <Typography
             variant="h5"
