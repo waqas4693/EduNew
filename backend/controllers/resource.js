@@ -155,35 +155,13 @@ export const getResources = async (req, res) => {
 export const getSectionResources = async (req, res) => {
   try {
     const { sectionId } = req.params
-    const { page = 1, limit = 15, search = '' } = req.query
-    
-    const query = {
+    const resources = await Resource.find({
       sectionId,
       status: 1
-    }
-
-    // Add search filter if search term exists
-    if (search) {
-      query.name = { $regex: search, $options: 'i' }
-    }
-
-    const skip = (page - 1) * limit
-
-    const [resources, total] = await Promise.all([
-      Resource.find(query)
-        .sort('number')
-        .skip(skip)
-        .limit(limit)
-        .select('name number resourceType content.fileName'),
-      Resource.countDocuments(query)
-    ])
+    }).sort('number') // Sort by number field
 
     res.status(200).json({
-      resources,
-      total,
-      page,
-      totalPages: Math.ceil(total / limit),
-      hasMore: skip + resources.length < total
+      resources
     })
   } catch (error) {
     handleError(res, error)
@@ -472,34 +450,4 @@ export const insertResource = async (req, res) => {
     }
     handleError(res, error);
   }
-};
-
-// Add new endpoint for searching resources by name
-export const searchResourcesByName = async (req, res) => {
-  try {
-    const { sectionId } = req.params
-    const { name } = req.query
-
-    if (!name) {
-      return res.status(400).json({
-        success: false,
-        message: 'Search term is required'
-      })
-    }
-
-    const resources = await Resource.find({
-      sectionId,
-      status: 1,
-      name: { $regex: name, $options: 'i' }
-    })
-    .sort('number')
-    .select('name number resourceType content.fileName')
-
-    res.status(200).json({
-      success: true,
-      data: resources
-    })
-  } catch (error) {
-    handleError(res, error)
-  }
-} 
+}; 

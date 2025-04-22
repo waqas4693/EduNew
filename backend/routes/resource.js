@@ -6,15 +6,13 @@ import {
   getResourcesWithViewStatus,
   getLatestResourceNumber,
   updateResourceNumber,
-  insertResource,
-  searchResourcesByName
+  insertResource
 } from '../controllers/resource.js'
 
 const router = express.Router()
 
 router.post('/', createResource)
 router.get('/:sectionId', getSectionResources)
-router.get('/:sectionId/search', searchResourcesByName)
 router.put('/:id', updateResource)
 router.get('/:sectionId/student/:studentId/status', getResourcesWithViewStatus)
 router.get('/latest-number/:sectionId', getLatestResourceNumber)
