@@ -184,7 +184,7 @@ export const getSectionResources = async (req, res) => {
         .sort('number')
         .skip(skip)
         .limit(limit)
-        .select('name number resourceType content.fileName'),
+        .select('name number resourceType content.fileName content.audioFile content.backgroundImage content.mcq'),
       Resource.countDocuments(query)
     ])
 

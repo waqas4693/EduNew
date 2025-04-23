@@ -605,44 +605,46 @@ const ResourceRenderer = ({
 
     case 'PDF':
       return (
-        <Box
-          sx={{
-            width: '100%',
-            height: '80vh',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2
-          }}
-        >
-          <iframe
-            src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true`}
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              borderRadius: '8px'
-            }}
-            title="PDF Viewer"
-          />
-          {resource.content.backgroundImage && (
-            <Box
-              sx={{
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2 }}>
+          {/* PDF Viewer */}
+
+          <Typography variant="h6">Checking The Data Of Pdf Res With Audio {resource.content.audioFile}</Typography>
+            
+
+          <Box sx={{ width: '100%', height: '70vh' }}>
+            <iframe
+              src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true`}
+              style={{
                 width: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center'
+                height: '100%',
+                border: 'none',
+                borderRadius: '8px'
               }}
-            >
-              <img
-                src={signedUrls[resource.content.backgroundImage]}
-                alt="Background"
-                style={{
-                  maxWidth: '100%',
-                  maxHeight: '300px',
-                  objectFit: 'contain',
-                  borderRadius: '8px'
-                }}
-              />
+              title="PDF Viewer"
+            />
+          </Box>
+
+          {/* Audio Player for PDF */}
+          {resource.content.audioFile && signedUrls[resource.content.audioFile] && (
+            <Box sx={{ 
+              width: '100%', 
+              p: 2, 
+              bgcolor: 'grey.100', 
+              borderRadius: '8px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1
+            }}>
+              <Typography variant="subtitle1" fontWeight="medium">
+                Audio Narration
+              </Typography>
+              <audio
+                controls
+                style={{ width: '100%' }}
+                src={signedUrls[resource.content.audioFile]}
+              >
+                Your browser does not support the audio element.
+              </audio>
             </Box>
           )}
         </Box>
@@ -724,6 +726,10 @@ const LearnerFrame = () => {
     const urls = {};
     
     try {
+      console.log('Fetching signed URLs for resource:', resource);
+      console.log('Resource type:', resource.resourceType);
+      console.log('Resource content:', resource.content);
+
       // Main resource file
       if (resource.content.fileName) {
         urls[resource.content.fileName] = await getSignedS3Url(
@@ -737,6 +743,15 @@ const LearnerFrame = () => {
         urls[resource.content.backgroundImage] = await getSignedS3Url(
           resource.content.backgroundImage,
           'BACKGROUNDS'
+        );
+      }
+
+      // PDF audio file
+      if (resource.resourceType === 'PDF' && resource.content.audioFile) {
+        console.log('Found PDF audio file:', resource.content.audioFile);
+        urls[resource.content.audioFile] = await getSignedS3Url(
+          resource.content.audioFile,
+          'AUDIO'
         );
       }
 
@@ -756,6 +771,7 @@ const LearnerFrame = () => {
         }
       }
 
+      console.log('Final signed URLs:', urls);
       return urls;
     } catch (error) {
       console.error('Error fetching signed URLs:', error);
@@ -771,6 +787,8 @@ const LearnerFrame = () => {
       if (response.status === 200) {
         const { resources: newResources, total, totalPages, hasMore } = response.data;
         
+        console.log('Resources received from server:', newResources);
+        
         // If it's the first page, replace resources, otherwise append
         setResources(prev => page === 1 ? newResources : [...prev, ...newResources]);
         
@@ -785,7 +803,10 @@ const LearnerFrame = () => {
         setLoading(prev => ({ ...prev, urls: true }));
         const allUrls = { ...signedUrls };
         for (const resource of newResources) {
+          console.log('Processing resource:', resource);
+          console.log('Resource content:', resource.content);
           const resourceUrls = await fetchSignedUrls(resource);
+          console.log('Signed URLs for resource:', resourceUrls);
           Object.assign(allUrls, resourceUrls);
         }
         setSignedUrls(allUrls);
