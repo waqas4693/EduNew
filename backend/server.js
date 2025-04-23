@@ -82,7 +82,8 @@ app.use('/api/resources', upload.fields([
   { name: 'thumbnail', maxCount: 1 },
   { name: 'backgroundImage', maxCount: 1 },
   { name: 'mcqImage', maxCount: 1 },
-  { name: 'mcqAudio', maxCount: 1 }
+  { name: 'mcqAudio', maxCount: 1 },
+  { name: 'audioFile', maxCount: 1 }
 ]), resourceRoutes)
 app.use('/api/section-unlock', sectionUnlockStatusRoutes)
 

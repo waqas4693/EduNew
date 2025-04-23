@@ -700,6 +700,14 @@ const LearnerFrame = () => {
   const { courseId, unitId, sectionId } = useParams();
   const { user } = useAuth();
 
+  // Add new state for pagination
+  const [pagination, setPagination] = useState({
+    page: 1,
+    total: 0,
+    totalPages: 0,
+    hasMore: true
+  });
+
   // Optimized function using getData from api.js
   const getSignedS3Url = async (fileName, folder) => {
     try {
@@ -755,19 +763,28 @@ const LearnerFrame = () => {
     }
   };
 
-  // Optimized fetchResources to batch operations
-  const fetchResources = async () => {
+  // Modified fetchResources to handle pagination
+  const fetchResources = async (page = 1) => {
     setLoading(prev => ({ ...prev, resources: true }));
     try {
-      const response = await getData(`resources/${sectionId}`);
-      if (response.status === 200 && response.data.resources) {
-        const resourcesList = response.data.resources;
-        setResources(resourcesList);
+      const response = await getData(`resources/${sectionId}?page=${page}&limit=15`);
+      if (response.status === 200) {
+        const { resources: newResources, total, totalPages, hasMore } = response.data;
         
-        // Fetch signed URLs for all resources
+        // If it's the first page, replace resources, otherwise append
+        setResources(prev => page === 1 ? newResources : [...prev, ...newResources]);
+        
+        setPagination({
+          page,
+          total,
+          totalPages,
+          hasMore
+        });
+
+        // Fetch signed URLs for new resources
         setLoading(prev => ({ ...prev, urls: true }));
-        const allUrls = {};
-        for (const resource of resourcesList) {
+        const allUrls = { ...signedUrls };
+        for (const resource of newResources) {
           const resourceUrls = await fetchSignedUrls(resource);
           Object.assign(allUrls, resourceUrls);
         }
@@ -777,12 +794,12 @@ const LearnerFrame = () => {
         // Set up URL refresh timer (every 45 minutes)
         if (urlRefreshTimer) clearInterval(urlRefreshTimer);
         const timer = setInterval(() => {
-          refreshSignedUrls(resourcesList);
+          refreshSignedUrls(newResources);
         }, 45 * 60 * 1000); // 45 minutes
         setUrlRefreshTimer(timer);
         
         // After resources are loaded, fetch student progress
-        await fetchStudentProgress(resourcesList);
+        await fetchStudentProgress(newResources);
       }
     } catch (error) {
       console.error('Error fetching resources:', error);
@@ -790,6 +807,47 @@ const LearnerFrame = () => {
       setLoading(prev => ({ ...prev, resources: false }));
     }
   };
+
+  // Add function to load more resources
+  const loadMoreResources = () => {
+    if (pagination.hasMore && !loading.resources) {
+      fetchResources(pagination.page + 1);
+    }
+  };
+
+  // Modify useEffect to reset pagination when section changes
+  useEffect(() => {
+    setPagination({
+      page: 1,
+      total: 0,
+      totalPages: 0,
+      hasMore: true
+    });
+    fetchResources(1);
+  }, [sectionId]);
+
+  // Add intersection observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && pagination.hasMore && !loading.resources) {
+          loadMoreResources();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const loadMoreTrigger = document.getElementById('load-more-trigger');
+    if (loadMoreTrigger) {
+      observer.observe(loadMoreTrigger);
+    }
+
+    return () => {
+      if (loadMoreTrigger) {
+        observer.unobserve(loadMoreTrigger);
+      }
+    };
+  }, [pagination.hasMore, loading.resources]);
 
   // Function to refresh signed URLs
   const refreshSignedUrls = async (resourcesList) => {
@@ -816,11 +874,6 @@ const LearnerFrame = () => {
       }
     };
   }, [urlRefreshTimer]);
-
-  // Fetch all resources on mount
-  useEffect(() => {
-    fetchResources();
-  }, [sectionId]);
 
   // Load main resource content only when clicked
   useEffect(() => {
@@ -1420,11 +1473,28 @@ const LearnerFrame = () => {
                 signedUrls={signedUrls}
                 onMcqCompleted={handleMcqCompleted}
                 mcqProgress={getCurrentMcqProgress()}
-                onNext={handleNext}  // Pass the handleNext function to ResourceRenderer
+                onNext={handleNext}
                 isLastResource={currentIndex === resources.length - 1}
               />
             )}
           </Box>
+
+          {/* Load More Trigger */}
+          {pagination.hasMore && (
+            <Box
+              id="load-more-trigger"
+              sx={{
+                height: '20px',
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                py: 2
+              }}
+            >
+              {loading.resources && <CircularProgress size={24} />}
+            </Box>
+          )}
 
           <Box sx={{ px: 2, py: 2, borderTop: '1px solid #f0f0f0' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>

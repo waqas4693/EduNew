@@ -37,6 +37,7 @@ const resourceSchema = new mongoose.Schema({
       max: 11,
       default: 1
     },
+    audioFile: String,
     mcq: {
       question: String,
       options: [String],
