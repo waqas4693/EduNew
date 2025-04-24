@@ -606,11 +606,6 @@ const ResourceRenderer = ({
     case 'PDF':
       return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2 }}>
-          {/* PDF Viewer */}
-
-          <Typography variant="h6">Checking The Data Of Pdf Res With Audio {resource.content.audioFile}</Typography>
-            
-
           <Box sx={{ width: '100%', height: '70vh' }}>
             <iframe
               src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true`}
