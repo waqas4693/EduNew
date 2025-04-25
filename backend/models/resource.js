@@ -38,6 +38,12 @@ const resourceSchema = new mongoose.Schema({
       default: 1
     },
     audioFile: String,
+    audioRepeatCount: {
+      type: Number,
+      min: 1,
+      max: 11,
+      default: 1
+    },
     mcq: {
       question: String,
       options: [String],

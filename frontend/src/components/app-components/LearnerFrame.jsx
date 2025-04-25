@@ -49,9 +49,14 @@ const ResourceRenderer = ({
   const [isPlaying, setIsPlaying] = useState(false)
 
   useEffect(() => {
-    if (resource.resourceType === 'AUDIO' && audioRef.current) {
+    if ((resource.resourceType === 'AUDIO' || resource.resourceType === 'PDF') && audioRef.current) {
       const audio = audioRef.current
-      const repeatCount = resource.content.repeatCount
+      const repeatCount = resource.resourceType === 'PDF' 
+        ? (resource.content.audioRepeatCount || 1) 
+        : (resource.content.repeatCount || 1)
+
+      console.log('Repeat count:', repeatCount)
+      console.log('Resource content:', resource.content)
 
       const handleEnded = () => {
         setPlayCount(prev => {
@@ -606,19 +611,6 @@ const ResourceRenderer = ({
     case 'PDF':
       return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2 }}>
-          <Box sx={{ width: '100%', height: '70vh' }}>
-            <iframe
-              src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true`}
-              style={{
-                width: '100%',
-                height: '100%',
-                border: 'none',
-                borderRadius: '8px'
-              }}
-              title="PDF Viewer"
-            />
-          </Box>
-
           {/* Audio Player for PDF */}
           {resource.content.audioFile && signedUrls[resource.content.audioFile] && (
             <Box sx={{ 
@@ -633,15 +625,55 @@ const ResourceRenderer = ({
               <Typography variant="subtitle1" fontWeight="medium">
                 Audio Narration
               </Typography>
-              <audio
-                controls
-                style={{ width: '100%' }}
-                src={signedUrls[resource.content.audioFile]}
-              >
-                Your browser does not support the audio element.
-              </audio>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 2,
+                bgcolor: 'white',
+                p: 1,
+                borderRadius: '8px'
+              }}>
+                <audio
+                  ref={audioRef}
+                  controls
+                  style={{ width: '100%' }}
+                  src={signedUrls[resource.content.audioFile]}
+                >
+                  Your browser does not support the audio element.
+                </audio>
+                {playCount > 0 && (
+                  <Typography
+                    variant='body1'
+                    sx={{
+                      color: 'primary.white',
+                      fontWeight: 'medium',
+                      minWidth: '30px',
+                      textAlign: 'center',
+                      p: 1,
+                      borderRadius: 1,
+                      bgcolor: 'primary.light'
+                    }}
+                  >
+                    {(resource.content.audioRepeatCount || 1) - playCount + 1}
+                  </Typography>
+                )}
+              </Box>
             </Box>
           )}
+
+          {/* PDF Viewer */}
+          <Box sx={{ width: '100%', height: '70vh' }}>
+            <iframe
+              src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true`}
+              style={{
+                width: '100%',
+                height: '100%',
+                border: 'none',
+                borderRadius: '8px'
+              }}
+              title="PDF Viewer"
+            />
+          </Box>
         </Box>
       )
 
@@ -721,9 +753,6 @@ const LearnerFrame = () => {
     const urls = {};
     
     try {
-      console.log('Fetching signed URLs for resource:', resource);
-      console.log('Resource type:', resource.resourceType);
-      console.log('Resource content:', resource.content);
 
       // Main resource file
       if (resource.content.fileName) {
@@ -766,7 +795,6 @@ const LearnerFrame = () => {
         }
       }
 
-      console.log('Final signed URLs:', urls);
       return urls;
     } catch (error) {
       console.error('Error fetching signed URLs:', error);
@@ -782,8 +810,6 @@ const LearnerFrame = () => {
       if (response.status === 200) {
         const { resources: newResources, total, totalPages, hasMore } = response.data;
         
-        console.log('Resources received from server:', newResources);
-        
         // If it's the first page, replace resources, otherwise append
         setResources(prev => page === 1 ? newResources : [...prev, ...newResources]);
         
@@ -798,10 +824,7 @@ const LearnerFrame = () => {
         setLoading(prev => ({ ...prev, urls: true }));
         const allUrls = { ...signedUrls };
         for (const resource of newResources) {
-          console.log('Processing resource:', resource);
-          console.log('Resource content:', resource.content);
           const resourceUrls = await fetchSignedUrls(resource);
-          console.log('Signed URLs for resource:', resourceUrls);
           Object.assign(allUrls, resourceUrls);
         }
         setSignedUrls(allUrls);
@@ -824,180 +847,16 @@ const LearnerFrame = () => {
     }
   };
 
-  // Add function to load more resources
-  const loadMoreResources = () => {
-    if (pagination.hasMore && !loading.resources) {
-      fetchResources(pagination.page + 1);
-    }
-  };
-
-  // Modify useEffect to reset pagination when section changes
-  useEffect(() => {
-    setPagination({
-      page: 1,
-      total: 0,
-      totalPages: 0,
-      hasMore: true
-    });
-    fetchResources(1);
-  }, [sectionId]);
-
-  // Add intersection observer for infinite scroll
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && pagination.hasMore && !loading.resources) {
-          loadMoreResources();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    const loadMoreTrigger = document.getElementById('load-more-trigger');
-    if (loadMoreTrigger) {
-      observer.observe(loadMoreTrigger);
-    }
-
-    return () => {
-      if (loadMoreTrigger) {
-        observer.unobserve(loadMoreTrigger);
-      }
-    };
-  }, [pagination.hasMore, loading.resources]);
-
-  // Function to refresh signed URLs
-  const refreshSignedUrls = async (resourcesList) => {
-    setLoading(prev => ({ ...prev, urls: true }));
-    try {
-      const newUrls = {};
-      for (const resource of resourcesList) {
-        const resourceUrls = await fetchSignedUrls(resource);
-        Object.assign(newUrls, resourceUrls);
-      }
-      setSignedUrls(newUrls);
-    } catch (error) {
-      console.error('Error refreshing signed URLs:', error);
-    } finally {
-      setLoading(prev => ({ ...prev, urls: false }));
-    }
-  };
-
-  // Clean up timer on component unmount
-  useEffect(() => {
-    return () => {
-      if (urlRefreshTimer) {
-        clearInterval(urlRefreshTimer);
-      }
-    };
-  }, [urlRefreshTimer]);
-
-  // Load main resource content only when clicked
-  useEffect(() => {
-    const fetchResourceContent = async () => {
-      if (!resources[currentIndex]) return;
-      
-      const resource = resources[currentIndex];
-      const urlsToFetch = [];
-      
-      // Determine which URLs need to be fetched
-      if (resource.resourceType === 'MCQ') {
-        if (resource.content.mcq?.imageFile && !signedUrls[resource.content.mcq.imageFile]) {
-          urlsToFetch.push({
-            key: resource.content.mcq.imageFile,
-            fileName: resource.content.mcq.imageFile,
-            folder: 'MCQ_IMAGES'
-          });
-        }
-        
-        if (resource.content.mcq?.audioFile && !signedUrls[resource.content.mcq.audioFile]) {
-          urlsToFetch.push({
-            key: resource.content.mcq.audioFile,
-            fileName: resource.content.mcq.audioFile,
-            folder: 'MCQ_AUDIO'
-          });
-        }
-      }
-
-      // Main resource content
-      if (resource.content.fileName && !signedUrls[resource.content.fileName]) {
-        urlsToFetch.push({
-          key: resource.content.fileName,
-          fileName: resource.content.fileName,
-          folder: resource.resourceType
-        });
-      }
-
-      // Background images
-      if ((resource.resourceType === 'AUDIO' || resource.resourceType === 'TEXT' || 
-           resource.resourceType === 'PPT') && 
-          resource.content.backgroundImage && 
-          !signedUrls[resource.content.backgroundImage]) {
-        urlsToFetch.push({
-          key: resource.content.backgroundImage,
-          fileName: resource.content.backgroundImage,
-          folder: 'BACKGROUNDS'
-        });
-      }
-
-      // PPT preview images
-      if (resource.resourceType === 'PPT' && 
-          resource.content.previewImageUrl && 
-          !signedUrls[resource.content.previewImageUrl]) {
-        urlsToFetch.push({
-          key: resource.content.previewImageUrl,
-          fileName: resource.content.previewImageUrl,
-          folder: 'PPT'
-        });
-      }
-      
-      // Fetch all needed URLs in parallel
-      if (urlsToFetch.length > 0) {
-        setLoading(prev => ({ ...prev, urls: true }));
-        try {
-          const results = await Promise.all(
-            urlsToFetch.map(item => 
-              getSignedS3Url(item.fileName, item.folder)
-                .then(url => ({ key: item.key, url }))
-            )
-          );
-          
-          const newUrls = { ...signedUrls };
-          results.forEach(result => {
-            if (result.url) {
-              newUrls[result.key] = result.url;
-            }
-          });
-          
-          setSignedUrls(newUrls);
-        } catch (error) {
-          console.error('Error fetching resource content:', error);
-        } finally {
-          setLoading(prev => ({ ...prev, urls: false }));
-        }
-      }
-    };
-
-    fetchResourceContent();
-  }, [currentIndex, resources]);
-
-  // Update last accessed resource
-  const updateLastAccessedResource = async (resourceId) => {
-    if (!user?.studentId) return;
-    
-    try {
-      await postData(`student-progress/last-accessed/${user.studentId}/${courseId}/${unitId}/${sectionId}`, {
-        resourceId: resourceId
-      });
-    } catch (error) {
-      console.error('Error updating last accessed resource:', error);
-    }
-  };
-
-  // Optimized navigation handlers
-  const handleNext = () => {
+  // Modified navigation handlers to load more resources when needed
+  const handleNext = async () => {
     if (currentIndex < resources.length - 1) {
       const nextIndex = currentIndex + 1;
       setCurrentIndex(nextIndex);
+      
+      // If we're near the end of loaded resources, load more
+      if (nextIndex >= resources.length - 5 && pagination.hasMore) {
+        await fetchResources(pagination.page + 1);
+      }
       
       // Update last accessed resource
       if (resources[nextIndex]) {
@@ -1028,88 +887,30 @@ const LearnerFrame = () => {
     }
   };
 
-  // Check section completion
-  const checkSectionCompletion = async () => {
+  // Remove the scroll-based loading
+  useEffect(() => {
+    setPagination({
+      page: 1,
+      total: 0,
+      totalPages: 0,
+      hasMore: true
+    });
+    fetchResources(1);
+  }, [sectionId]);
+
+  // Remove the intersection observer effect since we're not using scroll-based loading anymore
+
+  // Update last accessed resource
+  const updateLastAccessedResource = async (resourceId) => {
     if (!user?.studentId) return;
     
     try {
-      const response = await getData(`section-unlock/check-completion/${user.studentId}/${courseId}/${unitId}/${sectionId}`);
-      return response.status === 200 && response.data.isCompleted;
-    } catch (error) {
-      console.error('Error checking section completion:', error);
-      return false;
-    }
-  };
-
-  // Optimized MCQ completion handler
-  const handleMcqCompleted = async (resourceId, isCorrect, attempts) => {
-    if (!user?.studentId || !isCorrect) return;
-    
-    try {
-      // Mark the resource as correctly answered in our local state
-      const updatedResources = [...resources];
-      const resourceIndex = updatedResources.findIndex(r => r._id === resourceId);
-      
-      if (resourceIndex >= 0) {
-        updatedResources[resourceIndex] = {
-          ...updatedResources[resourceIndex],
-          isCorrectlyAnswered: true
-        };
-        setResources(updatedResources);
-      }
-      
-      // Update the progress on the server
-      await postData(`student-progress/${user.studentId}/${courseId}/${unitId}/${sectionId}/${resourceId}`, {
-        completed: true,
-        attempts
+      await postData(`student-progress/last-accessed/${user.studentId}/${courseId}/${unitId}/${sectionId}`, {
+        resourceId: resourceId
       });
-      
-      // Also update this as the last accessed resource
-      await updateLastAccessedResource(resourceId);
-      
-      // Refresh all progress data
-      await fetchStudentProgress();
-      
-      // Check if all MCQs in the section are completed
-      await checkSectionCompletion();
     } catch (error) {
-      console.error('Error updating MCQ progress:', error);
+      console.error('Error updating last accessed resource:', error);
     }
-  };
-
-  // Optimized MCQ completion check
-  const isCurrentMcqCompleted = () => {
-    if (!resources[currentIndex] || resources[currentIndex].resourceType !== 'MCQ') {
-      return true; // Not an MCQ, so navigation is allowed
-    }
-    
-    const currentResource = resources[currentIndex];
-    
-    // Check if the resource is marked as correctly answered in our local state
-    if (currentResource.isCorrectlyAnswered === true) {
-      return true;
-    }
-    
-    // Also check the mcqProgress data from the server
-    if (progress.studentProgress && progress.studentProgress.mcqProgress) {
-      const mcqProgress = progress.studentProgress.mcqProgress.find(
-        p => getIdString(p.resourceId) === currentResource._id.toString()
-      );
-      
-      if (mcqProgress && mcqProgress.completed) {
-        // If we find it's completed in the progress data but not marked locally,
-        // update our local state
-        const updatedResources = [...resources];
-        updatedResources[currentIndex] = {
-          ...updatedResources[currentIndex],
-          isCorrectlyAnswered: true
-        };
-        setResources(updatedResources);
-        return true;
-      }
-    }
-    
-    return false;
   };
 
   // Record resource view
@@ -1345,6 +1146,107 @@ const LearnerFrame = () => {
   // Determine if we should show loading state
   const isPageLoading = loading.resources || (resources.length === 0);
 
+  // Function to refresh signed URLs
+  const refreshSignedUrls = async (resourcesList) => {
+    setLoading(prev => ({ ...prev, urls: true }));
+    try {
+      const newUrls = {};
+      for (const resource of resourcesList) {
+        const resourceUrls = await fetchSignedUrls(resource);
+        Object.assign(newUrls, resourceUrls);
+      }
+      setSignedUrls(newUrls);
+    } catch (error) {
+      console.error('Error refreshing signed URLs:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, urls: false }));
+    }
+  };
+
+  // Check section completion
+  const checkSectionCompletion = async () => {
+    if (!user?.studentId) return;
+    
+    try {
+      const response = await getData(`section-unlock/check-completion/${user.studentId}/${courseId}/${unitId}/${sectionId}`);
+      return response.status === 200 && response.data.isCompleted;
+    } catch (error) {
+      console.error('Error checking section completion:', error);
+      return false;
+    }
+  };
+
+  // MCQ completion handler
+  const handleMcqCompleted = async (resourceId, isCorrect, attempts) => {
+    if (!user?.studentId || !isCorrect) return;
+    
+    try {
+      // Mark the resource as correctly answered in our local state
+      const updatedResources = [...resources];
+      const resourceIndex = updatedResources.findIndex(r => r._id === resourceId);
+      
+      if (resourceIndex >= 0) {
+        updatedResources[resourceIndex] = {
+          ...updatedResources[resourceIndex],
+          isCorrectlyAnswered: true
+        };
+        setResources(updatedResources);
+      }
+      
+      // Update the progress on the server
+      await postData(`student-progress/${user.studentId}/${courseId}/${unitId}/${sectionId}/${resourceId}`, {
+        completed: true,
+        attempts
+      });
+      
+      // Also update this as the last accessed resource
+      await updateLastAccessedResource(resourceId);
+      
+      // Refresh all progress data
+      await fetchStudentProgress();
+      
+      // Check if all MCQs in the section are completed
+      await checkSectionCompletion();
+    } catch (error) {
+      console.error('Error updating MCQ progress:', error);
+    }
+  };
+
+  // MCQ completion check
+  const isCurrentMcqCompleted = () => {
+    if (!resources[currentIndex] || resources[currentIndex].resourceType !== 'MCQ') {
+      return true; // Not an MCQ, so navigation is allowed
+    }
+    
+    const currentResource = resources[currentIndex];
+    
+    // Check if the resource is marked as correctly answered in our local state
+    if (currentResource.isCorrectlyAnswered === true) {
+      return true;
+    }
+    
+    // Also check the mcqProgress data from the server
+    if (progress.studentProgress && progress.studentProgress.mcqProgress) {
+      const mcqProgress = progress.studentProgress.mcqProgress.find(
+        p => getIdString(p.resourceId) === currentResource._id.toString()
+      );
+      
+      if (mcqProgress && mcqProgress.completed) {
+        // If we find it's completed in the progress data but not marked locally,
+        // update our local state
+        const updatedResources = [...resources];
+        updatedResources[currentIndex] = {
+          ...updatedResources[currentIndex],
+          isCorrectlyAnswered: true
+        };
+        setResources(updatedResources);
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
   if (isPageLoading) {
     return (
       <Paper
@@ -1494,23 +1396,6 @@ const LearnerFrame = () => {
               />
             )}
           </Box>
-
-          {/* Load More Trigger */}
-          {pagination.hasMore && (
-            <Box
-              id="load-more-trigger"
-              sx={{
-                height: '20px',
-                width: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                py: 2
-              }}
-            >
-              {loading.resources && <CircularProgress size={24} />}
-            </Box>
-          )}
 
           <Box sx={{ px: 2, py: 2, borderTop: '1px solid #f0f0f0' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>

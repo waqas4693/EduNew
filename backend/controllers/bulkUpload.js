@@ -5,11 +5,6 @@ import mongoose from 'mongoose'
 import { uploadToS3 } from './s3.js'
 
 export const bulkUploadResources = async (req, res) => {
-  // Start a MongoDB session for transactions
-
-  console.log('Received resources:', req.body.resources)
-  console.log('Received files:', req.files)
-
   const session = await mongoose.startSession()
   session.startTransaction()
 

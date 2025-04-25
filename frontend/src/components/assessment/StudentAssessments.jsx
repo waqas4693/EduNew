@@ -41,8 +41,6 @@ const StudentAssessments = ({ isAdminView }) => {
   const fetchAssessments = async () => {
     try {
       const id = isAdminView ? studentId : user.studentId;
-      console.log('Student ID:')
-      console.log(id)
       const response = await getData(`assessment-review/student/${id}`);
       if (response.status === 200) {
         setAssessments(response.data.data);

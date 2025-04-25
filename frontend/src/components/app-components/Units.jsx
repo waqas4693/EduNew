@@ -35,10 +35,6 @@ const Units = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    console.log(currentCourse)
-  }, [currentCourse])
-
-  useEffect(() => {
     const fetchCourseDetails = async () => {
       try {
         const response = await getData(`courses/${courseId}`)

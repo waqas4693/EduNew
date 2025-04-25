@@ -332,9 +332,6 @@ const CourseRow = ({ course, studentId }) => {
   }
 
   const handleThumbnailClick = () => {
-    // Debug log to check course object structure
-    console.log('Course data:', course)
-    
     dispatch(
       setCurrentCourse({
         id: course.id,

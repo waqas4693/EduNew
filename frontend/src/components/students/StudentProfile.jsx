@@ -55,7 +55,6 @@ const StudentProfile = () => {
       const response = await getData(`student/${studentId}`)
       if (response.status === 200 && response.data.data) {
         const studentData = response.data.data
-        console.log('Student data from API:', studentData)
         setStudent(studentData)
         setProfileData({
           name: studentData.name || '',

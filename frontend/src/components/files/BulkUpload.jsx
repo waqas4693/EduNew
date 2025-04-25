@@ -63,9 +63,6 @@ const FilePreview = ({ file }) => {
 }
 
 const detectResourceType = (title) => {
-
-  console.log('title checking for resource', title)
-
   const titleLower = title.toLowerCase()
   if (titleLower.includes('video')) return 'VIDEO'
   if (titleLower.includes('audio')) return 'AUDIO'
@@ -363,7 +360,6 @@ const BulkUpload = () => {
         })
       })
 
-      console.log('Parsed MCQ data:', JSON.stringify(videoResources, null, 2))
       setMcqPreview({
         videoResources
       })
@@ -481,11 +477,7 @@ const BulkUpload = () => {
     try {
       const formData = new FormData()
 
-      console.log('Starting resource creation from mcqPreview:', mcqPreview)
-
       const resources = mcqPreview.videoResources.flatMap((videoResource, videoIndex) => {
-        console.log(`Processing video resource ${videoIndex + 1}:`, videoResource)
-
         const resources = []
 
         // First add the video resource if it exists
@@ -498,14 +490,11 @@ const BulkUpload = () => {
               fileName: videoResource.resourceFile.name
             }
           }
-          console.log(`Created video resource object:`, videoResourceObj)
           resources.push(videoResourceObj)
         }
 
         // Modified MCQ processing
         videoResource.mcqs.forEach((mcq, mcqIndex) => {
-          console.log(`Processing MCQ ${mcqIndex + 1} for video ${videoIndex + 1}:`, mcq)
-
           // Create a mapping of letter options to full text
           const optionMap = {}
           const letters = ['A', 'B', 'C', 'D', 'E', 'F']
@@ -513,7 +502,6 @@ const BulkUpload = () => {
             optionMap[letters[index]] = opt.trim()
           })
 
-          console.log('Option mapping:', optionMap)
 
           // Convert letter answers to full text answers
           const formattedCorrectAnswers = mcq.correctAnswers.map(letter => {
@@ -526,7 +514,6 @@ const BulkUpload = () => {
               })
               throw new Error(error)
             }
-            console.log(`Converted answer "${letter}" to "${fullAnswer}"`)
             return fullAnswer
           })
 
@@ -543,7 +530,6 @@ const BulkUpload = () => {
               }
             }
           }
-          console.log(`Created MCQ resource object:`, mcqResourceObj)
           resources.push(mcqResourceObj)
         })
 
@@ -555,20 +541,9 @@ const BulkUpload = () => {
       // Log files being appended
       mcqPreview.videoResources.forEach((resource, index) => {
         if (resource.resourceFile) {
-          console.log(`Appending file for video ${index + 1}:`, {
-            name: resource.resourceFile.name,
-            type: resource.resourceFile.type,
-            size: resource.resourceFile.size
-          })
           formData.append('files', resource.resourceFile)
         }
       })
-
-      // Log the final FormData contents
-      console.log('FormData entries:')
-      for (let pair of formData.entries()) {
-        console.log(pair[0], pair[1])
-      }
 
       const response = await postData('bulk-upload/mcq', formData, {
         headers: {
@@ -580,8 +555,6 @@ const BulkUpload = () => {
           setOverallProgress(progress)
         }
       })
-
-      console.log('Upload response:', response)
 
       if (!response.data.success) {
         throw new Error(response.data.message || 'Upload failed')

@@ -317,6 +317,8 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             { name: '', url: '' },
             { name: '', url: '' }
           ],
+          audioFile: null,
+          audioRepeatCount: 1,
           mcq: {
             question: '',
             options: ['', '', '', ''],
@@ -622,6 +624,8 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
           { name: '', url: '' },
           { name: '', url: '' }
         ],
+        audioFile: null,
+        audioRepeatCount: 1,
         mcq: {
           question: '',
           options: ['', '', '', ''],
@@ -694,11 +698,6 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
   const handleSaveResource = async (resource) => {
     setIsSaving(true)
     try {
-
-      console.log('resource for editing: ')
-      console.log(resource)
-
-      // Create a clean content object without URLs and extra fields
       const cleanContent = {
         ...resource.content,
         fileUrl: undefined,
@@ -714,9 +713,6 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         ...resource,
         content: cleanContent
       })
-
-      console.log('formData: ')
-      console.log(formData)
 
       await axios.put(`${url}resources/${resource._id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -1221,6 +1217,28 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                             />
                           )}
                         </Box>
+                        <TextField
+                          fullWidth
+                          size='small'
+                          type='number'
+                          label='Audio Repeat Count'
+                          value={resource.content.audioRepeatCount || 1}
+                          onChange={e =>
+                            handleContentChange(
+                              index,
+                              'audioRepeatCount',
+                              parseInt(e.target.value)
+                            )
+                          }
+                          slotProps={{
+                            input: { min: 1, max: 11 }
+                          }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '8px'
+                            }
+                          }}
+                        />
                       </Box>
                     )}
 

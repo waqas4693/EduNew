@@ -59,6 +59,7 @@ export const createResource = async (req, res) => {
         `${Date.now()}-${req.files.audioFile[0].originalname}`
       )
       content.audioFile = audioFileName
+      content.audioRepeatCount = content.audioRepeatCount || 1
     }
 
     // Handle MCQ files
@@ -184,7 +185,7 @@ export const getSectionResources = async (req, res) => {
         .sort('number')
         .skip(skip)
         .limit(limit)
-        .select('name number resourceType content.fileName content.audioFile content.backgroundImage content.mcq'),
+        .select('name number resourceType content.fileName content.audioFile content.audioRepeatCount content.backgroundImage content.mcq'),
       Resource.countDocuments(query)
     ])
 
@@ -344,19 +345,14 @@ export const updateResourceNumber = async (req, res) => {
 }
 
 export const insertResource = async (req, res) => {
-  console.log('Starting insertResource with request body:', JSON.stringify(req.body, null, 2));
-  
   const session = await Resource.startSession();
   session.startTransaction();
-  console.log('MongoDB session started');
 
   try {
     const { newResource } = req.body;
-    console.log('Processing newResource:', JSON.stringify(newResource, null, 2));
     
     // Validate inputs
     if (!newResource || !newResource.sectionId || !newResource.number || !newResource.name || !newResource.resourceType) {
-      console.log('Validation failed - missing required fields');
       throw new Error('Missing required fields');
     }
 
@@ -367,11 +363,8 @@ export const insertResource = async (req, res) => {
       status: 1
     }).session(session);
     
-    console.log('Existing resource check result:', existingResource ? 'Found' : 'Not found');
 
-    if (existingResource) {
-      console.log('Incrementing numbers for resources >=', newResource.number);
-      
+    if (existingResource) {      
       // First, find all resources that need to be updated
       const resourcesToUpdate = await Resource.find({
         sectionId: newResource.sectionId,
@@ -379,11 +372,8 @@ export const insertResource = async (req, res) => {
         status: 1
       }).sort({ number: -1 }).session(session);
       
-      console.log('Found resources to update:', resourcesToUpdate.length);
-
       // Update resources one by one in descending order to avoid conflicts
       for (const resource of resourcesToUpdate) {
-        console.log(`Updating resource ${resource._id} from number ${resource.number} to ${resource.number + 1}`);
         await Resource.findByIdAndUpdate(
           resource._id,
           { $inc: { number: 1 } },
@@ -391,14 +381,6 @@ export const insertResource = async (req, res) => {
         );
       }
     }
-
-    console.log('Creating new resource with data:', {
-      name: newResource.name,
-      number: newResource.number,
-      sectionId: newResource.sectionId,
-      resourceType: newResource.resourceType,
-      content: newResource.content || {}
-    });
 
     // Create the new resource
     const resource = new Resource({
@@ -411,24 +393,20 @@ export const insertResource = async (req, res) => {
     
     try {
       await resource.save({ session });
-      console.log('New resource saved successfully:', resource);
     } catch (saveError) {
       console.error('Error saving new resource:', saveError);
       throw saveError;
     }
 
-    console.log('Updating section with new resource ID:', resource._id);
     // Update the section to include the new resource
     const sectionUpdate = await Section.findByIdAndUpdate(
       newResource.sectionId,
       { $push: { resources: resource._id } },
       { session }
     );
-    console.log('Section update result:', sectionUpdate ? 'Success' : 'Failed');
 
     await session.commitTransaction();
     session.endSession();
-    console.log('Transaction committed successfully');
 
     res.status(201).json({
       success: true,
@@ -443,12 +421,9 @@ export const insertResource = async (req, res) => {
     
     await session.abortTransaction();
     session.endSession();
-    console.log('Transaction aborted and session ended');
     
     if (error.code === 11000) {
-      console.log('Handling duplicate key error');
       try {
-        console.log('Attempting to find next available number');
         const nextNumber = await Resource.findOne({
           sectionId: newResource.sectionId,
           status: 1
@@ -458,7 +433,6 @@ export const insertResource = async (req, res) => {
         .lean();
 
         const availableNumber = (nextNumber?.number || 0) + 1;
-        console.log('Next available number:', availableNumber);
 
         // Create new resource with the next available number
         const resource = new Resource({
@@ -466,7 +440,6 @@ export const insertResource = async (req, res) => {
           number: availableNumber
         });
         await resource.save();
-        console.log('Resource saved with next available number:', resource);
 
         return res.status(201).json({
           success: true,

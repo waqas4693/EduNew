@@ -153,8 +153,6 @@ const ActiveStudents = () => {
   }
 
   const handleAssignCourse = () => {
-    console.log('Selected Student From Active Students:')
-    console.log(selectedStudent)
     if (selectedStudent) {
       setAssignStudent(selectedStudent)
       fetchActiveCourses()
@@ -174,12 +172,6 @@ const ActiveStudents = () => {
   }
 
   const handleAssignSubmit = async () => {
-    console.log('Selected Course ID:')
-    console.log(selectedCourseId)
-
-    console.log('Selected Student:')
-    console.log(assignStudent)
-
     if (!selectedCourseId || !assignStudent) return
 
     setLoading(true)
@@ -208,10 +200,6 @@ const ActiveStudents = () => {
 
   const handleViewAssessments = () => {
     if (selectedStudent) {
-
-      console.log('Selected Student From Active Students:')
-      console.log(selectedStudent)
-
       navigate(`/admin/students/${selectedStudent._id}/assessments`)
     }
     handleMenuClose()

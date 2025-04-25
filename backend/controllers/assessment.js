@@ -62,7 +62,6 @@ export const createAssessment = async (req, res) => {
       assessment: savedAssessment
     })
   } catch (error) {
-    console.log('Error Creating Assessment:', error)
     handleError(error, res)
   }
 }
@@ -72,11 +71,9 @@ export const getAssessments = async (req, res) => {
     const { sectionId } = req.params
     const studentId = req.query.studentId
 
-    console.log('Fetching assessments for:', { sectionId, studentId })
 
     // Get all assessments for the section
     const assessments = await Assessment.find({ sectionId })
-    console.log('Found assessments:', assessments.length)
 
     if (studentId) {
       // Get all attempts for these assessments by this student
@@ -84,7 +81,6 @@ export const getAssessments = async (req, res) => {
         assessmentId: { $in: assessments.map(a => a._id) },
         studentId: studentId
       })
-      console.log('Found attempts:', attempts.length)
 
       // Create a map of attempts by assessment ID for easier lookup
       const attemptsByAssessment = attempts.reduce((acc, attempt) => {
@@ -102,7 +98,6 @@ export const getAssessments = async (req, res) => {
         }
       })
 
-      console.log('Sending assessments with attempts:', assessmentsWithAttempts.length)
       return res.status(200).json({
         success: true,
         assessments: assessmentsWithAttempts

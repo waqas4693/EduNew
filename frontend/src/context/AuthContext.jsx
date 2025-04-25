@@ -48,9 +48,7 @@ export const AuthProvider = ({ children }) => {
   }, [navigate])
 
   const login = (userData, token) => {
-    try {
-      console.log('Storing user data:', userData)
-      
+    try {      
       // Only store enrollment dates for students
       if (userData.role === STUDENT_ROLE && userData.courseIds) {
         const enrollmentDates = {}
