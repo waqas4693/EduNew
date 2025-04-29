@@ -15,6 +15,7 @@ import ResourceRenderer from './ResourceRenderer'
 import { useResources, useUpdateResourceProgress, useRecordResourceView } from '../../hooks/useResources'
 import { useSignedUrls } from '../../hooks/useSignedUrls'
 import { useProgress } from '../../hooks/useProgress'
+import { getData, postData } from '../../api/api'
 
 const LearnerFrame = () => {
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -46,6 +47,54 @@ const LearnerFrame = () => {
 
   const updateResourceProgress = useUpdateResourceProgress()
   const recordResourceView = useRecordResourceView()
+
+  // Fetch student progress and navigate to last accessed resource
+  useEffect(() => {
+    const fetchStudentProgress = async () => {
+      if (!user?.studentId || !resources.length) return
+
+      try {
+        const response = await getData(`student-progress/${user.studentId}/${courseId}/${unitId}/${sectionId}`)
+        if (response.status === 200) {
+          const progressData = response.data.data.progress
+          
+          if (progressData?.lastAccessedResource) {
+            // Find the index of the last accessed resource
+            const lastAccessedIndex = resources.findIndex(
+              resource => resource._id === progressData.lastAccessedResource
+            )
+            
+            if (lastAccessedIndex !== -1) {
+              setCurrentIndex(lastAccessedIndex)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching student progress:', error)
+      }
+    }
+
+    if (resources.length > 0) {
+      fetchStudentProgress()
+    }
+  }, [user?.studentId, courseId, unitId, sectionId, resources])
+
+  // Update last accessed resource when current resource changes
+  useEffect(() => {
+    const updateLastAccessed = async () => {
+      if (!user?.studentId || !currentResource) return
+
+      try {
+        await postData(`student-progress/last-accessed/${user.studentId}/${courseId}/${unitId}/${sectionId}`, {
+          resourceId: currentResource._id
+        })
+      } catch (error) {
+        console.error('Error updating last accessed resource:', error)
+      }
+    }
+
+    updateLastAccessed()
+  }, [currentIndex, currentResource, user?.studentId, courseId, unitId, sectionId])
 
   // Handle navigation
   const handleNext = async () => {
@@ -94,7 +143,11 @@ const LearnerFrame = () => {
     updateResourceProgress.mutate({
       resourceId,
       isCorrect,
-      attempts
+      attempts,
+      studentId: user.studentId,
+      courseId,
+      unitId,
+      sectionId
     })
   }
 
@@ -280,20 +333,20 @@ const LearnerFrame = () => {
           </Box>
 
           <Box sx={{ bgcolor: 'white' }}>
-            <ResourceRenderer
+              <ResourceRenderer
               key={`resource-${currentResource._id}-${currentIndex}`}
               resource={currentResource}
               signedUrl={signedUrls[currentResource.content?.fileName]}
-              signedUrls={signedUrls}
-              onMcqCompleted={handleMcqCompleted}
+                signedUrls={signedUrls}
+                onMcqCompleted={handleMcqCompleted}
               mcqProgress={getMcqProgress(currentResource._id)}
-              onNext={handleNext}
-              isLastResource={currentIndex === resources.length - 1}
+                onNext={handleNext}
+                isLastResource={currentIndex === resources.length - 1}
               studentId={user?.studentId}
               courseId={courseId}
               unitId={unitId}
               sectionId={sectionId}
-            />
+              />
           </Box>
 
           <Box sx={{ px: 2, py: 2, borderTop: '1px solid #f0f0f0' }}>

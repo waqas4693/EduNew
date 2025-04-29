@@ -51,8 +51,12 @@ export const useUpdateResourceProgress = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ resourceId, isCorrect, attempts }) => {
-      const response = await postData(`student-progress/${resourceId}`, {
+    mutationFn: async ({ resourceId, isCorrect, attempts, studentId, courseId, unitId, sectionId }) => {
+      if (!studentId || !courseId || !unitId || !sectionId || !resourceId) {
+        throw new Error('Missing required parameters')
+      }
+      
+      const response = await postData(`student-progress/${studentId}/${courseId}/${unitId}/${sectionId}/${resourceId}`, {
         completed: isCorrect,
         attempts
       })
