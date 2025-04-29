@@ -18,6 +18,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { setCurrentCourse, setCurrentUnit } from '../../redux/slices/courseSlice'
+import { useUnits } from '../../hooks/useUnits'
 
 import Grid from '@mui/material/Grid2'
 import Calendar from '../calendar/Calendar'
@@ -31,8 +32,7 @@ const Units = () => {
   const { user } = useAuth()
   const { courseId } = useParams()
 
-  const [units, setUnits] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { data: units, isLoading } = useUnits(courseId)
 
   useEffect(() => {
     const fetchCourseDetails = async () => {
@@ -54,23 +54,6 @@ const Units = () => {
       fetchCourseDetails()
     }
   }, [courseId, dispatch])
-
-  useEffect(() => {
-    fetchUnits()
-  }, [courseId])
-
-  const fetchUnits = async () => {
-    try {
-      const response = await getData(`units/${courseId}`)
-      if (response.status === 200) {
-        setUnits(response.data.units)
-      }
-    } catch (error) {
-      console.error('Error fetching units:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleUnitClick = (unitId, unitName) => {
     dispatch(setCurrentUnit({
@@ -192,7 +175,7 @@ const Units = () => {
             Last Visit: 11/11/2024 at 2 am
           </Typography> */}
 
-          {loading ? (
+          {isLoading ? (
             [...Array(3)].map((_, index) => (
               <Box key={index} sx={{ mb: 3 }}>
                 <Skeleton variant="rectangular" height={80} sx={{ borderRadius: '6px', mb: 1 }} />
@@ -205,95 +188,74 @@ const Units = () => {
               </Box>
             ))
           ) : (
-            units.map((unit) => (
-              <>
-                <ListItem
-                  key={unit._id}
-                  onClick={() => handleUnitClick(unit._id, unit.name)}
+            units?.map((unit) => (
+              <ListItem
+                key={unit._id}
+                onClick={() => handleUnitClick(unit._id, unit.name)}
+                sx={{
+                  pl: '80px',
+                  pr: 2,
+                  bgcolor: '#F5F5F5',
+                  borderRadius: '6px',
+                  boxShadow: '0px 1px 3px rgba(0,0,0,0.1)',
+                  mb: 1,
+                  position: 'relative',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <Box
                   sx={{
-                    pl: '80px',
-                    pr: 2,
-                    bgcolor: '#F5F5F5',
-                    borderRadius: '6px',
-                    boxShadow: '0px 1px 3px rgba(0,0,0,0.1)',
-                    mb: 1,
-                    position: 'relative',
-                    cursor: 'pointer',
+                    mr: 2,
+                    color: 'white',
+                    minWidth: '70px',
+                    bgcolor: '#4169e1',
+                    textAlign: 'center',
+                    borderTopLeftRadius: '6px',
+                    borderBottomLeftRadius: '6px',
+                    height: '100%',
                     display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    bottom: 0
                   }}
                 >
-                  <Box
+                  <Typography sx={{ fontSize: '16px', fontWeight: 500, p: '20px' }}>
+                    {unit.number}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography
                     sx={{
-                      mr: 2,
-                      color: 'white',
-                      minWidth: '70px',
-                      bgcolor: '#4169e1',
-                      textAlign: 'center',
-                      borderTopLeftRadius: '6px',
-                      borderBottomLeftRadius: '6px',
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      position: 'absolute',
-                      left: 0,
-                      top: 0,
-                      bottom: 0
+                      fontWeight: 'bold',
+                      fontSize: '14px',
+                      overflow: 'hidden',
+                      WebkitLineClamp: 2,
+                      display: '-webkit-box',
+                      textOverflow: 'ellipsis',
+                      WebkitBoxOrient: 'vertical'
                     }}
                   >
-                    <Typography sx={{ fontSize: '16px', fontWeight: 500, p: '20px' }}>
-                      {unit.number}
-                    </Typography>
-                  </Box>
-                  <Box>
-                    <Typography
-                      sx={{
-                        fontWeight: 'bold',
-                        fontSize: '14px',
-                        overflow: 'hidden',
-                        WebkitLineClamp: 2,
-                        display: '-webkit-box',
-                        textOverflow: 'ellipsis',
-                        WebkitBoxOrient: 'vertical'
-                      }}
-                    >
-                      {unit.name}
-                    </Typography>
-                    <Typography
-                      variant='body2'
-                      sx={{
-                        color: 'text.secondary',
-                        mt: 1
-                      }}
-                    >
-                      (Sections: {unit.sections.length})
-                    </Typography>
-                  </Box>
-                  <ChevronRight sx={{ color: 'primary.main' }} />
-                </ListItem>
-                {/* <Typography
-                  sx={{
-                    mb: 1,
-                    fontSize: '14px',
-                    color: 'text.secondary'
-                  }}
-                >
-                  <Box component='span' sx={{ color: 'black' }}>
-                    Due Date:
-                  </Box>{' '}
-                  {unit.dueDate || '20/11/2024'}
-                </Typography> */}
-                {/* <Box
-                  sx={{
-                    border: '1px solid #0000001A',
-                    width: '100%',
-                    mb: 3
-                  }}
-                /> */}
-              </>
+                    {unit.name}
+                  </Typography>
+                  <Typography
+                    variant='body2'
+                    sx={{
+                      color: 'text.secondary',
+                      mt: 1
+                    }}
+                  >
+                    (Sections: {unit.sections.length})
+                  </Typography>
+                </Box>
+                <ChevronRight sx={{ color: 'primary.main' }} />
+              </ListItem>
             ))
           )}
         </Paper>

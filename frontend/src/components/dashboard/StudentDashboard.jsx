@@ -22,6 +22,7 @@ import { useDispatch } from 'react-redux'
 import { setCurrentCourse } from '../../redux/slices/courseSlice'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import SpeedIcon from '@mui/icons-material/Speed'
+import { useEnrolledCourses, useCourseProgress, useAssessmentDueDates } from '../../hooks/useCourses'
 
 const getThumbnailUrl = fileName => {
   if (!fileName) return ''
@@ -30,37 +31,12 @@ const getThumbnailUrl = fileName => {
 
 // Progress Card Component
 const CourseProgressCard = memo(({ courseId, studentId }) => {
-  const [unitsProgress, setUnitsProgress] = useState([])
-  const [loading, setLoading] = useState(true)
   const [openDialog, setOpenDialog] = useState(false)
-  const [overallProgress, setOverallProgress] = useState(0)
+  const { data: progressData, isLoading } = useCourseProgress(studentId, courseId)
 
-  useEffect(() => {
-    fetchUnitsProgress()
-  }, [courseId, studentId])
-
-  const fetchUnitsProgress = async () => {
-    try {
-      const response = await getData(
-        `student/${studentId}/courses/${courseId}/progress`
-      )
-      const progressData = response.data.data || []
-      setUnitsProgress(progressData)
-
-      if (progressData.length > 0) {
-        const totalProgress = progressData.reduce(
-          (sum, unit) => sum + unit.progress,
-          0
-        )
-        setOverallProgress(Math.round(totalProgress / progressData.length))
-      }
-    } catch (error) {
-      console.error('Error fetching units progress:', error)
-      setUnitsProgress([])
-    } finally {
-      setLoading(false)
-    }
-  }
+  const overallProgress = progressData?.length > 0
+    ? Math.round(progressData.reduce((sum, unit) => sum + unit.progress, 0) / progressData.length)
+    : 0
 
   const handleCardClick = () => {
     setOpenDialog(true)
@@ -87,7 +63,7 @@ const CourseProgressCard = memo(({ courseId, studentId }) => {
           }
         }}
       >
-        {loading ? (
+        {isLoading ? (
           <Box
             sx={{
               display: 'flex',
@@ -164,9 +140,9 @@ const CourseProgressCard = memo(({ courseId, studentId }) => {
           </Typography>
         </DialogTitle>
         <DialogContent>
-          {unitsProgress.length > 0 ? (
+          {progressData?.length > 0 ? (
             <Box sx={{ mt: 2 }}>
-              {unitsProgress.map(unit => (
+              {progressData.map(unit => (
                 <Box key={unit._id} sx={{ mb: 3 }}>
                   <Typography variant='body1' sx={{ mb: 1, fontWeight: 500 }}>
                     {unit.name}
@@ -259,25 +235,67 @@ const DecorativeCard = () => {
   )
 }
 
+// Custom hook for handling all assessment due dates
+const useAllAssessmentDueDates = (courseEnrollments) => {
+  const [allDueDates, setAllDueDates] = useState({})
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    const fetchAllDueDates = async () => {
+      if (!courseEnrollments?.length) return
+
+      try {
+        const dueDates = {}
+        await Promise.all(
+          courseEnrollments.map(async (course) => {
+            try {
+              const response = await getData(`assessments/due-dates/${course.courseId}?enrollmentDate=${course.enrollmentDate}`)
+              if (response.data) {
+                Object.assign(dueDates, response.data)
+              }
+            } catch (err) {
+              console.error(`Error fetching due dates for course ${course.courseId}:`, err)
+            }
+          })
+        )
+        setAllDueDates(dueDates)
+        setError(null)
+      } catch (err) {
+        console.error('Error fetching all due dates:', err)
+        setError(err)
+      }
+    }
+
+    fetchAllDueDates()
+  }, [courseEnrollments])
+
+  return { allDueDates, error }
+}
+
 // Course Row Component
-const CourseRow = ({ course, studentId }) => {
+const CourseRow = memo(({ course, studentId }) => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const [imageError, setImageError] = useState(false)
   const [thumbnailUrl, setThumbnailUrl] = useState('')
   const [thumbnailLoading, setThumbnailLoading] = useState(true)
-  const [progress, setProgress] = useState(0)
-  const [loading, setLoading] = useState(true)
   const [openDialog, setOpenDialog] = useState(false)
   const [openAIDialog, setOpenAIDialog] = useState(false)
-  const [unitsProgress, setUnitsProgress] = useState([])
 
+  const { data: progressData, isLoading: progressLoading } = useCourseProgress(studentId, course.id)
+  const { data: dueDates } = useAssessmentDueDates(course.id, course.enrollmentDate)
+
+  const progress = progressData?.length > 0
+    ? Math.round(progressData.reduce((sum, unit) => sum + unit.progress, 0) / progressData.length)
+    : 0
+
+  // Fetch thumbnail URL
   useEffect(() => {
     const fetchThumbnailUrl = async () => {
-      if (course.image) {
+      if (course.thumbnail || course.image) {
         try {
           setThumbnailLoading(true)
-          const response = await getData(`resources/files/url/THUMBNAILS/${course.image}`)
+          const response = await getData(`resources/files/url/THUMBNAILS/${course.thumbnail || course.image}`)
           if (response.status === 200) {
             setThumbnailUrl(response.data.signedUrl)
             setImageError(false)
@@ -294,33 +312,7 @@ const CourseRow = ({ course, studentId }) => {
       }
     }
     fetchThumbnailUrl()
-  }, [course.image])
-
-  useEffect(() => {
-    fetchProgress()
-  }, [course.id, studentId])
-
-  const fetchProgress = async () => {
-    try {
-      const response = await getData(
-        `student/${studentId}/courses/${course.id}/progress`
-      )
-      const progressData = response.data.data || []
-      setUnitsProgress(progressData)
-
-      if (progressData.length > 0) {
-        const totalProgress = progressData.reduce(
-          (sum, unit) => sum + unit.progress,
-          0
-        )
-        setProgress(Math.round(totalProgress / progressData.length))
-      }
-    } catch (error) {
-      console.error('Error fetching progress:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [course.thumbnail, course.image])
 
   const handleQuickView = e => {
     e.stopPropagation()
@@ -336,18 +328,18 @@ const CourseRow = ({ course, studentId }) => {
       setCurrentCourse({
         id: course.id,
         name: course.name,
-        image: thumbnailUrl // Using the fetched signed URL instead of the image filename
+        image: thumbnailUrl || course.thumbnail || course.image
       })
     )
     navigate(`/units/${course.id}`)
   }
 
   const handleDetailView = (e) => {
-    e.stopPropagation() // Prevent thumbnail click
+    e.stopPropagation()
     navigate(`/students/${studentId}/courses/${course.id}/progress`, {
       state: {
         courseName: course.name,
-        studentName: '' // Will be fetched in StudentProgress component
+        studentName: ''
       }
     })
   }
@@ -396,7 +388,7 @@ const CourseRow = ({ course, studentId }) => {
         >
           {thumbnailLoading ? (
             <CircularProgress size={32} />
-          ) : course.image && !imageError && thumbnailUrl ? (
+          ) : (course.thumbnail || course.image) && !imageError && thumbnailUrl ? (
             <Box
               component='img'
               src={thumbnailUrl}
@@ -482,7 +474,7 @@ const CourseRow = ({ course, studentId }) => {
               />
               <CircularProgress
                 variant="determinate"
-                value={loading ? 0 : progress}
+                value={progressLoading ? 0 : progress}
                 size={65}
                 thickness={8}
                 sx={{
@@ -504,7 +496,7 @@ const CourseRow = ({ course, studentId }) => {
                 }}
               >
                 <Typography variant="caption" sx={{ fontSize: '12px', fontWeight: 'bold', color: 'primary.main' }}>
-                  {loading ? '...' : `${progress}%`}
+                  {progressLoading ? '...' : `${progress}%`}
                 </Typography>
               </Box>
             </Box>
@@ -615,8 +607,8 @@ const CourseRow = ({ course, studentId }) => {
           }}
         >
           <Grid container spacing={3}>
-            {unitsProgress.length > 0 ? (
-              unitsProgress.map(unit => (
+            {progressData?.length > 0 ? (
+              progressData.map(unit => (
                 <Grid key={unit._id} item size={3}>
                   <Box
                     sx={{
@@ -800,108 +792,17 @@ const CourseRow = ({ course, studentId }) => {
       </Dialog>
     </Card>
   )
-}
+})
 
 const StudentDashboard = () => {
-  const [courses, setCourses] = useState([])
-  const [assessmentDueDates, setAssessmentDueDates] = useState({})
   const { user } = useAuth()
+  const courseIds = user?.courseIds?.map(course => course.courseId) || []
+  const { data: courses } = useEnrolledCourses(courseIds)
+  const { allDueDates, error } = useAllAssessmentDueDates(user?.courseIds)
 
-  const calculateDueDate = (enrollmentDate, intervalDays) => {
-    const dueDate = new Date(enrollmentDate)
-    dueDate.setDate(dueDate.getDate() + parseInt(intervalDays))
-    return dueDate
+  if (error) {
+    console.error('Error loading assessment due dates:', error)
   }
-
-  const fetchAssessmentDueDates = async (courseId, enrollmentDate) => {
-    try {
-      // Fetch units for the course
-      const unitsResponse = await getData(`units/${courseId}`)
-      if (unitsResponse.status === 200) {
-        const units = unitsResponse.data.units
-
-        // Fetch sections for each unit
-        const sectionsPromises = units.map(unit =>
-          getData(`sections/${unit._id}`)
-        )
-        const sectionsResponses = await Promise.all(sectionsPromises)
-
-        // Fetch assessments for each section
-        const assessmentPromises = sectionsResponses.flatMap(sectionRes => {
-          if (sectionRes.status === 200) {
-            return sectionRes.data.sections.map(section =>
-              getData(`assessments/${section._id}`)
-            )
-          }
-          return []
-        })
-
-        const assessmentResponses = await Promise.all(assessmentPromises)
-
-        // Calculate due dates for each assessment
-        const dueDates = {}
-        assessmentResponses.forEach(assessmentRes => {
-          if (assessmentRes.status === 200) {
-            assessmentRes.data.assessments.forEach(assessment => {
-              dueDates[assessment._id] = {
-                dueDate: calculateDueDate(enrollmentDate, assessment.interval),
-                name: assessment.name,
-                courseId: courseId,
-                unitId: assessment.unitId,
-                sectionId: assessment.sectionId,
-                type: assessment.assessmentType
-              }
-            })
-          }
-        })
-
-        return dueDates
-      }
-    } catch (error) {
-      console.error('Error fetching assessment due dates:', error)
-      return {}
-    }
-  }
-
-  useEffect(() => {
-    const fetchEnrolledCourses = async () => {
-      try {
-        if (user?.courseIds?.length > 0) {
-          const courseIdList = user.courseIds.map(course => course.courseId)
-          const response = await getData(
-            `courses/enrolled?courseIds=${courseIdList.join(',')}`
-          )
-
-          if (response.status === 200) {
-            setCourses(response.data.data)
-
-            // Fetch due dates for all courses
-            const allDueDates = {}
-            await Promise.all(
-              user.courseIds.map(async course => {
-                const courseDueDates = await fetchAssessmentDueDates(
-                  course.courseId,
-                  course.enrollmentDate
-                )
-                Object.assign(allDueDates, courseDueDates)
-              })
-            )
-
-            // Store in localStorage and state
-            localStorage.setItem(
-              'assessmentDueDates',
-              JSON.stringify(allDueDates)
-            )
-            setAssessmentDueDates(allDueDates)
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching enrolled courses:', error)
-      }
-    }
-
-    fetchEnrolledCourses()
-  }, [user])
 
   return (
     <Grid container spacing={2}>
@@ -919,7 +820,7 @@ const StudentDashboard = () => {
             Current Courses
           </Typography>
           <Grid container spacing={2}>
-            {courses.length > 0 ? (
+            {courses?.length > 0 ? (
               courses.map(course => (
                 <Grid key={course.id} xs={12} md={6} lg={4}>
                   <CourseRow course={course} studentId={user.studentId} />
@@ -942,7 +843,7 @@ const StudentDashboard = () => {
           elevation={5}
           sx={{ backgroundColor: 'transparent', borderRadius: 2 }}
         >
-          <Calendar assessmentDueDates={assessmentDueDates} />
+          <Calendar assessmentDueDates={allDueDates} />
         </Paper>
       </Grid>
     </Grid>

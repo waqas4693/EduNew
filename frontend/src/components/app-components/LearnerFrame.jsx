@@ -1,21 +1,22 @@
 import Grid from '@mui/material/Grid2'
+import ResourceRenderer from './ResourceRenderer'
 import {
   Box,
   Typography,
-  Paper,
+  Paper,  
   Button,
   CircularProgress,
   LinearProgress
 } from '@mui/material'
-import { ChevronLeft, ChevronRight } from '@mui/icons-material'
-import { useAuth } from '../../context/AuthContext'
+
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import ResourceRenderer from './ResourceRenderer'
-import { useResources, useUpdateResourceProgress, useRecordResourceView } from '../../hooks/useResources'
-import { useSignedUrls } from '../../hooks/useSignedUrls'
-import { useProgress } from '../../hooks/useProgress'
 import { getData, postData } from '../../api/api'
+import { useAuth } from '../../context/AuthContext'
+import { useProgress } from '../../hooks/useProgress'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useSignedUrls } from '../../hooks/useSignedUrls'
+import { ChevronLeft, ChevronRight } from '@mui/icons-material'
+import { useResources, useUpdateResourceProgress, useRecordResourceView } from '../../hooks/useResources'
 
 const LearnerFrame = () => {
   const [currentIndex, setCurrentIndex] = useState(0)
