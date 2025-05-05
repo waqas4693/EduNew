@@ -3,7 +3,7 @@ import ResourceRenderer from './ResourceRenderer'
 import {
   Box,
   Typography,
-  Paper,  
+  Paper,
   Button,
   CircularProgress,
   LinearProgress
@@ -19,11 +19,12 @@ import { ChevronLeft, ChevronRight } from '@mui/icons-material'
 import { useResources, useUpdateResourceProgress, useRecordResourceView } from '../../hooks/useResources'
 
 const LearnerFrame = () => {
-  const [currentIndex, setCurrentIndex] = useState(0)
   const navigate = useNavigate()
-  const { courseId, unitId, sectionId } = useParams()
-  const { user } = useAuth()
 
+  const { user } = useAuth()
+  const { courseId, unitId, sectionId } = useParams()
+
+  const [currentIndex, setCurrentIndex] = useState(0)
   // Use our new hooks
   const {
     resources,
@@ -70,15 +71,16 @@ const LearnerFrame = () => {
             }
           }
         }
-      } catch (error) {
+    } catch (error) {
         console.error('Error fetching student progress:', error)
       }
     }
 
-    if (resources.length > 0) {
+    // Only fetch progress on initial load
+    if (resources.length > 0 && currentIndex === 0) {
       fetchStudentProgress()
     }
-  }, [user?.studentId, courseId, unitId, sectionId, resources])
+  }, [user?.studentId, courseId, unitId, sectionId, resources.length])
 
   // Update last accessed resource when current resource changes
   useEffect(() => {
@@ -89,7 +91,7 @@ const LearnerFrame = () => {
         await postData(`student-progress/last-accessed/${user.studentId}/${courseId}/${unitId}/${sectionId}`, {
           resourceId: currentResource._id
         })
-      } catch (error) {
+    } catch (error) {
         console.error('Error updating last accessed resource:', error)
       }
     }
@@ -145,10 +147,10 @@ const LearnerFrame = () => {
       resourceId,
       isCorrect,
       attempts,
-      studentId: user.studentId,
-      courseId,
-      unitId,
-      sectionId
+        studentId: user.studentId,
+        courseId,
+        unitId,
+        sectionId
     })
   }
 

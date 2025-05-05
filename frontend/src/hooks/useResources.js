@@ -23,6 +23,24 @@ export const useResources = (sectionId, page = 1) => {
     keepPreviousData: true, // Keep previous data while fetching new data
   })
 
+  // Get all resources from the cache
+  const getAllResources = () => {
+    const allResources = []
+    let currentPage = 1
+    
+    while (true) {
+      const pageData = queryClient.getQueryData(['resources', sectionId, currentPage])
+      if (!pageData) break
+      
+      allResources.push(...pageData.resources)
+      if (!pageData.hasMore) break
+      
+      currentPage++
+    }
+    
+    return allResources
+  }
+
   // Prefetch next page
   const prefetchNextPage = () => {
     if (data?.hasMore) {
@@ -34,7 +52,7 @@ export const useResources = (sectionId, page = 1) => {
   }
 
   return {
-    resources: data?.resources || [],
+    resources: getAllResources(),
     total: data?.total || 0,
     totalPages: data?.totalPages || 0,
     hasMore: data?.hasMore || false,
