@@ -25,13 +25,16 @@ const LearnerFrame = () => {
   const { courseId, unitId, sectionId } = useParams()
 
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
+
   // Use our new hooks
   const {
     resources,
     isLoading: resourcesLoading,
     isError: resourcesError,
-    prefetchNextPage
-  } = useResources(sectionId)
+    prefetchNextPage,
+    hasMore
+  } = useResources(sectionId, currentPage)
 
   // Only use useSignedUrls when we have a current resource
   const currentResource = resources[currentIndex]
@@ -106,7 +109,8 @@ const LearnerFrame = () => {
       setCurrentIndex(nextIndex)
       
       // Prefetch next page if needed
-      if (nextIndex >= resources.length - 5) {
+      if (nextIndex >= resources.length - 5 && hasMore) {
+        setCurrentPage(prev => prev + 1)
         prefetchNextPage()
       }
       

@@ -361,87 +361,84 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
     const formData = new FormData()
 
     const generateUniqueFilename = originalName => {
+      if (!originalName) return null
       const timestamp = Date.now()
       const extension = originalName.split('.').pop()
       return `${timestamp}.${extension}`
     }
 
-    if (resource.content.file) {
+    // Only process file if it's a new file upload
+    if (resource.content.file && resource.content.file instanceof File) {
       const uniqueFileName = generateUniqueFilename(resource.content.file.name)
-      const renamedFile = new File([resource.content.file], uniqueFileName, {
-        type: resource.content.file.type
-      })
-      formData.append('file', renamedFile)
-      contentData.fileName = uniqueFileName
+      if (uniqueFileName) {
+        const renamedFile = new File([resource.content.file], uniqueFileName, {
+          type: resource.content.file.type
+        })
+        formData.append('file', renamedFile)
+        contentData.fileName = uniqueFileName
+      }
     }
 
     // Handle PDF audio file
-    if (resource.resourceType === 'PDF' && resource.content.audioFile) {
+    if (resource.resourceType === 'PDF' && resource.content.audioFile instanceof File) {
       const uniqueAudioName = generateUniqueFilename(resource.content.audioFile.name)
-      const renamedAudioFile = new File([resource.content.audioFile], uniqueAudioName, {
-        type: resource.content.audioFile.type
-      })
-      formData.append('audioFile', renamedAudioFile)
-      contentData.audioFile = uniqueAudioName
+      if (uniqueAudioName) {
+        const renamedAudioFile = new File([resource.content.audioFile], uniqueAudioName, {
+          type: resource.content.audioFile.type
+        })
+        formData.append('audioFile', renamedAudioFile)
+        contentData.audioFile = uniqueAudioName
+      }
     }
 
+    // Handle background image
     if (
       (resource.resourceType === 'PPT' ||
         resource.resourceType === 'AUDIO' ||
         resource.resourceType === 'TEXT') &&
-      resource.content.backgroundImage
+      resource.content.backgroundImage instanceof File
     ) {
-      const uniqueBgName = generateUniqueFilename(
-        resource.content.backgroundImage.name
-      )
-      const renamedBgFile = new File(
-        [resource.content.backgroundImage],
-        uniqueBgName,
-        {
+      const uniqueBgName = generateUniqueFilename(resource.content.backgroundImage.name)
+      if (uniqueBgName) {
+        const renamedBgFile = new File([resource.content.backgroundImage], uniqueBgName, {
           type: resource.content.backgroundImage.type
-        }
-      )
-      formData.append('backgroundImage', renamedBgFile)
-      contentData.backgroundImage = uniqueBgName
+        })
+        formData.append('backgroundImage', renamedBgFile)
+        contentData.backgroundImage = uniqueBgName
+      }
     }
 
+    // Handle MCQ files
     if (resource.resourceType === 'MCQ') {
-      if (resource.content.mcq?.imageFile) {
-        const uniqueMcqImageName = generateUniqueFilename(
-          resource.content.mcq.imageFile.name
-        )
-        const renamedMcqImage = new File(
-          [resource.content.mcq.imageFile],
-          uniqueMcqImageName,
-          {
+      if (resource.content.mcq?.imageFile instanceof File) {
+        const uniqueMcqImageName = generateUniqueFilename(resource.content.mcq.imageFile.name)
+        if (uniqueMcqImageName) {
+          const renamedMcqImage = new File([resource.content.mcq.imageFile], uniqueMcqImageName, {
             type: resource.content.mcq.imageFile.type
+          })
+          formData.append('mcqImage', renamedMcqImage)
+          contentData.mcq = {
+            ...contentData.mcq,
+            imageFile: uniqueMcqImageName
           }
-        )
-        formData.append('mcqImage', renamedMcqImage)
-        contentData.mcq = {
-          ...contentData.mcq,
-          imageFile: uniqueMcqImageName
         }
       }
-      if (resource.content.mcq?.audioFile) {
-        const uniqueMcqAudioName = generateUniqueFilename(
-          resource.content.mcq.audioFile.name
-        )
-        const renamedMcqAudio = new File(
-          [resource.content.mcq.audioFile],
-          uniqueMcqAudioName,
-          {
+      if (resource.content.mcq?.audioFile instanceof File) {
+        const uniqueMcqAudioName = generateUniqueFilename(resource.content.mcq.audioFile.name)
+        if (uniqueMcqAudioName) {
+          const renamedMcqAudio = new File([resource.content.mcq.audioFile], uniqueMcqAudioName, {
             type: resource.content.mcq.audioFile.type
+          })
+          formData.append('mcqAudio', renamedMcqAudio)
+          contentData.mcq = {
+            ...contentData.mcq,
+            audioFile: uniqueMcqAudioName
           }
-        )
-        formData.append('mcqAudio', renamedMcqAudio)
-        contentData.mcq = {
-          ...contentData.mcq,
-          audioFile: uniqueMcqAudioName
         }
       }
     }
 
+    // Always append these fields
     formData.append('name', resource.name)
     formData.append('number', resource.number)
     formData.append('resourceType', resource.resourceType)
@@ -698,6 +695,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
   const handleSaveResource = async (resource) => {
     setIsSaving(true)
     try {
+      // Create a clean content object without URLs and extra fields
       const cleanContent = {
         ...resource.content,
         fileUrl: undefined,
@@ -714,19 +712,26 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         content: cleanContent
       })
 
-      await axios.put(`${url}resources/${resource._id}`, formData, {
+      // Log the FormData contents for debugging
+      for (let pair of formData.entries()) {
+        console.log(pair[0], pair[1])
+      }
+
+      const response = await axios.put(`${url}resources/${resource._id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
 
-      setEditingResourceId(null)
-      alert('Resource updated successfully')
-      // Refresh the resource data
-      if (sectionId) {
-        fetchResources()
+      if (response.status === 200) {
+        setEditingResourceId(null)
+        alert('Resource updated successfully')
+        // Refresh the resource data
+        if (sectionId) {
+          fetchResources()
+        }
       }
     } catch (error) {
       console.error('Error updating resource:', error)
-      alert('Error updating resource')
+      alert('Error updating resource: ' + (error.response?.data?.message || error.message))
     } finally {
       setIsSaving(false)
     }

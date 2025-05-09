@@ -114,9 +114,9 @@ const FeatureCard = ({ icon, title, description }) => (
       component='img'
       src={icon}
       alt={title}
-      sx={{ width: 75, height: 75, mr: 1, flexShrink: 0 }}
+      sx={{ width: 90, height: 90, mr: 1, flexShrink: 0 }}
     />
-    <Box sx={{ fontSize: 9, color: 'text.secondary', lineHeight: 1.3, pt: '15px' }}>
+    <Box sx={{ fontSize: 10, color: 'text.secondary', lineHeight: 1.3, pt: '15px' }}>
       {description}
     </Box>
   </Box>

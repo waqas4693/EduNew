@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getData, postData } from '../api/api'
+import { useEffect } from 'react'
 
 const fetchResources = async ({ sectionId, page = 1, limit = 15 }) => {
   const response = await getData(`resources/${sectionId}?page=${page}&limit=${limit}`)
@@ -44,12 +45,22 @@ export const useResources = (sectionId, page = 1) => {
   // Prefetch next page
   const prefetchNextPage = () => {
     if (data?.hasMore) {
+      const nextPage = page + 1
       queryClient.prefetchQuery({
-        queryKey: ['resources', sectionId, page + 1],
-        queryFn: () => fetchResources({ sectionId, page: page + 1 }),
+        queryKey: ['resources', sectionId, nextPage],
+        queryFn: () => fetchResources({ sectionId, page: nextPage }),
+        staleTime: 5 * 60 * 1000,
+        cacheTime: 30 * 60 * 1000,
       })
     }
   }
+
+  // Prefetch next page on initial load
+  useEffect(() => {
+    if (data?.hasMore) {
+      prefetchNextPage()
+    }
+  }, [data?.hasMore])
 
   return {
     resources: getAllResources(),
@@ -60,7 +71,8 @@ export const useResources = (sectionId, page = 1) => {
     isError,
     error,
     isFetching,
-    prefetchNextPage
+    prefetchNextPage,
+    currentPage: page
   }
 }
 

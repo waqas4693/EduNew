@@ -209,6 +209,81 @@ export const updateResource = async (req, res) => {
     // Parse the content string back into an object if it's a string
     const parsedContent = typeof content === 'string' ? JSON.parse(content) : content
 
+    // Get the existing resource to check for file updates
+    const existingResource = await Resource.findById(id)
+    if (!existingResource) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resource not found'
+      })
+    }
+
+    // Handle file uploads to S3 if new files are provided
+    if (req.files) {
+      // Handle main file update
+      if (req.files.file) {
+        const fileName = await uploadToS3(
+          req.files.file[0],
+          resourceType,  // Uses resource type as folder name
+          `${Date.now()}-${req.files.file[0].originalname}`
+        )
+        parsedContent.fileName = fileName
+      }
+
+      // Handle thumbnail update
+      if (req.files.thumbnail) {
+        const thumbnailName = await uploadToS3(
+          req.files.thumbnail[0],
+          'THUMBNAILS',
+          `${Date.now()}-${req.files.thumbnail[0].originalname}`
+        )
+        parsedContent.thumbnailUrl = thumbnailName
+      }
+
+      // Handle background image update
+      if (req.files.backgroundImage) {
+        const bgImageName = await uploadToS3(
+          req.files.backgroundImage[0],
+          'BACKGROUNDS',
+          `${Date.now()}-${req.files.backgroundImage[0].originalname}`
+        )
+        parsedContent.backgroundImage = bgImageName
+      }
+
+      // Handle PDF audio file update
+      if (resourceType === 'PDF' && req.files.audioFile) {
+        const audioFileName = await uploadToS3(
+          req.files.audioFile[0],
+          'AUDIO',
+          `${Date.now()}-${req.files.audioFile[0].originalname}`
+        )
+        parsedContent.audioFile = audioFileName
+        parsedContent.audioRepeatCount = parsedContent.audioRepeatCount || 1
+      }
+
+      // Handle MCQ files update
+      if (resourceType === 'MCQ') {
+        if (req.files.mcqImage) {
+          const mcqImageName = await uploadToS3(
+            req.files.mcqImage[0],
+            'MCQ_IMAGES',
+            `${Date.now()}-${req.files.mcqImage[0].originalname}`
+          )
+          parsedContent.mcq.imageFile = mcqImageName
+        }
+        
+        if (req.files.mcqAudio) {
+          const mcqAudioName = await uploadToS3(
+            req.files.mcqAudio[0],
+            'MCQ_AUDIO',
+            `${Date.now()}-${req.files.mcqAudio[0].originalname}`
+          )
+          parsedContent.mcq.audioFile = mcqAudioName
+        }
+      }
+    }
+
+    // Update the resource with new data and/or file references
     const resource = await Resource.findByIdAndUpdate(
       id,
       { 
@@ -220,18 +295,12 @@ export const updateResource = async (req, res) => {
       { new: true }
     )
 
-    if (!resource) {
-      return res.status(404).json({
-        success: false,
-        message: 'Resource not found'
-      })
-    }
-
     res.status(200).json({
       success: true,
       data: resource
     })
   } catch (error) {
+    console.error('Resource Update Error:', error)
     handleError(res, error)
   }
 }
