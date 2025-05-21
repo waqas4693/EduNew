@@ -5,6 +5,7 @@ import Resource from '../models/resource.js'
 import Section from '../models/section.js'
 import Unit from '../models/unit.js'
 import { handleError } from '../utils/errorHandler.js'
+import Course from '../models/course.js'
 
 // Course Stats Controllers
 export const getCourseStats = async (req, res) => {
@@ -129,6 +130,73 @@ export const recalculateAllStats = async (courseId) => {
     }
   } catch (error) {
     console.error('Error recalculating all stats:', error)
+    throw error
+  }
+}
+
+/**
+ * Counts and updates stats for all existing data
+ * This is a one-time function to populate stats for existing data
+ */
+export const countAllExistingStats = async () => {
+  try {
+    console.log('Starting to count all existing stats...')
+    
+    // Get all courses
+    const courses = await Course.find({ status: 1 })
+    console.log(`Found ${courses.length} active courses`)
+    
+    for (const course of courses) {
+      // Count units for this course
+      const totalUnits = await Unit.countDocuments({ courseId: course._id, status: 1 })
+      await CourseStats.findOneAndUpdate(
+        { courseId: course._id },
+        { totalUnits },
+        { upsert: true }
+      )
+      console.log(`Updated CourseStats for course ${course._id} with ${totalUnits} units`)
+      
+      // Get all units for this course
+      const units = await Unit.find({ courseId: course._id, status: 1 })
+      
+      for (const unit of units) {
+        // Count sections for this unit
+        const totalSections = await Section.countDocuments({ unitId: unit._id, status: 1 })
+        await UnitStats.findOneAndUpdate(
+          { unitId: unit._id },
+          { totalSections },
+          { upsert: true }
+        )
+        console.log(`Updated UnitStats for unit ${unit._id} with ${totalSections} sections`)
+        
+        // Get all sections for this unit
+        const sections = await Section.find({ unitId: unit._id, status: 1 })
+        
+        for (const section of sections) {
+          // Count resources and MCQs for this section
+          const [totalResources, totalMcqs, totalAssessments] = await Promise.all([
+            Resource.countDocuments({ sectionId: section._id, status: 1 }),
+            Resource.countDocuments({ sectionId: section._id, status: 1, resourceType: 'MCQ' }),
+            Resource.countDocuments({ sectionId: section._id, status: 1, resourceType: 'ASSESSMENT' })
+          ])
+          
+          await SectionStats.findOneAndUpdate(
+            { sectionId: section._id },
+            { 
+              totalResources,
+              totalMcqs,
+              totalAssessments
+            },
+            { upsert: true }
+          )
+          console.log(`Updated SectionStats for section ${section._id} with ${totalResources} resources, ${totalMcqs} MCQs, and ${totalAssessments} assessments`)
+        }
+      }
+    }
+    
+    console.log('Finished counting all existing stats')
+  } catch (error) {
+    console.error('Error counting existing stats:', error)
     throw error
   }
 }

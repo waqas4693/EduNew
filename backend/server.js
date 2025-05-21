@@ -27,6 +27,9 @@ import sectionUnlockStatusRoutes from './routes/sectionUnlockStatusRoutes.js'
 import studentProgressRoutes from './routes/studentProgress.js'
 import bulkUploadRoutes from './routes/bulkUpload.js'
 import statsRouter from './routes/stats.js'
+import { countAllExistingStats } from './controllers/stats.js'
+
+import Course from './models/course.js'
 
 /* CONFIGURATION */
 dotenv.config()
@@ -100,9 +103,16 @@ mongoose.set('strictQuery', false)
 
 await mongoose
   .connect(process.env.MONGO_URL)
-  .then(() => {
+  .then(async () => {
     app.listen(process.env.PORT)
     console.log(`Server running on port ${process.env.PORT}`)
+    
+    // Count all existing stats
+    try {
+      await countAllExistingStats()
+    } catch (error) {
+      console.error('Error counting existing stats:', error)
+    }
   })
   .catch(error => console.log(`${error} did not connect`))
 
