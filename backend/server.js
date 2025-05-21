@@ -106,13 +106,6 @@ await mongoose
   .then(async () => {
     app.listen(process.env.PORT)
     console.log(`Server running on port ${process.env.PORT}`)
-    
-    // Count all existing stats
-    try {
-      await countAllExistingStats()
-    } catch (error) {
-      console.error('Error counting existing stats:', error)
-    }
   })
   .catch(error => console.log(`${error} did not connect`))
 
