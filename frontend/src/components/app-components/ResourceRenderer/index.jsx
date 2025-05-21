@@ -34,7 +34,6 @@ const ResourceRenderer = ({
     const isCorrect = mcqActions.submitAnswers(resource.content.mcq.correctAnswers)
     if (isCorrect) {
       onMcqCompleted(resource._id, true, mcqState.attempts)
-      progressActions.updateMcqProgress(resource._id, true, mcqState.attempts)
     }
   }
 

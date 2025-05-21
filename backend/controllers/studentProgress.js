@@ -1,5 +1,6 @@
 import StudentProgress from '../models/studentProgress.js'
 import Resource from '../models/resource.js'
+import SectionStats from '../models/sectionStats.js'
 import { handleError } from '../utils/errorHandler.js'
 
 // Get student progress for a specific section
@@ -22,158 +23,144 @@ export const getStudentSectionProgress = async (req, res) => {
         courseId,
         unitId,
         sectionId,
-        mcqProgress: []
+        mcqProgress: [],
+        viewedResources: []
       })
       await progress.save()
     }
 
-    // Get all MCQ resources in this section
-    const mcqResources = await Resource.find({
-      sectionId,
-      resourceType: 'MCQ',
-      status: 1
-    }).sort('createdAt')
-
-    // Calculate progress statistics
-    const totalMcqs = mcqResources.length
-    const completedMcqs = progress.mcqProgress.filter(p => p.completed).length
-    const mcqProgressPercentage = totalMcqs > 0 ? Math.round((completedMcqs / totalMcqs) * 100) : 0
-
-    // Find the next uncompleted MCQ
-    let nextMcqIndex = 0
-    if (progress.mcqProgress.length > 0) {
-      // Create a map of completed MCQs
-      const completedMap = {}
-      progress.mcqProgress.forEach(p => {
-        if (p.completed && p.resourceId) {
-          completedMap[p.resourceId._id.toString()] = true
-        }
+    // Get section stats for validation
+    const sectionStats = await SectionStats.findOne({ sectionId })
+    if (!sectionStats) {
+      return res.status(404).json({
+        success: false,
+        message: 'Section stats not found'
       })
+    }
 
-      // Find the first uncompleted MCQ
-      for (let i = 0; i < mcqResources.length; i++) {
-        if (!completedMap[mcqResources[i]._id.toString()]) {
-          nextMcqIndex = i
-          break
-        }
-        // If all MCQs are completed, point to the last one
-        if (i === mcqResources.length - 1) {
-          nextMcqIndex = i
+    // Update progress percentages if they're out of sync
+    if (progress.lastAccessedAt && 
+        (Date.now() - progress.lastAccessedAt > 5 * 60 * 1000)) { // 5 minutes
+      await progress.updateProgressPercentages()
+    }
+
+    // Get last accessed resource details if exists
+    let lastResourceDetails = null
+    if (progress.lastAccessedResource) {
+      const lastResource = await Resource.findOne({ 
+        _id: progress.lastAccessedResource,
+        status: 1
+      })
+      if (lastResource) {
+        lastResourceDetails = {
+          _id: lastResource._id,
+          name: lastResource.name,
+          number: lastResource.number,
+          resourceType: lastResource.resourceType
         }
       }
     }
+
+    // Ensure we have the latest progress data
+    const progressData = await StudentProgress.findById(progress._id)
 
     res.status(200).json({
       success: true,
       data: {
-        progress,
-        totalMcqs,
-        completedMcqs,
-        mcqProgressPercentage,
-        nextMcqIndex,
-        nextMcqId: mcqResources[nextMcqIndex]?._id || null
+        progress: {
+          ...progressData.toObject(),
+          lastResourceDetails
+        },
+        totalResources: sectionStats.totalResources,
+        totalMcqs: sectionStats.totalMcqs,
+        resourceProgressPercentage: progressData.resourceProgressPercentage,
+        mcqProgressPercentage: progressData.mcqProgressPercentage
       }
     })
   } catch (error) {
+    console.error('Error in getStudentSectionProgress:', error)
     handleError(res, error)
   }
 }
 
-// Update MCQ progress
-export const updateMcqProgress = async (req, res) => {
-  try {
-    const { studentId, courseId, unitId, sectionId, resourceId } = req.params
-    const { completed, attempts } = req.body
-
-    // Find or create progress record
-    let progress = await StudentProgress.findOne({
-      studentId,
-      courseId,
-      unitId,
-      sectionId
-    })
-
-    if (!progress) {
-      progress = new StudentProgress({
-        studentId,
-        courseId,
-        unitId,
-        sectionId,
-        mcqProgress: []
-      })
-    }
-
-    // Check if this MCQ is already in the progress array
-    const mcqIndex = progress.mcqProgress.findIndex(
-      p => p.resourceId.toString() === resourceId
-    )
-
-    if (mcqIndex === -1) {
-      // Add new MCQ progress
-      progress.mcqProgress.push({
-        resourceId,
-        completed,
-        completedAt: completed ? new Date() : null,
-        attempts: attempts || 1
-      })
-    } else {
-      // Update existing MCQ progress
-      progress.mcqProgress[mcqIndex].attempts = (progress.mcqProgress[mcqIndex].attempts || 0) + 1
-      
-      if (completed && !progress.mcqProgress[mcqIndex].completed) {
-        progress.mcqProgress[mcqIndex].completed = true
-        progress.mcqProgress[mcqIndex].completedAt = new Date()
-      }
-    }
-
-    // Update last accessed resource
-    progress.lastAccessedResource = resourceId
-    progress.lastAccessedAt = new Date()
-
-    await progress.save()
-
-    res.status(200).json({
-      success: true,
-      data: progress
-    })
-  } catch (error) {
-    handleError(res, error)
-  }
-}
-
-// Update last accessed resource
-export const updateLastAccessedResource = async (req, res) => {
+// Update progress (MCQ and/or resource view)
+export const updateProgress = async (req, res) => {
   try {
     const { studentId, courseId, unitId, sectionId } = req.params
-    const { resourceId } = req.body
+    const { resourceId, resourceNumber, mcqData } = req.body
 
-    // Find or create progress record
-    let progress = await StudentProgress.findOne({
-      studentId,
-      courseId,
-      unitId,
-      sectionId
-    })
-
-    if (!progress) {
-      progress = new StudentProgress({
-        studentId,
-        courseId,
-        unitId,
-        sectionId,
-        mcqProgress: []
+    // Get section stats for total counts
+    const sectionStats = await SectionStats.findOne({ sectionId })
+    if (!sectionStats) {
+      return res.status(404).json({
+        success: false,
+        message: 'Section stats not found'
       })
     }
 
-    // Update last accessed resource
-    progress.lastAccessedResource = resourceId
-    progress.lastAccessedAt = new Date()
+    // Update progress
+    const progress = await StudentProgress.findOneAndUpdate(
+      {
+        studentId,
+        courseId,
+        unitId,
+        sectionId
+      },
+      {
+        $addToSet: { viewedResources: { resourceId, resourceNumber } },
+        ...(mcqData && {
+          $push: {
+            mcqProgress: {
+              resourceId,
+              resourceNumber,
+              completed: mcqData.completed,
+              attempts: mcqData.attempts
+            }
+          }
+        }),
+        // Always update lastAccessedResource and lastAccessedAt
+        lastAccessedResource: resourceId,
+        lastAccessedAt: new Date()
+      },
+      {
+        new: true,
+        upsert: true
+      }
+    )
 
-    await progress.save()
+    // Calculate updated percentages
+    const resourceProgressPercentage = Math.round(
+      (progress.viewedResources.length / sectionStats.totalResources) * 100
+    )
+
+    const completedMcqs = progress.mcqProgress.filter(mcq => mcq.completed).length
+    const mcqProgressPercentage = Math.round(
+      (completedMcqs / sectionStats.totalMcqs) * 100
+    )
+
+    // Update the progress document with the calculated percentages
+    await StudentProgress.findByIdAndUpdate(
+      progress._id,
+      {
+        resourceProgressPercentage,
+        mcqProgressPercentage,
+        lastAccessedAt: new Date()
+      }
+    )
 
     res.status(200).json({
       success: true,
-      data: progress
+      data: {
+        progress: {
+          resourceProgressPercentage,
+          mcqProgressPercentage,
+          totalResources: sectionStats.totalResources,
+          totalMcqs: sectionStats.totalMcqs,
+          completedMcqs,
+          viewedResources: progress.viewedResources.length,
+          lastAccessedResource: resourceId
+        }
+      }
     })
   } catch (error) {
     handleError(res, error)
@@ -194,17 +181,32 @@ export const getCourseMcqProgress = async (req, res) => {
     // Calculate total MCQs and completed MCQs
     let totalMcqs = 0
     let completedMcqs = 0
+    let totalProgressPercentage = 0
 
-    progressRecords.forEach(record => {
-      record.mcqProgress.forEach(mcq => {
-        totalMcqs++
-        if (mcq.completed) {
-          completedMcqs++
-        }
-      })
+    // Get all section stats for this course
+    const sectionIds = progressRecords.map(record => record.sectionId)
+    const sectionStats = await SectionStats.find({
+      sectionId: { $in: sectionIds }
     })
 
-    const progressPercentage = totalMcqs > 0 ? Math.round((completedMcqs / totalMcqs) * 100) : 0
+    // Create a map of section stats for quick lookup
+    const statsMap = sectionStats.reduce((acc, stat) => {
+      acc[stat.sectionId.toString()] = stat
+      return acc
+    }, {})
+
+    // Calculate overall progress
+    progressRecords.forEach(record => {
+      const sectionStat = statsMap[record.sectionId.toString()]
+      if (sectionStat) {
+        totalMcqs += sectionStat.totalMcqs
+        completedMcqs += record.mcqProgress.filter(mcq => mcq.completed).length
+      }
+    })
+
+    const progressPercentage = totalMcqs > 0 
+      ? Math.round((completedMcqs / totalMcqs) * 100) 
+      : 0
 
     res.status(200).json({
       success: true,

@@ -20,13 +20,13 @@ import sectionRoutes from './routes/section.js'
 import userRoutes from './routes/userRoutes.js'
 import resourceRoutes from './routes/resource.js'
 import assessmentRoutes from './routes/assessment.js'
-import resourceViewRoutes from './routes/resourceView.js'
 import assessmentReviewRoutes from './routes/assessmentReview.js'
 import assessmentAttemptRoutes from './routes/assessmentAttempt.js'
 import s3Routes from './routes/s3.js'
 import sectionUnlockStatusRoutes from './routes/sectionUnlockStatusRoutes.js'
 import studentProgressRoutes from './routes/studentProgress.js'
 import bulkUploadRoutes from './routes/bulkUpload.js'
+import statsRouter from './routes/stats.js'
 
 /* CONFIGURATION */
 dotenv.config()
@@ -90,12 +90,12 @@ app.use('/api/section-unlock', sectionUnlockStatusRoutes)
 app.use('/api/assessments', assessmentRoutes)
 app.use('/api/assessment-attempts', assessmentAttemptRoutes)
 app.use('/api/assessment-review', assessmentReviewRoutes)
-app.use('/api/resource-views', resourceViewRoutes)
 app.use('/api/resources/files', s3Routes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/bulk-upload', bulkUploadRoutes)
 app.use('/api/student-progress', studentProgressRoutes)
+app.use('/api/stats', statsRouter)
 mongoose.set('strictQuery', false)
 
 await mongoose

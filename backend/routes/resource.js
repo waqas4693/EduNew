@@ -3,11 +3,11 @@ import {
   createResource, 
   getSectionResources,
   updateResource,
-  getResourcesWithViewStatus,
   getLatestResourceNumber,
   updateResourceNumber,
   insertResource,
-  searchResourcesByName
+  searchResourcesByName,
+  deleteResource
 } from '../controllers/resource.js'
 
 const router = express.Router()
@@ -16,7 +16,7 @@ router.post('/', createResource)
 router.get('/:sectionId', getSectionResources)
 router.get('/:sectionId/search', searchResourcesByName)
 router.put('/:id', updateResource)
-router.get('/:sectionId/student/:studentId/status', getResourcesWithViewStatus)
+router.delete('/:id', deleteResource)
 router.get('/latest-number/:sectionId', getLatestResourceNumber)
 router.patch('/:id/number', updateResourceNumber)
 router.post('/insert', insertResource)

@@ -81,21 +81,40 @@ export const useUpdateResourceProgress = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ resourceId, isCorrect, attempts, studentId, courseId, unitId, sectionId }) => {
+    mutationFn: async ({ resourceId, resourceNumber, isCorrect, attempts, studentId, courseId, unitId, sectionId }) => {
       if (!studentId || !courseId || !unitId || !sectionId || !resourceId) {
         throw new Error('Missing required parameters')
       }
       
-      const response = await postData(`student-progress/${studentId}/${courseId}/${unitId}/${sectionId}/${resourceId}`, {
-        completed: isCorrect,
-        attempts
-      })
+      const response = await postData(
+        `student-progress/${studentId}/${courseId}/${unitId}/${sectionId}/progress`,
+        {
+          resourceId,
+          resourceNumber,
+          mcqData: {
+            completed: isCorrect,
+            attempts
+          }
+        }
+      )
       return response.data
     },
-    onSuccess: (data, variables) => {
-      // Invalidate and refetch
-      queryClient.invalidateQueries(['resources'])
-      queryClient.invalidateQueries(['progress'])
+    onSuccess: (data) => {
+      // Immediately update the progress cache
+      queryClient.setQueryData(
+        ['progress', data.studentId, data.courseId, data.unitId, data.sectionId],
+        {
+          data: {
+            resourceProgressPercentage: data.progress.resourceProgressPercentage,
+            mcqProgressPercentage: data.progress.mcqProgressPercentage,
+            totalMcqs: data.progress.totalMcqs,
+            completedMcqs: data.progress.completedMcqs,
+            progress: data.progress
+          }
+        }
+      )
+      // Then invalidate to ensure we have the latest data
+      queryClient.invalidateQueries(['progress', data.studentId, data.courseId, data.unitId, data.sectionId])
     }
   })
 }
@@ -105,18 +124,32 @@ export const useRecordResourceView = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ resourceId, courseId, unitId, sectionId }) => {
-      const response = await postData('resource-views/record', {
-        resourceId,
-        courseId,
-        unitId,
-        sectionId
-      })
+    mutationFn: async ({ resourceId, resourceNumber, studentId, courseId, unitId, sectionId }) => {
+      const response = await postData(
+        `student-progress/${studentId}/${courseId}/${unitId}/${sectionId}/progress`,
+        {
+          resourceId,
+          resourceNumber
+        }
+      )
       return response.data
     },
-    onSuccess: () => {
-      // Invalidate and refetch
-      queryClient.invalidateQueries(['progress'])
+    onSuccess: (data) => {
+      // Immediately update the progress cache
+      queryClient.setQueryData(
+        ['progress', data.studentId, data.courseId, data.unitId, data.sectionId],
+        {
+          data: {
+            resourceProgressPercentage: data.progress.resourceProgressPercentage,
+            mcqProgressPercentage: data.progress.mcqProgressPercentage,
+            totalMcqs: data.progress.totalMcqs,
+            completedMcqs: data.progress.completedMcqs,
+            progress: data.progress
+          }
+        }
+      )
+      // Then invalidate to ensure we have the latest data
+      queryClient.invalidateQueries(['progress', data.studentId, data.courseId, data.unitId, data.sectionId])
     }
   })
 } 

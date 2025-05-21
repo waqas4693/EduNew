@@ -9,8 +9,8 @@ import {
   LinearProgress
 } from '@mui/material'
 
+import { getData } from '../../api/api'
 import { useState, useEffect } from 'react'
-import { getData, postData } from '../../api/api'
 import { useAuth } from '../../context/AuthContext'
 import { useProgress } from '../../hooks/useProgress'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -47,7 +47,8 @@ const LearnerFrame = () => {
     isLoading: progressLoading,
     updateProgress,
     getMcqProgress,
-    isResourceCompleted
+    isResourceCompleted,
+    refetch: refetchProgress
   } = useProgress(user?.studentId, courseId, unitId, sectionId)
 
   const updateResourceProgress = useUpdateResourceProgress()
@@ -70,11 +71,19 @@ const LearnerFrame = () => {
             )
             
             if (lastAccessedIndex !== -1) {
-              setCurrentIndex(lastAccessedIndex)
+              // If the last accessed resource is an MCQ and not completed, stay on it
+              const lastResource = resources[lastAccessedIndex]
+              if (lastResource.resourceType === 'MCQ' && !isResourceCompleted(lastResource._id)) {
+                setCurrentIndex(lastAccessedIndex)
+              } else {
+                // If not an MCQ or already completed, move to the next resource
+                const nextIndex = lastAccessedIndex + 1 < resources.length ? lastAccessedIndex + 1 : lastAccessedIndex
+                setCurrentIndex(nextIndex)
+              }
             }
           }
         }
-    } catch (error) {
+      } catch (error) {
         console.error('Error fetching student progress:', error)
       }
     }
@@ -83,24 +92,26 @@ const LearnerFrame = () => {
     if (resources.length > 0 && currentIndex === 0) {
       fetchStudentProgress()
     }
-  }, [user?.studentId, courseId, unitId, sectionId, resources.length])
+  }, [user?.studentId, courseId, unitId, sectionId, resources.length, isResourceCompleted])
 
-  // Update last accessed resource when current resource changes
-  useEffect(() => {
-    const updateLastAccessed = async () => {
-      if (!user?.studentId || !currentResource) return
-
-      try {
-        await postData(`student-progress/last-accessed/${user.studentId}/${courseId}/${unitId}/${sectionId}`, {
-          resourceId: currentResource._id
-        })
-    } catch (error) {
-        console.error('Error updating last accessed resource:', error)
+  // Handle MCQ completion
+  const handleMcqCompleted = async (resourceId, isCorrect, attempts) => {
+    if (!user?.studentId || !isCorrect) return
+    updateResourceProgress.mutate({
+      resourceId,
+      resourceNumber: currentResource.number,
+      isCorrect,
+      attempts,
+      studentId: user.studentId,
+      courseId,
+      unitId,
+      sectionId
+    }, {
+      onSuccess: () => {
+        refetchProgress()
       }
-    }
-
-    updateLastAccessed()
-  }, [currentIndex, currentResource, user?.studentId, courseId, unitId, sectionId])
+    })
+  }
 
   // Handle navigation
   const handleNext = async () => {
@@ -118,9 +129,15 @@ const LearnerFrame = () => {
       if (resources[nextIndex]) {
         recordResourceView.mutate({
           resourceId: resources[nextIndex]._id,
+          resourceNumber: resources[nextIndex].number,
+          studentId: user?.studentId,
           courseId,
           unitId,
           sectionId
+        }, {
+          onSuccess: () => {
+            refetchProgress()
+          }
         })
       }
     }
@@ -135,27 +152,18 @@ const LearnerFrame = () => {
       if (resources[prevIndex]) {
         recordResourceView.mutate({
           resourceId: resources[prevIndex]._id,
+          resourceNumber: resources[prevIndex].number,
+          studentId: user?.studentId,
           courseId,
           unitId,
           sectionId
+        }, {
+          onSuccess: () => {
+            refetchProgress()
+          }
         })
       }
     }
-  }
-
-  // Handle MCQ completion
-  const handleMcqCompleted = async (resourceId, isCorrect, attempts) => {
-    if (!user?.studentId || !isCorrect) return
-
-    updateResourceProgress.mutate({
-      resourceId,
-      isCorrect,
-      attempts,
-        studentId: user.studentId,
-        courseId,
-        unitId,
-        sectionId
-    })
   }
 
   // Check if current MCQ is completed
@@ -164,6 +172,17 @@ const LearnerFrame = () => {
       return true
     }
     return isResourceCompleted(currentResource._id)
+  }
+
+  // Check if next button should be disabled
+  const isNextButtonDisabled = () => {
+    if (currentIndex === resources.length - 1) {
+      return true
+    }
+    if (currentResource?.resourceType === 'MCQ') {
+      return !isCurrentMcqCompleted()
+    }
+    return false
   }
 
   // Refresh expired URLs periodically
@@ -314,11 +333,7 @@ const LearnerFrame = () => {
                   variant='contained'
                   color='inherit'
                   size='small'
-                  disabled={
-                    currentIndex === resources.length - 1 ||
-                    (currentResource.resourceType === 'MCQ' &&
-                      !isCurrentMcqCompleted())
-                  }
+                  disabled={isNextButtonDisabled()}
                   onClick={handleNext}
                   sx={{
                     minWidth: '36px',
@@ -359,7 +374,7 @@ const LearnerFrame = () => {
           <Box sx={{ px: 2, py: 2, borderTop: '1px solid #f0f0f0' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant='body2' fontWeight="medium">
-                Your Progress (MCQs): {progress.mcq}%
+                Your Progress (MCQs): {Math.round(progress.mcq)}%
               </Typography>
               <Typography variant='body2' color="text.secondary">
                 {progress.completedMcqs} of {progress.totalMcqs} MCQs completed
@@ -367,7 +382,7 @@ const LearnerFrame = () => {
             </Box>
             <LinearProgress 
               variant='determinate' 
-              value={progress.mcq} 
+              value={Math.round(progress.mcq)} 
               sx={{ 
                 height: 8,
                 borderRadius: 4,

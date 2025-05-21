@@ -1,4 +1,6 @@
 import Section from '../models/section.js'
+import SectionStats from '../models/sectionStats.js'
+import UnitStats from '../models/unitStats.js'
 import Resource from '../models/resource.js'
 import { handleError } from '../utils/errorHandler.js'
 import Unit from '../models/unit.js'
@@ -34,6 +36,21 @@ export const createSection = async (req, res) => {
       await Unit.findByIdAndUpdate(
         req.body.unitId,
         { $push: { sections: savedSection._id } }
+      )
+
+      // Create SectionStats for the new section
+      const sectionStats = new SectionStats({
+        sectionId: savedSection._id,
+        totalResources: 0,
+        totalMcqs: 0,
+        totalAssessments: 0
+      })
+      await sectionStats.save()
+
+      // Update UnitStats
+      await UnitStats.findOneAndUpdate(
+        { unitId: req.body.unitId },
+        { $inc: { totalSections: 1 } }
       )
 
       return res.status(201).json({
@@ -83,9 +100,24 @@ export const createSection = async (req, res) => {
           sectionData.unitId,
           { $push: { sections: savedSection._id } }
         )
+
+        // Create SectionStats for each new section
+        const sectionStats = new SectionStats({
+          sectionId: savedSection._id,
+          totalResources: 0,
+          totalMcqs: 0,
+          totalAssessments: 0
+        })
+        await sectionStats.save()
         
         return savedSection
       })
+    )
+
+    // Update UnitStats with bulk increment
+    await UnitStats.findOneAndUpdate(
+      { unitId },
+      { $inc: { totalSections: sections.length } }
     )
     
     res.status(201).json({

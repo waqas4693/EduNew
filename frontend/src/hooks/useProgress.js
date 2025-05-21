@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getData, postData } from '../api/api'
-import { useMemo } from 'react'
 
 const fetchProgress = async ({ studentId, courseId, unitId, sectionId }) => {
+  console.log('Fetching progress for:', { studentId, courseId, unitId, sectionId })
   const response = await getData(`student-progress/${studentId}/${courseId}/${unitId}/${sectionId}`)
+  console.log('Progress response:', response.data)
   return response.data
 }
 
@@ -19,37 +20,31 @@ export const useProgress = (studentId, courseId, unitId, sectionId) => {
     queryKey: ['progress', studentId, courseId, unitId, sectionId],
     queryFn: () => fetchProgress({ studentId, courseId, unitId, sectionId }),
     enabled: !!studentId && !!courseId && !!unitId && !!sectionId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0, // Remove stale time to always get fresh data
     cacheTime: 30 * 60 * 1000, // 30 minutes
   })
 
-  // Memoize progress calculations
-  const progress = useMemo(() => {
-    if (!data) return {
-      section: 0,
-      mcq: 0,
-      totalMcqs: 0,
-      completedMcqs: 0,
-      studentProgress: null
-    }
+  // Calculate progress directly from data
+  const progress = {
+    section: data?.data?.resourceProgressPercentage || 0,
+    mcq: data?.data?.mcqProgressPercentage || 0,
+    totalMcqs: data?.data?.totalMcqs || 0,
+    completedMcqs: data?.data?.completedMcqs || 0,
+    studentProgress: data?.data?.progress || null
+  }
 
-    return {
-      section: data.sectionProgress || 0,
-      mcq: data.mcqProgressPercentage || 0,
-      totalMcqs: data.totalMcqs || 0,
-      completedMcqs: data.completedMcqs || 0,
-      studentProgress: data.progress
-    }
-  }, [data])
-
-  // Batch update mutation
+  // Update progress mutation
   const updateProgress = useMutation({
-    mutationFn: async (updates) => {
-      const response = await postData('batch-update-progress', { updates })
+    mutationFn: async ({ resourceId, resourceNumber, mcqData }) => {
+      const response = await postData(
+        `student-progress/${studentId}/${courseId}/${unitId}/${sectionId}/progress`,
+        { resourceId, resourceNumber, mcqData }
+      )
       return response.data
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['progress'])
+      // Invalidate the progress query to trigger a refetch
+      queryClient.invalidateQueries(['progress', studentId, courseId, unitId, sectionId])
     }
   })
 
@@ -73,6 +68,15 @@ export const useProgress = (studentId, courseId, unitId, sectionId) => {
     return mcqProgress?.completed || false
   }
 
+  // Check if a resource has been viewed
+  const isResourceViewed = (resourceId) => {
+    if (!progress.studentProgress?.viewedResources) return false
+    
+    return progress.studentProgress.viewedResources.some(
+      vr => vr.resourceId === resourceId
+    )
+  }
+
   return {
     progress,
     isLoading,
@@ -80,6 +84,7 @@ export const useProgress = (studentId, courseId, unitId, sectionId) => {
     error,
     updateProgress,
     getMcqProgress,
-    isResourceCompleted
+    isResourceCompleted,
+    isResourceViewed
   }
 } 

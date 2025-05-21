@@ -1,8 +1,9 @@
-import Resource from '../models/resource.js'
-import { handleError } from '../utils/errorHandler.js'
 import Section from '../models/section.js'
-import ResourceView from '../models/resourceView.js'
+import Resource from '../models/resource.js'
+import SectionStats from '../models/sectionStats.js'
+
 import { uploadToS3 } from './s3.js'
+import { handleError } from '../utils/errorHandler.js'
 
 export const createResource = async (req, res) => {
   try {
@@ -96,6 +97,19 @@ export const createResource = async (req, res) => {
     await Section.findByIdAndUpdate(
       sectionId,
       { $push: { resources: savedResource._id } }
+    )
+
+    // Update SectionStats based on resource type
+    const updateQuery = { $inc: { totalResources: 1 } }
+    if (resourceType === 'MCQ') {
+      updateQuery.$inc.totalMcqs = 1
+    } else if (resourceType === 'ASSESSMENT') {
+      updateQuery.$inc.totalAssessments = 1
+    }
+
+    await SectionStats.findOneAndUpdate(
+      { sectionId },
+      updateQuery
     )
 
     res.status(201).json({ success: true, data: savedResource })
@@ -283,7 +297,6 @@ export const updateResource = async (req, res) => {
       }
     }
 
-    // Update the resource with new data and/or file references
     const resource = await Resource.findByIdAndUpdate(
       id,
       { 
@@ -301,51 +314,6 @@ export const updateResource = async (req, res) => {
     })
   } catch (error) {
     console.error('Resource Update Error:', error)
-    handleError(res, error)
-  }
-}
-
-export const getResourcesWithViewStatus = async (req, res) => {
-  try {
-    const { sectionId, studentId } = req.params
-
-    // Get all resources for the section, sorted by number
-    const resources = await Resource.find({ 
-      sectionId,
-      status: 1 
-    }).sort('number')
-
-    // Get all resource views for this student with viewedAt field
-    const resourceViews = await ResourceView.find({
-      studentId,
-      resourceId: { $in: resources.map(r => r._id) }
-    }).select('resourceId viewedAt').lean()
-
-    // Create a map for quick lookup of viewedAt dates
-    const viewsMap = resourceViews.reduce((acc, view) => {
-      acc[view.resourceId.toString()] = view.viewedAt
-      return acc
-    }, {})
-
-    // Map resources with their view status and viewedAt date
-    const resourcesWithStatus = resources.map(resource => ({
-      _id: resource._id,
-      name: resource.name,
-      number: resource.number, // Include number in response
-      resourceType: resource.resourceType,
-      isViewed: resourceViews.some(view => 
-        view.resourceId.toString() === resource._id.toString()
-      ),
-      viewedAt: viewsMap[resource._id.toString()] 
-        ? new Date(viewsMap[resource._id.toString()]).toLocaleString() 
-        : null
-    }))
-
-    res.status(200).json({
-      success: true,
-      data: resourcesWithStatus
-    })
-  } catch (error) {
     handleError(res, error)
   }
 }
@@ -526,7 +494,6 @@ export const insertResource = async (req, res) => {
   }
 };
 
-// Add new endpoint for searching resources by name
 export const searchResourcesByName = async (req, res) => {
   try {
     const { sectionId } = req.params
@@ -550,6 +517,36 @@ export const searchResourcesByName = async (req, res) => {
     res.status(200).json({
       success: true,
       data: resources
+    })
+  } catch (error) {
+    handleError(res, error)
+  }
+}
+
+export const deleteResource = async (req, res) => {
+  try {
+    const { id } = req.params
+    const resource = await Resource.findById(id)
+    
+    if (!resource) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resource not found'
+      })
+    }
+
+    // Soft delete by updating status
+    await Resource.findByIdAndUpdate(id, { status: 2 })
+    
+    // Update section to remove resource reference
+    await Section.findByIdAndUpdate(
+      resource.sectionId,
+      { $pull: { resources: resource._id } }
+    )
+
+    res.status(200).json({
+      success: true,
+      message: 'Resource deleted successfully'
     })
   } catch (error) {
     handleError(res, error)

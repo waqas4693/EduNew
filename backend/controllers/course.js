@@ -1,4 +1,5 @@
 import Course from '../models/course.js'
+import CourseStats from '../models/courseStats.js'
 import { handleError } from '../utils/errorHandler.js'
 
 export const createCourse = async (req, res) => {
@@ -11,6 +12,13 @@ export const createCourse = async (req, res) => {
     })
 
     const savedCourse = await course.save()
+    
+    // Create initial CourseStats
+    const courseStats = new CourseStats({
+      courseId: savedCourse._id,
+      totalUnits: 0
+    })
+    await courseStats.save()
     
     res.status(201).json({
       success: true,

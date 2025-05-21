@@ -1,6 +1,7 @@
 import { handleError } from '../utils/errorHandler.js'
 import Resource from '../models/resource.js'
 import Section from '../models/section.js'
+import SectionStats from '../models/sectionStats.js'
 import mongoose from 'mongoose'
 import { uploadToS3 } from './s3.js'
 
@@ -43,6 +44,9 @@ export const bulkUploadResources = async (req, res) => {
 
     // Process each resource
     const savedResources = []
+    let mcqCount = 0
+    let totalResources = 0
+
     for (const resource of numberedResources) {
       let content = resource.content
 
@@ -83,7 +87,28 @@ export const bulkUploadResources = async (req, res) => {
         { $push: { resources: savedResource._id } },
         { session }
       )
+
+      // Count resources and MCQs
+      totalResources++
+      if (resource.resourceType === 'MCQ') {
+        mcqCount++
+      }
     }
+
+    // Update section stats
+    await SectionStats.findOneAndUpdate(
+      { sectionId: resources[0].sectionId },
+      { 
+        $inc: { 
+          totalResources: totalResources,
+          totalMcqs: mcqCount
+        }
+      },
+      { 
+        session,
+        upsert: true // Create if doesn't exist
+      }
+    )
 
     // Commit the transaction
     await session.commitTransaction()
@@ -95,7 +120,9 @@ export const bulkUploadResources = async (req, res) => {
         totalResources: savedResources.length,
         resources: savedResources,
         startingNumber: startingNumber,
-        endingNumber: startingNumber + savedResources.length - 1
+        endingNumber: startingNumber + savedResources.length - 1,
+        mcqCount,
+        totalResources
       }
     })
 

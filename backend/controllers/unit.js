@@ -1,4 +1,6 @@
 import Unit from '../models/unit.js'
+import UnitStats from '../models/unitStats.js'
+import CourseStats from '../models/courseStats.js'
 import { handleError } from '../utils/errorHandler.js'
 import Course from '../models/course.js'
 
@@ -31,6 +33,19 @@ export const createUnit = async (req, res) => {
       await Course.findByIdAndUpdate(
         req.body.courseId,
         { $push: { units: savedUnit._id } }
+      )
+
+      // Create UnitStats for the new unit
+      const unitStats = new UnitStats({
+        unitId: savedUnit._id,
+        totalSections: 0
+      })
+      await unitStats.save()
+
+      // Update CourseStats
+      await CourseStats.findOneAndUpdate(
+        { courseId: req.body.courseId },
+        { $inc: { totalUnits: 1 } }
       )
 
       return res.status(201).json({
@@ -78,9 +93,22 @@ export const createUnit = async (req, res) => {
           unitData.courseId,
           { $push: { units: savedUnit._id } }
         )
+
+        // Create UnitStats for each new unit
+        const unitStats = new UnitStats({
+          unitId: savedUnit._id,
+          totalSections: 0
+        })
+        await unitStats.save()
         
         return savedUnit
       })
+    )
+
+    // Update CourseStats with bulk increment
+    await CourseStats.findOneAndUpdate(
+      { courseId },
+      { $inc: { totalUnits: units.length } }
     )
     
     res.status(201).json({
