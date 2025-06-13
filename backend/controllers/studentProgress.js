@@ -2,6 +2,7 @@ import StudentProgress from '../models/studentProgress.js'
 import Resource from '../models/resource.js'
 import SectionStats from '../models/sectionStats.js'
 import { handleError } from '../utils/errorHandler.js'
+import mongoose from 'mongoose'
 
 // Get student progress for a specific section
 export const getStudentSectionProgress = async (req, res) => {
@@ -89,14 +90,60 @@ export const updateProgress = async (req, res) => {
     const { studentId, courseId, unitId, sectionId } = req.params
     const { resourceId, resourceNumber, mcqData } = req.body
 
+    console.log('Received request data:', {
+      params: { studentId, courseId, unitId, sectionId },
+      body: { resourceId, resourceNumber, mcqData }
+    })
+
+    // Convert resourceId to ObjectId
+    let resourceObjectId
+    try {
+      resourceObjectId = new mongoose.Types.ObjectId(resourceId)
+      console.log('Successfully converted resourceId to ObjectId:', resourceObjectId)
+    } catch (error) {
+      console.error('Error converting resourceId to ObjectId:', error)
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid resource ID format',
+        error: error.message
+      })
+    }
+
     // Get section stats for total counts
     const sectionStats = await SectionStats.findOne({ sectionId })
+    console.log('Section stats found:', sectionStats)
+    
     if (!sectionStats) {
       return res.status(404).json({
         success: false,
         message: 'Section stats not found'
       })
     }
+
+    // Prepare update object
+    const updateObj = {
+      lastAccessedResource: resourceObjectId,
+      lastAccessedAt: new Date()
+    }
+
+    // Only add to viewedResources if this is not an MCQ update
+    if (!mcqData) {
+      updateObj.$addToSet = { viewedResources: { resourceId: resourceObjectId, resourceNumber } }
+    }
+
+    // Add MCQ progress if provided
+    if (mcqData) {
+      updateObj.$push = {
+        mcqProgress: {
+          resourceId: resourceObjectId,
+          resourceNumber,
+          completed: mcqData.completed,
+          attempts: mcqData.attempts
+        }
+      }
+    }
+
+    console.log('Update object prepared:', JSON.stringify(updateObj, null, 2))
 
     // Update progress
     const progress = await StudentProgress.findOneAndUpdate(
@@ -106,47 +153,50 @@ export const updateProgress = async (req, res) => {
         unitId,
         sectionId
       },
-      {
-        $addToSet: { viewedResources: { resourceId, resourceNumber } },
-        ...(mcqData && {
-          $push: {
-            mcqProgress: {
-              resourceId,
-              resourceNumber,
-              completed: mcqData.completed,
-              attempts: mcqData.attempts
-            }
-          }
-        }),
-        // Always update lastAccessedResource and lastAccessedAt
-        lastAccessedResource: resourceId,
-        lastAccessedAt: new Date()
-      },
+      updateObj,
       {
         new: true,
         upsert: true
       }
     )
 
+    console.log('Progress document after update:', progress)
+
     // Calculate updated percentages
     const resourceProgressPercentage = Math.round(
       (progress.viewedResources.length / sectionStats.totalResources) * 100
     )
 
-    const completedMcqs = progress.mcqProgress.filter(mcq => mcq.completed).length
-    const mcqProgressPercentage = Math.round(
-      (completedMcqs / sectionStats.totalMcqs) * 100
-    )
+    // Only calculate MCQ progress if there are MCQs in the section
+    let mcqProgressPercentage = 0
+    let completedMcqs = 0
+    
+    if (sectionStats.totalMcqs > 0) {
+      completedMcqs = progress.mcqProgress.filter(mcq => mcq.completed).length
+      mcqProgressPercentage = Math.round(
+        (completedMcqs / sectionStats.totalMcqs) * 100
+      )
+    }
+
+    console.log('Calculated percentages:', {
+      resourceProgressPercentage,
+      mcqProgressPercentage,
+      completedMcqs,
+      totalMcqs: sectionStats.totalMcqs
+    })
 
     // Update the progress document with the calculated percentages
-    await StudentProgress.findByIdAndUpdate(
+    const finalProgress = await StudentProgress.findByIdAndUpdate(
       progress._id,
       {
         resourceProgressPercentage,
         mcqProgressPercentage,
         lastAccessedAt: new Date()
-      }
+      },
+      { new: true }
     )
+
+    console.log('Final progress document:', finalProgress)
 
     res.status(200).json({
       success: true,
@@ -163,6 +213,7 @@ export const updateProgress = async (req, res) => {
       }
     })
   } catch (error) {
+    console.error('Error in updateProgress:', error)
     handleError(res, error)
   }
 }

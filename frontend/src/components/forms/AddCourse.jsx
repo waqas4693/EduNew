@@ -2,7 +2,7 @@ import axios from 'axios'
 import AddUnit from './AddUnit'
 import AddSection from './AddSection'
 import url from '../config/server-url'
-import AddResource from './AddResource'
+import AddResource from './AddResource/index'
 import AddAssessment from './AddAssessment'
 
 import {

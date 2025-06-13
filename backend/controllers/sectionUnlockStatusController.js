@@ -1,67 +1,73 @@
 import SectionUnlockStatus from '../models/sectionUnlockStatus.js'
 import StudentProgress from '../models/studentProgress.js'
 import Section from '../models/section.js'
-import Resource from '../models/resource.js'
-// Get unlocked sections for a student in a unit
-export const getUnlockedSections = async (req, res, next) => {
+import SectionStats from '../models/sectionStats.js'
+import { handleError } from '../utils/errorHandler.js'
+import Unit from '../models/unit.js'
+
+// Get unlocked sections and units for a student in a course
+export const getUnlockStatus = async (req, res) => {
   try {
-    const { studentId, courseId, unitId } = req.params
+    const { studentId, courseId } = req.params
 
     // Find or create unlock status
     let unlockStatus = await SectionUnlockStatus.findOne({
       studentId,
-      courseId,
-      unitId
+      courseId
     })
 
-    // If no unlock status exists, create one with the first section unlocked
+    // If no unlock status exists, create one with the first unit and section unlocked
     if (!unlockStatus) {
-      // Get the first section of the unit
-      const sections = await Section.find({ unitId }).sort({ number: 1 }).limit(1)
+      // Get the first unit of the course
+      const firstUnit = await Unit.findOne({ courseId }).sort({ number: 1 })
       
-      if (sections.length === 0) {
+      if (!firstUnit) {
         return res.status(200).json({ 
           success: true, 
-          unlockedSections: [] 
+          unlockedUnits: [],
+          unlockedSections: []
+        })
+      }
+
+      // Get the first section of the first unit
+      const firstSection = await Section.findOne({ unitId: firstUnit._id }).sort({ number: 1 })
+      
+      if (!firstSection) {
+        return res.status(200).json({ 
+          success: true, 
+          unlockedUnits: [],
+          unlockedSections: []
         })
       }
 
       unlockStatus = await SectionUnlockStatus.create({
         studentId,
         courseId,
-        unitId,
-        unlockedSections: [sections[0]._id]
+        unlockedUnits: [firstUnit._id],
+        unlockedSections: [firstSection._id]
       })
     }
 
     res.status(200).json({
       success: true,
+      unlockedUnits: unlockStatus.unlockedUnits,
       unlockedSections: unlockStatus.unlockedSections
     })
   } catch (error) {
+    handleError(res, error)
   }
 }
 
-// Check if a section is completed (all MCQs answered correctly)
-export const checkSectionCompletion = async (req, res, next) => {
+// Check section completion and unlock next section/unit if needed
+export const checkAndUnlockNext = async (req, res) => {
+
+  console.log('🔍 Checking request body:', req.body)
+
   try {
-    const { studentId, courseId, unitId, sectionId } = req.params
+    const { studentId, courseId, unitId, sectionId } = req.body
+    console.log('🔍 Checking section completion:', { studentId, courseId, unitId, sectionId })
 
-    // Get all MCQ resources for the section
-    const mcqResources = await Resource.find({
-      sectionId,
-      resourceType: 'MCQ'
-    })
-
-    if (mcqResources.length === 0) {
-      return res.status(200).json({
-        success: true,
-        isCompleted: true,
-        message: 'No MCQs in this section'
-      })
-    }
-
-    // Get student progress for this section
+    // Get student progress for the section
     const studentProgress = await StudentProgress.findOne({
       studentId,
       courseId,
@@ -70,6 +76,7 @@ export const checkSectionCompletion = async (req, res, next) => {
     })
 
     if (!studentProgress) {
+      console.log('❌ No progress found for this section')
       return res.status(200).json({
         success: true,
         isCompleted: false,
@@ -77,70 +84,153 @@ export const checkSectionCompletion = async (req, res, next) => {
       })
     }
 
-    // Check if all MCQs are completed
-    const mcqIds = mcqResources.map(resource => resource._id.toString())
-    const completedMcqs = studentProgress.mcqProgress
-      .filter(progress => progress.completed)
-      .map(progress => progress.resourceId.toString())
-
-    // Check if all MCQ IDs are in the completed MCQs list
-    const allCompleted = mcqIds.every(id => completedMcqs.includes(id))
-
-    if (allCompleted) {
-      // If all MCQs are completed, unlock the next section
-      await unlockNextSection(studentId, courseId, unitId, sectionId)
+    // Get section stats for total resources count
+    const sectionStats = await SectionStats.findOne({ sectionId })
+    if (!sectionStats) {
+      console.log('❌ Section stats not found')
+      return res.status(404).json({
+        success: false,
+        message: 'Section stats not found'
+      })
     }
 
+    // Check if all resources are viewed
+    const isCompleted = studentProgress.viewedResources.length === sectionStats.totalResources
+    console.log('📊 Section completion status:', {
+      viewedResources: studentProgress.viewedResources.length,
+      totalResources: sectionStats.totalResources,
+      isCompleted
+    })
+
+    if (isCompleted) {
+      console.log('✅ Section is completed, checking for next section/unit')
+      
+      // Get current section and its unit
+      const currentSection = await Section.findById(sectionId)
+      if (!currentSection) {
+        console.log('❌ Section not found')
+        return res.status(404).json({
+          success: false,
+          message: 'Section not found'
+        })
+      }
+      console.log('📑 Current section:', { 
+        id: currentSection._id, 
+        number: currentSection.number 
+      })
+
+      // Get the unit
+      const currentUnit = await Unit.findById(unitId)
+      if (!currentUnit) {
+        console.log('❌ Unit not found')
+        return res.status(404).json({
+          success: false,
+          message: 'Unit not found'
+        })
+      }
+      console.log('📚 Current unit:', { 
+        id: currentUnit._id, 
+        number: currentUnit.number 
+      })
+
+      // Get the last section number in the current unit
+      const lastSectionInUnit = await Section.findOne({ unitId })
+        .sort({ number: -1 })
+        .select('number')
+      console.log('🔢 Last section in unit:', { 
+        number: lastSectionInUnit?.number 
+      })
+
+      // Get the last unit number in the course
+      const lastUnitInCourse = await Unit.findOne({ courseId })
+        .sort({ number: -1 })
+        .select('number')
+      console.log('🔢 Last unit in course:', { 
+        number: lastUnitInCourse?.number 
+      })
+
+      // Get or create unlock status
+      let unlockStatus = await SectionUnlockStatus.findOne({
+        studentId,
+        courseId
+      })
+
+      if (!unlockStatus) {
+        console.log('🆕 Creating new unlock status')
+        unlockStatus = await SectionUnlockStatus.create({
+          studentId,
+          courseId,
+          unlockedUnits: [unitId],
+          unlockedSections: [sectionId]
+        })
+      }
+      console.log('🔓 Current unlock status:', {
+        unlockedUnits: unlockStatus.unlockedUnits.length,
+        unlockedSections: unlockStatus.unlockedSections.length
+      })
+
+      // If current section is not the last in the unit
+      if (currentSection.number < lastSectionInUnit.number) {
+        console.log('📑 Current section is not last in unit, unlocking next section')
+        // Get the next section
+        const nextSection = await Section.findOne({
+          unitId,
+          number: currentSection.number + 1
+        })
+
+        if (nextSection) {
+          console.log('🔓 Unlocking next section:', { 
+            id: nextSection._id, 
+            number: nextSection.number 
+          })
+          await unlockStatus.unlockSection(nextSection._id)
+        }
+      } 
+      // If current section is the last in the unit
+      else if (currentSection.number === lastSectionInUnit.number) {
+        console.log('📑 Current section is last in unit, checking unit status')
+        // If current unit is not the last in the course
+        if (currentUnit.number < lastUnitInCourse.number) {
+          console.log('📚 Current unit is not last in course, unlocking next unit')
+          // Get the next unit
+          const nextUnit = await Unit.findOne({
+            courseId,
+            number: currentUnit.number + 1
+          })
+
+          if (nextUnit) {
+            console.log('🔓 Unlocking next unit:', { 
+              id: nextUnit._id, 
+              number: nextUnit.number 
+            })
+            await unlockStatus.unlockUnit(nextUnit._id)
+          }
+        } else {
+          console.log('🏆 Course completed! This is the last unit')
+        }
+      }
+    }
+
+    console.log('✅ Section completion check completed')
     res.status(200).json({
       success: true,
-      isCompleted: allCompleted,
-      totalMcqs: mcqIds.length,
-      completedMcqs: completedMcqs.length
+      isCompleted,
+      totalResources: sectionStats.totalResources,
+      viewedResources: studentProgress.viewedResources.length
     })
   } catch (error) {
-  }
-}
-
-// Helper function to unlock the next section
-const unlockNextSection = async (studentId, courseId, unitId, currentSectionId) => {
-  try {
-    // Get all sections in the unit, sorted by number
-    const sections = await Section.find({ unitId }).sort({ number: 1 })
-    
-    // Find the index of the current section
-    const currentIndex = sections.findIndex(
-      section => section._id.toString() === currentSectionId
-    )
-    
-    // If this is the last section or not found, return
-    if (currentIndex === -1 || currentIndex === sections.length - 1) {
-      return
-    }
-    
-    // Get the next section
-    const nextSection = sections[currentIndex + 1]
-    
-    // Update the unlock status to include the next section
-    await SectionUnlockStatus.findOneAndUpdate(
-      { studentId, courseId, unitId },
-      { 
-        $addToSet: { unlockedSections: nextSection._id },
-        lastUpdated: Date.now()
-      },
-      { upsert: true }
-    )
-  } catch (error) {
-    console.error('Error unlocking next section:', error)
+    console.error('❌ Error in checkAndUnlockNext:', error)
+    handleError(res, error)
   }
 }
 
 // Manually unlock a specific section (for admin use)
-export const unlockSection = async (req, res, next) => {
+export const unlockSection = async (req, res) => {
   try {
-    const { studentId, courseId, unitId, sectionId } = req.params
+    const { studentId, courseId, sectionId } = req.params
     
-    await SectionUnlockStatus.findOneAndUpdate(
-      { studentId, courseId, unitId },
+    const unlockStatus = await SectionUnlockStatus.findOneAndUpdate(
+      { studentId, courseId },
       { 
         $addToSet: { unlockedSections: sectionId },
         lastUpdated: Date.now()
@@ -153,5 +243,29 @@ export const unlockSection = async (req, res, next) => {
       message: 'Section unlocked successfully'
     })
   } catch (error) {
+    handleError(res, error)
+  }
+}
+
+// Manually unlock a specific unit (for admin use)
+export const unlockUnit = async (req, res) => {
+  try {
+    const { studentId, courseId, unitId } = req.params
+    
+    const unlockStatus = await SectionUnlockStatus.findOneAndUpdate(
+      { studentId, courseId },
+      { 
+        $addToSet: { unlockedUnits: unitId },
+        lastUpdated: Date.now()
+      },
+      { upsert: true }
+    )
+    
+    res.status(200).json({
+      success: true,
+      message: 'Unit unlocked successfully'
+    })
+  } catch (error) {
+    handleError(res, error)
   }
 } 

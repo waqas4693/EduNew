@@ -10,7 +10,8 @@ import {
   ChevronLeft,
   PlayArrow,
   AssignmentOutlined,
-  ChevronRight
+  ChevronRight,
+  LockOutlined
 } from '@mui/icons-material'
 import { getData } from '../../api/api'
 import { useState, useEffect } from 'react'
@@ -19,6 +20,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { setCurrentCourse, setCurrentUnit } from '../../redux/slices/courseSlice'
 import { useUnits } from '../../hooks/useUnits'
+import { useUnlockStatus } from '../../hooks/useUnlockStatus'
 
 import Grid from '@mui/material/Grid2'
 import Calendar from '../calendar/Calendar'
@@ -33,6 +35,7 @@ const Units = () => {
   const { courseId } = useParams()
 
   const { data: units, isLoading } = useUnits(courseId)
+  const { data: unlockStatus } = useUnlockStatus(user?.studentId, courseId)
 
   useEffect(() => {
     const fetchCourseDetails = async () => {
@@ -56,6 +59,10 @@ const Units = () => {
   }, [courseId, dispatch])
 
   const handleUnitClick = (unitId, unitName) => {
+    if (!unlockStatus?.unlockedUnits?.includes(unitId)) {
+      return
+    }
+
     dispatch(setCurrentUnit({
       id: unitId,
       name: unitName,
@@ -188,75 +195,84 @@ const Units = () => {
               </Box>
             ))
           ) : (
-            units?.map((unit) => (
-              <ListItem
-                key={unit._id}
-                onClick={() => handleUnitClick(unit._id, unit.name)}
-                sx={{
-                  pl: '80px',
-                  pr: 2,
-                  bgcolor: '#F5F5F5',
-                  borderRadius: '6px',
-                  boxShadow: '0px 1px 3px rgba(0,0,0,0.1)',
-                  mb: 1,
-                  position: 'relative',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <Box
+            units?.map((unit) => {
+              const isUnlocked = unlockStatus?.unlockedUnits?.includes(unit._id)
+              
+              return (
+                <ListItem
+                  key={unit._id}
+                  onClick={() => handleUnitClick(unit._id, unit.name)}
                   sx={{
-                    mr: 2,
-                    color: 'white',
-                    minWidth: '70px',
-                    bgcolor: '#4169e1',
-                    textAlign: 'center',
-                    borderTopLeftRadius: '6px',
-                    borderBottomLeftRadius: '6px',
-                    height: '100%',
+                    pl: '80px',
+                    pr: 2,
+                    bgcolor: '#F5F5F5',
+                    borderRadius: '6px',
+                    boxShadow: '0px 1px 3px rgba(0,0,0,0.1)',
+                    mb: 1,
+                    position: 'relative',
+                    cursor: isUnlocked ? 'pointer' : 'not-allowed',
                     display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
-                    position: 'absolute',
-                    left: 0,
-                    top: 0,
-                    bottom: 0
+                    opacity: isUnlocked ? 1 : 0.7
                   }}
                 >
-                  <Typography sx={{ fontSize: '16px', fontWeight: 500, p: '20px' }}>
-                    {unit.number}
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography
+                  <Box
                     sx={{
-                      fontWeight: 'bold',
-                      fontSize: '14px',
-                      overflow: 'hidden',
-                      WebkitLineClamp: 2,
-                      display: '-webkit-box',
-                      textOverflow: 'ellipsis',
-                      WebkitBoxOrient: 'vertical'
+                      mr: 2,
+                      color: 'white',
+                      minWidth: '70px',
+                      bgcolor: isUnlocked ? '#4169e1' : '#9e9e9e',
+                      textAlign: 'center',
+                      borderTopLeftRadius: '6px',
+                      borderBottomLeftRadius: '6px',
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      position: 'absolute',
+                      left: 0,
+                      top: 0,
+                      bottom: 0
                     }}
                   >
-                    {unit.name}
-                  </Typography>
-                  <Typography
-                    variant='body2'
-                    sx={{
-                      color: 'text.secondary',
-                      mt: 1
-                    }}
-                  >
-                    (Sections: {unit.sections.length})
-                  </Typography>
-                </Box>
-                <ChevronRight sx={{ color: 'primary.main' }} />
-              </ListItem>
-            ))
+                    <Typography sx={{ fontSize: '16px', fontWeight: 500, p: '20px' }}>
+                      {unit.number}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography
+                      sx={{
+                        fontWeight: 'bold',
+                        fontSize: '14px',
+                        overflow: 'hidden',
+                        WebkitLineClamp: 2,
+                        display: '-webkit-box',
+                        textOverflow: 'ellipsis',
+                        WebkitBoxOrient: 'vertical'
+                      }}
+                    >
+                      {unit.name}
+                    </Typography>
+                    <Typography
+                      variant='body2'
+                      sx={{
+                        color: 'text.secondary',
+                        mt: 1
+                      }}
+                    >
+                      (Sections: {unit.sections.length})
+                    </Typography>
+                  </Box>
+                  {isUnlocked ? (
+                    <ChevronRight sx={{ color: 'primary.main' }} />
+                  ) : (
+                    <LockOutlined sx={{ color: 'text.secondary' }} />
+                  )}
+                </ListItem>
+              )
+            })
           )}
         </Paper>
       </Grid>

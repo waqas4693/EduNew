@@ -34,6 +34,9 @@ const ResourceRenderer = ({
     const isCorrect = mcqActions.submitAnswers(resource.content.mcq.correctAnswers)
     if (isCorrect) {
       onMcqCompleted(resource._id, true, mcqState.attempts)
+      if (isLastResource) {
+        onNext()
+      }
     }
   }
 
@@ -93,6 +96,8 @@ const ResourceRenderer = ({
             onSubmit={handleMcqSubmit}
             onNext={onNext}
             isLastResource={isLastResource}
+            submitButtonText={isLastResource ? 'Complete Section' : 'Submit'}
+            signedUrls={signedUrls}
           />
         )
 

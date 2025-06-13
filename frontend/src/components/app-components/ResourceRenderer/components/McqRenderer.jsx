@@ -1,5 +1,6 @@
 import { Box, Typography, Paper, Button, Alert } from '@mui/material'
 import { NavigateNext } from '@mui/icons-material'
+import AudioPlayer from './common/AudioPlayer'
 
 const McqRenderer = ({
   resource,
@@ -7,7 +8,8 @@ const McqRenderer = ({
   actions,
   onSubmit,
   onNext,
-  isLastResource
+  isLastResource,
+  signedUrls
 }) => {
   const { selectedAnswers, hasSubmitted, isCorrect, attempts } = state
   const alphabet = ['A', 'B', 'C', 'D', 'E', 'F']
@@ -45,12 +47,22 @@ const McqRenderer = ({
         </Typography>
 
         {/* MCQ Image */}
-        {resource.content.mcq?.imageFile && (
+        {resource.content.mcq?.imageFile && signedUrls[resource.content.mcq.imageFile] && (
           <Box sx={{ mb: 2, maxWidth: '100%', overflow: 'hidden' }}>
             <img
-              src={resource.content.mcq.imageFile}
+              src={signedUrls[resource.content.mcq.imageFile]}
               alt="Question"
               style={{ maxWidth: '100%', height: 'auto' }}
+            />
+          </Box>
+        )}
+
+        {/* MCQ Audio */}
+        {resource.content.mcq?.audioFile && signedUrls[resource.content.mcq.audioFile] && (
+          <Box sx={{ mb: 2 }}>
+            <AudioPlayer
+              src={signedUrls[resource.content.mcq.audioFile]}
+              repeatCount={1}
             />
           </Box>
         )}
@@ -101,12 +113,23 @@ const McqRenderer = ({
         {resource.content.mcq.question}
       </Typography>
 
-      {resource.content.mcq?.imageFile && (
+      {/* MCQ Image */}
+      {resource.content.mcq?.imageFile && signedUrls[resource.content.mcq.imageFile] && (
         <Box sx={{ mb: 2, maxWidth: '100%', overflow: 'hidden' }}>
           <img
-            src={resource.content.mcq.imageFile}
+            src={signedUrls[resource.content.mcq.imageFile]}
             alt="Question"
             style={{ maxWidth: '100%', height: 'auto' }}
+          />
+        </Box>
+      )}
+
+      {/* MCQ Audio */}
+      {resource.content.mcq?.audioFile && signedUrls[resource.content.mcq.audioFile] && (
+        <Box sx={{ mb: 2 }}>
+          <AudioPlayer
+            src={signedUrls[resource.content.mcq.audioFile]}
+            repeatCount={1}
           />
         </Box>
       )}

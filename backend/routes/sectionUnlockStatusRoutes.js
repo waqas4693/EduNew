@@ -1,19 +1,23 @@
 import express from 'express'
 import { 
-  getUnlockedSections, 
-  checkSectionCompletion,
-  unlockSection
+  getUnlockStatus, 
+  checkAndUnlockNext,
+  unlockSection,
+  unlockUnit
 } from '../controllers/sectionUnlockStatusController.js'
 
 const router = express.Router()
 
-// Get unlocked sections for a student in a unit
-router.get('/:studentId/:courseId/:unitId', getUnlockedSections)
+// Get unlocked sections and units for a student in a course
+router.get('/:studentId/:courseId', getUnlockStatus)
 
-// Check if a section is completed and unlock next section if needed
-router.get('/check-completion/:studentId/:courseId/:unitId/:sectionId', checkSectionCompletion)
+// Check section completion and unlock next section/unit if needed
+router.post('/check-completion', checkAndUnlockNext)
 
 // Manually unlock a section (for admin use)
-router.post('/unlock/:studentId/:courseId/:unitId/:sectionId', unlockSection)
+router.post('/unlock-section/:studentId/:courseId/:sectionId', unlockSection)
+
+// Manually unlock a unit (for admin use)
+router.post('/unlock-unit/:studentId/:courseId/:unitId', unlockUnit)
 
 export default router 

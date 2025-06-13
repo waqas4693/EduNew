@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getData, postData } from '../api/api'
 import { useEffect } from 'react'
+import { getData } from '../api/api'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 const fetchResources = async ({ sectionId, page = 1, limit = 15 }) => {
   const response = await getData(`resources/${sectionId}?page=${page}&limit=${limit}`)
@@ -75,81 +75,3 @@ export const useResources = (sectionId, page = 1) => {
     currentPage: page
   }
 }
-
-// Mutation for updating resource progress
-export const useUpdateResourceProgress = () => {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async ({ resourceId, resourceNumber, isCorrect, attempts, studentId, courseId, unitId, sectionId }) => {
-      if (!studentId || !courseId || !unitId || !sectionId || !resourceId) {
-        throw new Error('Missing required parameters')
-      }
-      
-      const response = await postData(
-        `student-progress/${studentId}/${courseId}/${unitId}/${sectionId}/progress`,
-        {
-          resourceId,
-          resourceNumber,
-          mcqData: {
-            completed: isCorrect,
-            attempts
-          }
-        }
-      )
-      return response.data
-    },
-    onSuccess: (data) => {
-      // Immediately update the progress cache
-      queryClient.setQueryData(
-        ['progress', data.studentId, data.courseId, data.unitId, data.sectionId],
-        {
-          data: {
-            resourceProgressPercentage: data.progress.resourceProgressPercentage,
-            mcqProgressPercentage: data.progress.mcqProgressPercentage,
-            totalMcqs: data.progress.totalMcqs,
-            completedMcqs: data.progress.completedMcqs,
-            progress: data.progress
-          }
-        }
-      )
-      // Then invalidate to ensure we have the latest data
-      queryClient.invalidateQueries(['progress', data.studentId, data.courseId, data.unitId, data.sectionId])
-    }
-  })
-}
-
-// Mutation for recording resource view
-export const useRecordResourceView = () => {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async ({ resourceId, resourceNumber, studentId, courseId, unitId, sectionId }) => {
-      const response = await postData(
-        `student-progress/${studentId}/${courseId}/${unitId}/${sectionId}/progress`,
-        {
-          resourceId,
-          resourceNumber
-        }
-      )
-      return response.data
-    },
-    onSuccess: (data) => {
-      // Immediately update the progress cache
-      queryClient.setQueryData(
-        ['progress', data.studentId, data.courseId, data.unitId, data.sectionId],
-        {
-          data: {
-            resourceProgressPercentage: data.progress.resourceProgressPercentage,
-            mcqProgressPercentage: data.progress.mcqProgressPercentage,
-            totalMcqs: data.progress.totalMcqs,
-            completedMcqs: data.progress.completedMcqs,
-            progress: data.progress
-          }
-        }
-      )
-      // Then invalidate to ensure we have the latest data
-      queryClient.invalidateQueries(['progress', data.studentId, data.courseId, data.unitId, data.sectionId])
-    }
-  })
-} 

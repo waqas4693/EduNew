@@ -6,17 +6,18 @@ import {
   Paper,
   Button,
   CircularProgress,
-  LinearProgress
+  LinearProgress,
+  Link
 } from '@mui/material'
 
-import { getData } from '../../api/api'
 import { useState, useEffect } from 'react'
+import { getData, postData } from '../../api/api'
 import { useAuth } from '../../context/AuthContext'
-import { useProgress } from '../../hooks/useProgress'
+import { useProgress, useUpdateProgress } from '../../hooks/useProgress'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useSignedUrls } from '../../hooks/useSignedUrls'
-import { ChevronLeft, ChevronRight } from '@mui/icons-material'
-import { useResources, useUpdateResourceProgress, useRecordResourceView } from '../../hooks/useResources'
+import { ChevronLeft, ChevronRight, OpenInNew } from '@mui/icons-material'
+import { useResources } from '../../hooks/useResources'
 
 const LearnerFrame = () => {
   const navigate = useNavigate()
@@ -26,6 +27,7 @@ const LearnerFrame = () => {
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
+  const [isCompleting, setIsCompleting] = useState(false)
 
   // Use our new hooks
   const {
@@ -45,14 +47,12 @@ const LearnerFrame = () => {
   const {
     progress,
     isLoading: progressLoading,
-    updateProgress,
     getMcqProgress,
     isResourceCompleted,
     refetch: refetchProgress
   } = useProgress(user?.studentId, courseId, unitId, sectionId)
 
-  const updateResourceProgress = useUpdateResourceProgress()
-  const recordResourceView = useRecordResourceView()
+  const updateProgressMutation = useUpdateProgress()
 
   // Fetch student progress and navigate to last accessed resource
   useEffect(() => {
@@ -97,15 +97,17 @@ const LearnerFrame = () => {
   // Handle MCQ completion
   const handleMcqCompleted = async (resourceId, isCorrect, attempts) => {
     if (!user?.studentId || !isCorrect) return
-    updateResourceProgress.mutate({
+    updateProgressMutation.mutate({
       resourceId,
       resourceNumber: currentResource.number,
-      isCorrect,
-      attempts,
       studentId: user.studentId,
       courseId,
       unitId,
-      sectionId
+      sectionId,
+      mcqData: {
+        completed: isCorrect,
+        attempts
+      }
     }, {
       onSuccess: () => {
         refetchProgress()
@@ -125,9 +127,9 @@ const LearnerFrame = () => {
         prefetchNextPage()
       }
       
-      // Record view and update progress
+      // Record view and update progress only when actually navigating
       if (resources[nextIndex]) {
-        recordResourceView.mutate({
+        updateProgressMutation.mutate({
           resourceId: resources[nextIndex]._id,
           resourceNumber: resources[nextIndex].number,
           studentId: user?.studentId,
@@ -140,6 +142,49 @@ const LearnerFrame = () => {
           }
         })
       }
+    } else {
+      // We're at the last resource of the section
+      setIsCompleting(true)
+      try {
+        // First record the final view
+        if (currentResource) {
+          await updateProgressMutation.mutateAsync({
+            resourceId: currentResource._id,
+            resourceNumber: currentResource.number,
+            studentId: user?.studentId,
+            courseId,
+            unitId,
+            sectionId
+          })
+        }
+
+        // Then check section completion
+        const response = await postData('section-unlock/check-completion', {
+          studentId: user?.studentId,
+          courseId,
+          unitId,
+          sectionId
+        })
+
+        if (response.status === 200 && response.data.isCompleted) {
+          // Wait for progress to be updated
+          await refetchProgress()
+          
+          // Navigate back to sections page with a state parameter to trigger refresh
+          navigate(`/units/${courseId}/section/${unitId}`, {
+            state: { 
+              refresh: true,
+              completedSectionId: sectionId 
+            }
+          })
+        }
+      } catch (error) {
+        console.error('Error completing section:', error)
+        // Show error to user
+        // You might want to add a proper error notification here
+      } finally {
+        setIsCompleting(false)
+      }
     }
   }
 
@@ -148,9 +193,9 @@ const LearnerFrame = () => {
       const prevIndex = currentIndex - 1
       setCurrentIndex(prevIndex)
       
-      // Record view
+      // Record view only when actually navigating
       if (resources[prevIndex]) {
-        recordResourceView.mutate({
+        updateProgressMutation.mutate({
           resourceId: resources[prevIndex]._id,
           resourceNumber: resources[prevIndex].number,
           studentId: user?.studentId,
@@ -177,12 +222,20 @@ const LearnerFrame = () => {
   // Check if next button should be disabled
   const isNextButtonDisabled = () => {
     if (currentIndex === resources.length - 1) {
-      return true
+      return false // Don't disable on last resource
     }
     if (currentResource?.resourceType === 'MCQ') {
       return !isCurrentMcqCompleted()
     }
     return false
+  }
+
+  // Get button text based on resource type and position
+  const getNextButtonText = () => {
+    if (currentIndex === resources.length - 1) {
+      return 'Complete Section'
+    }
+    return <ChevronRight />
   }
 
   // Refresh expired URLs periodically
@@ -193,6 +246,14 @@ const LearnerFrame = () => {
 
     return () => clearInterval(interval)
   }, [refreshExpiredUrls])
+
+  // Add console log to check current resource data
+  useEffect(() => {
+    if (currentResource) {
+      console.log('Current Resource:', currentResource)
+      console.log('External Links:', currentResource.content?.externalLinks)
+    }
+  }, [currentResource])
 
   // Show loading state if any data is loading or if we don't have resources yet
   if (resourcesLoading || urlsLoading || progressLoading || !resources.length) {
@@ -307,49 +368,83 @@ const LearnerFrame = () => {
                 </Typography>
               </Box>
 
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                  variant='contained'
-                  color='inherit'
-                  size='small'
-                  disabled={currentIndex === 0}
-                  onClick={handlePrevious}
-                  sx={{
-                    minWidth: '36px',
-                    bgcolor: 'rgba(255, 255, 255, 0.2)',
-                    color: 'white',
-                    '&:hover': {
-                      bgcolor: 'rgba(255, 255, 255, 0.3)'
-                    },
-                    '&.Mui-disabled': {
-                      bgcolor: 'rgba(255, 255, 255, 0.1)',
-                      color: 'rgba(255, 255, 255, 0.5)'
-                    }
-                  }}
-                >
-                  <ChevronLeft />
-                </Button>
-                <Button
-                  variant='contained'
-                  color='inherit'
-                  size='small'
-                  disabled={isNextButtonDisabled()}
-                  onClick={handleNext}
-                  sx={{
-                    minWidth: '36px',
-                    bgcolor: 'rgba(255, 255, 255, 0.2)',
-                    color: 'white',
-                    '&:hover': {
-                      bgcolor: 'rgba(255, 255, 255, 0.3)'
-                    },
-                    '&.Mui-disabled': {
-                      bgcolor: 'rgba(255, 255, 255, 0.1)',
-                      color: 'rgba(255, 255, 255, 0.5)'
-                    }
-                  }}
-                >
-                  <ChevronRight />
-                </Button>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                {/* External Links */}
+                {currentResource.content?.externalLinks?.filter(link => link.name && link.url).map((link, index) => {
+                  console.log('Rendering link:', link) // Debug log for each link
+                  return (
+                    <Link
+                      key={index}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        color: 'white',
+                        textDecoration: 'none',
+                        '&:hover': {
+                          textDecoration: 'underline'
+                        }
+                      }}
+                    >
+                      <OpenInNew sx={{ fontSize: 16, mr: 0.5 }} />
+                      <Typography variant="body2">
+                        {link.name}
+                      </Typography>
+                    </Link>
+                  )
+                })}
+
+                {/* Navigation Buttons */}
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant='contained'
+                    color='inherit'
+                    size='small'
+                    disabled={currentIndex === 0 || isCompleting}
+                    onClick={handlePrevious}
+                    sx={{
+                      minWidth: '36px',
+                      bgcolor: 'rgba(255, 255, 255, 0.2)',
+                      color: 'white',
+                      '&:hover': {
+                        bgcolor: 'rgba(255, 255, 255, 0.3)'
+                      },
+                      '&.Mui-disabled': {
+                        bgcolor: 'rgba(255, 255, 255, 0.1)',
+                        color: 'rgba(255, 255, 255, 0.5)'
+                      }
+                    }}
+                  >
+                    <ChevronLeft />
+                  </Button>
+                  <Button
+                    variant='contained'
+                    color='inherit'
+                    size='small'
+                    disabled={isNextButtonDisabled() || isCompleting}
+                    onClick={handleNext}
+                    sx={{
+                      minWidth: currentIndex === resources.length - 1 ? '120px' : '36px',
+                      bgcolor: 'rgba(255, 255, 255, 0.2)',
+                      color: 'white',
+                      '&:hover': {
+                        bgcolor: 'rgba(255, 255, 255, 0.3)'
+                      },
+                      '&.Mui-disabled': {
+                        bgcolor: 'rgba(255, 255, 255, 0.1)',
+                        color: 'rgba(255, 255, 255, 0.5)'
+                      }
+                    }}
+                  >
+                    {isCompleting ? (
+                      <CircularProgress size={20} color="inherit" />
+                    ) : (
+                      getNextButtonText()
+                    )}
+                  </Button>
+                </Box>
               </Box>
             </Box>
           </Box>

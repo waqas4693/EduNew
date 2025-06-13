@@ -17,7 +17,7 @@ import {
 } from '@mui/material'
 import { getData } from '../../api/api'
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { setCurrentUnit } from '../../redux/slices/courseSlice'
 import { useAuth } from '../../context/AuthContext'
@@ -36,6 +36,7 @@ import CheckCircleOutline from '@mui/icons-material/CheckCircleOutline'
 
 const Section = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
   const { courseId, unitId } = useParams()
   const dispatch = useDispatch()
@@ -43,8 +44,8 @@ const Section = () => {
   const [showRestrictionDialog, setShowRestrictionDialog] = useState(false)
 
   const { data: unitDetails } = useUnitDetails(unitId)
-  const { data: sections, isLoading: sectionsLoading } = useSections(unitId)
-  const { data: unlockedSections } = useUnlockedSections(user?.studentId, courseId, unitId)
+  const { data: sections, isLoading: sectionsLoading, refetch } = useSections(unitId)
+  const { data: unlockedSections, refetch: refetchUnlockedSections } = useUnlockedSections(user?.studentId, courseId, unitId)
 
   // Update unit details in Redux when they change
   useEffect(() => {
@@ -55,6 +56,36 @@ const Section = () => {
       }))
     }
   }, [unitDetails, unitId, dispatch])
+
+  // Add effect to handle refresh
+  useEffect(() => {
+    const handleRefresh = async () => {
+      if (location.state?.refresh) {
+        try {
+          // Refetch sections data
+          await refetch()
+          // Also refetch unlocked sections
+          await refetchUnlockedSections()
+          // Clear the refresh state
+          window.history.replaceState({}, document.title)
+        } catch (error) {
+          console.error('Error refreshing section data:', error)
+        }
+      }
+    }
+
+    handleRefresh()
+  }, [location.state, refetch, refetchUnlockedSections])
+
+  // Add effect to scroll to completed section
+  useEffect(() => {
+    if (location.state?.completedSectionId) {
+      const element = document.getElementById(`section-${location.state.completedSectionId}`)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }
+  }, [location.state?.completedSectionId])
 
   const courseName = currentCourse?.name
   const courseImage = currentCourse?.image
@@ -194,6 +225,7 @@ const Section = () => {
               return (
                 <ListItem
                   key={section._id}
+                  id={`section-${section._id}`}
                   sx={{
                     pl: '80px',
                     pr: 2,
@@ -207,7 +239,8 @@ const Section = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'flex-start',
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.3s ease',
+                    border: location.state?.completedSectionId === section._id ? '2px solid #4caf50' : 'none'
                   }}
                 >
                   <Box

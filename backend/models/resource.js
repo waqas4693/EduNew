@@ -71,7 +71,6 @@ const resourceSchema = new mongoose.Schema({
   }
 }, { timestamps: false })
 
-// Compound unique index for number within a section
 resourceSchema.index({ sectionId: 1, number: 1 }, { unique: true })
 
 const Resource = mongoose.model('Resource', resourceSchema)

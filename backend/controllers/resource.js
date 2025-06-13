@@ -232,6 +232,16 @@ export const updateResource = async (req, res) => {
       })
     }
 
+    // Preserve existing file references
+    const existingContent = existingResource.content.toObject()
+    parsedContent.fileName = existingContent.fileName
+    parsedContent.backgroundImage = existingContent.backgroundImage
+    parsedContent.audioFile = existingContent.audioFile
+    if (parsedContent.mcq) {
+      parsedContent.mcq.imageFile = existingContent.mcq?.imageFile
+      parsedContent.mcq.audioFile = existingContent.mcq?.audioFile
+    }
+
     // Handle file uploads to S3 if new files are provided
     if (req.files) {
       // Handle main file update
@@ -283,6 +293,7 @@ export const updateResource = async (req, res) => {
             'MCQ_IMAGES',
             `${Date.now()}-${req.files.mcqImage[0].originalname}`
           )
+          parsedContent.mcq = parsedContent.mcq || {}
           parsedContent.mcq.imageFile = mcqImageName
         }
         
@@ -292,8 +303,37 @@ export const updateResource = async (req, res) => {
             'MCQ_AUDIO',
             `${Date.now()}-${req.files.mcqAudio[0].originalname}`
           )
+          parsedContent.mcq = parsedContent.mcq || {}
           parsedContent.mcq.audioFile = mcqAudioName
         }
+      }
+    }
+
+    // Validate required files based on resource type
+    if (resourceType === 'MCQ') {
+      if (!parsedContent.mcq) {
+        return res.status(400).json({
+          success: false,
+          message: 'MCQ content is required'
+        })
+      }
+      if (!parsedContent.mcq.question) {
+        return res.status(400).json({
+          success: false,
+          message: 'MCQ question is required'
+        })
+      }
+      if (!parsedContent.mcq.options || parsedContent.mcq.options.length < 2) {
+        return res.status(400).json({
+          success: false,
+          message: 'MCQ must have at least 2 options'
+        })
+      }
+      if (!parsedContent.mcq.correctAnswers || parsedContent.mcq.correctAnswers.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'MCQ must have at least one correct answer'
+        })
       }
     }
 

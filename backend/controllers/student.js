@@ -1,9 +1,9 @@
 import User from '../models/user.js'
-import Student from '../models/student.js'
-import Course from '../models/course.js'
 import Unit from '../models/unit.js'
+import Course from '../models/course.js'
+import Student from '../models/student.js'
 import Section from '../models/section.js'
-import Resource from '../models/resource.js'
+import SectionUnlockStatus from '../models/sectionUnlockStatus.js'
 
 export const newStudent = async (req, res) => {
   try {
@@ -37,6 +37,20 @@ export const newStudent = async (req, res) => {
       }]
     })
     await student.save()
+
+    // Create initial unlock status for the first unit and section
+    const firstUnit = await Unit.findOne({ courseId }).sort({ number: 1 })
+    if (firstUnit) {
+      const firstSection = await Section.findOne({ unitId: firstUnit._id }).sort({ number: 1 })
+      if (firstSection) {
+        await SectionUnlockStatus.create({
+          studentId: student._id,
+          courseId,
+          unlockedUnits: [firstUnit._id],
+          unlockedSections: [firstSection._id]
+        })
+      }
+    }
 
     res.status(201).json({
       message: 'Student created successfully',
@@ -267,6 +281,20 @@ export const assignCourse = async (req, res) => {
     })
 
     await student.save()
+
+    // Create initial unlock status for the first unit and section
+    const firstUnit = await Unit.findOne({ courseId }).sort({ number: 1 })
+    if (firstUnit) {
+      const firstSection = await Section.findOne({ unitId: firstUnit._id }).sort({ number: 1 })
+      if (firstSection) {
+        await SectionUnlockStatus.create({
+          studentId: student._id,
+          courseId,
+          unlockedUnits: [firstUnit._id],
+          unlockedSections: [firstSection._id]
+        })
+      }
+    }
 
     res.status(200).json({
       message: 'Course assigned successfully',
