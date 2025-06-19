@@ -36,10 +36,9 @@ const FileUploader = ({
     }
   }
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      onChange(file)
+  const handleFileChange = (event) => {
+    if (event?.target?.files?.[0]) {
+      onChange(event.target.files[0])
     }
   }
 

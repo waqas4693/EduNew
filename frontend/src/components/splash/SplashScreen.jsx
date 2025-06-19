@@ -1,12 +1,15 @@
 import Grid from '@mui/material/Grid2'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Box, Button, Menu, MenuItem, Container } from '@mui/material'
+import { Box, Button, Menu, MenuItem, Container, useTheme, useMediaQuery } from '@mui/material'
 import { School, AdminPanelSettings, ArrowDropDown } from '@mui/icons-material'
 
 const HeaderSection = () => {
   const navigate = useNavigate()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'))
   const [anchorEl, setAnchorEl] = useState(null)
   const open = Boolean(anchorEl)
 
@@ -28,15 +31,16 @@ const HeaderSection = () => {
       {/* Login Button */}
       <Box sx={{ 
         position: 'absolute', 
-        // top: 16, 
-        right: 10, 
+        right: 0.2,
         zIndex: 1
       }}>
         <Button
           onClick={handleClick}
+          size={isMobile ? 'small' : 'medium'}
           sx={{
             color: '#BC0000',
             fontWeight: 'bold',
+            fontSize: { xs: '12px', sm: '14px' },
           }}
           endIcon={<ArrowDropDown />}
         >
@@ -50,6 +54,8 @@ const HeaderSection = () => {
             sx: {
               '& .MuiMenuItem-root': {
                 color: '#1F7EC2',
+                fontSize: { xs: '14px', sm: '16px' },
+                minHeight: { xs: '44px', sm: '48px' },
                 '&:hover': {
                   backgroundColor: 'rgba(31, 126, 194, 0.1)',
                 },
@@ -70,17 +76,18 @@ const HeaderSection = () => {
       <Box
         sx={{
           width: '100%',
-          height: { xs: '80px', md: '100px' },
+          height: { xs: '70px', sm: '80px', md: '100px' },
           display: 'flex',
           alignItems: 'center',
           backgroundColor: '#ffffff',
+          px: { xs: 1, sm: 2, md: 3 },
         }}
       >
         <Box
           sx={{
-            mr: 3,
-            width: { xs: '5%', md: '10%' },
-            height: '35px',
+            mr: { xs: 1, sm: 2, md: 3 },
+            width: { xs: '8%', sm: '6%', md: '10%' },
+            height: { xs: '25px', sm: '30px', md: '35px' },
             background: 'linear-gradient(90deg, #ff2b0c 0%, #ff6b0c 100%)'
           }}
         />
@@ -89,17 +96,17 @@ const HeaderSection = () => {
           alt='Logo'
           src='/logo.png'
           sx={{
-            px: 1,
-            width: { xs: '20%', md: '15%' },
+            px: { xs: 0.5, sm: 1 },
+            width: { xs: '25%', sm: '22%', md: '15%' },
             height: '100%',
             objectFit: 'contain'
           }}
         />
         <Box
           sx={{
-            ml: 3,
+            ml: { xs: 1, sm: 2, md: 3 },
             flexGrow: 1,
-            height: '35px',
+            height: { xs: '25px', sm: '30px', md: '35px' },
             background: 'linear-gradient(90deg, #ff2b0c 0%, #ff6b0c 100%)'
           }}
         />
@@ -108,35 +115,107 @@ const HeaderSection = () => {
   )
 }
 
-const FeatureCard = ({ icon, title, description }) => (
-  <Box sx={{ display: 'flex', alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
-    <Box
-      component='img'
-      src={icon}
-      alt={title}
-      sx={{ width: 90, height: 90, mr: 1, flexShrink: 0 }}
-    />
-    <Box sx={{ fontSize: 10, color: 'text.secondary', lineHeight: 1.3, pt: '15px' }}>
-      {description}
+const FeatureCard = ({ icon, title, description }) => {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'))
+
+  return (
+    <Box sx={{ 
+      display: 'flex', 
+      alignItems: 'flex-start', 
+      flex: 1, 
+      minWidth: 0,
+      flexDirection: { xs: 'column', sm: 'row' },
+      textAlign: { xs: 'center', sm: 'left' },
+      mb: { xs: 3, sm: 0 }
+    }}>
+      <Box
+        component='img'
+        src={icon}
+        alt={title}
+        sx={{ 
+          width: { xs: 70, sm: 60, md: 90 }, 
+          height: { xs: 70, sm: 60, md: 90 }, 
+          mr: { xs: 0, sm: 1, md: 1 }, 
+          mb: { xs: 1, sm: 0 },
+          flexShrink: 0,
+          alignSelf: { xs: 'center', sm: 'flex-start' }
+        }}
+      />
+      <Box sx={{ 
+        fontSize: { xs: 10, sm: 9, md: 10 },
+        color: 'text.secondary', 
+        lineHeight: { xs: 1.3, sm: 1.2, md: 1.3 },
+        pt: { xs: 0, sm: '15px' },
+        px: { xs: 1, sm: 0 }
+      }}>
+        {description}
+      </Box>
     </Box>
-  </Box>
-)
+  )
+}
+
+// Mobile/Tablet Slider Component
+const FeatureSlider = ({ features }) => {
+  const [currentSlide, setCurrentSlide] = useState(0)
+
+  // Auto-advance slides every 3 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % features.length)
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [features.length])
+
+  return (
+    <Box sx={{ position: 'relative', width: '100%' }}>
+      {/* Slider Container */}
+      <Box
+        sx={{
+          display: 'flex',
+          overflow: 'hidden',
+          position: 'relative',
+          minHeight: { xs: '200px', sm: '180px' },
+        }}
+      >
+        {features.map((feature, index) => (
+          <Box
+            key={index}
+            sx={{
+              display: 'flex',
+              minWidth: '100%',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'transform 0.3s ease-in-out',
+              transform: `translateX(-${currentSlide * 100}%)`
+            }}
+          >
+            <FeatureCard {...feature} />
+          </Box>
+        ))}
+      </Box>
+    </Box>
+  )
+}
 
 const FooterStrip = () => (
   <Box
     sx={{
       width: '100%',
-      height: { xs: '80px', md: '100px' },
+      height: { xs: '70px', sm: '80px', md: '100px' },
       display: 'flex',
       alignItems: 'center',
       backgroundColor: '#ffffff',
+      px: { xs: 1, sm: 2, md: 3 },
     }}
   >
     <Box
       sx={{
-        mr: 3,
-        width: { xs: '50%', md: '75%' },
-        height: '35px',
+        mr: { xs: 1, sm: 2, md: 3 },
+        width: { xs: '45%', sm: '60%', md: '75%' },
+        height: { xs: '25px', sm: '30px', md: '35px' },
         background: 'linear-gradient(90deg, #0070c0 0%, #00a0c0 100%)'
       }}
     />
@@ -145,17 +224,17 @@ const FooterStrip = () => (
       alt='Logo'
       src='/ehouse-logo.svg'
       sx={{
-        px: 1,
-        width: { xs: '15%', md: '10%' },
+        px: { xs: 0.5, sm: 1 },
+        width: { xs: '20%', sm: '15%', md: '10%' },
         height: '90%',
         objectFit: 'contain'
       }}
     />
     <Box
       sx={{
-        ml: 3,
+        ml: { xs: 1, sm: 2, md: 3 },
         flexGrow: 1,
-        height: '35px',
+        height: { xs: '25px', sm: '30px', md: '35px' },
         background: 'linear-gradient(90deg, #0070c0 0%, #00a0c0 100%)'
       }}
     />
@@ -163,6 +242,11 @@ const FooterStrip = () => (
 )
 
 const SplashScreen = () => {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'))
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'))
+
   const features = [
     {
       icon: '/splash_ai_tutor.png',
@@ -206,8 +290,8 @@ const SplashScreen = () => {
   return (
     <Box
       sx={{
-        height: '100vh',
         display: 'flex',
+        height: '100vh',
         flexDirection: 'column',
         backgroundColor: '#ffffff',
       }}
@@ -221,17 +305,18 @@ const SplashScreen = () => {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
-          py: 2
+          py: { xs: 1, sm: 2, md: 3 },
+          px: { xs: 2, sm: 3, md: 4 }
         }}
       >
-        <Grid container spacing={2}>
+        <Grid container spacing={{ xs: 1, sm: 2, md: 3 }}>
           {/* Main Logo Section */}
           <Grid size={12}>
             <Box
               sx={{
-                mb: '40px',
+                mb: { xs: 2, sm: 3, md: '40px' },
                 width: '100%',
-                height: { xs: '100px', md: '200px' },
+                height: { xs: '150px', sm: '200px', md: '180px' }, // Enlarged for mobile/tablet
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
@@ -254,13 +339,21 @@ const SplashScreen = () => {
 
           {/* Features Section */}
           <Grid size={12}>
-            <Grid container spacing={2}>
-              {features.map((feature, index) => (
-                <Grid size={{ xs: 12, md: 4 }} key={index}>
-                  <FeatureCard {...feature} />
-                </Grid>
-              ))}
-            </Grid>
+            {/* Mobile/Tablet Slider */}
+            {(isMobile || isTablet) && (
+              <FeatureSlider features={features} />
+            )}
+            
+            {/* Desktop Grid Layout - Unchanged */}
+            {isDesktop && (
+              <Grid container spacing={3}>
+                {features.map((feature, index) => (
+                  <Grid size={4} key={index}>
+                    <FeatureCard {...feature} />
+                  </Grid>
+                ))}
+              </Grid>
+            )}
           </Grid>
         </Grid>
       </Container>

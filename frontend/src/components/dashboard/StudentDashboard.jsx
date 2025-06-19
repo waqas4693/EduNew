@@ -9,7 +9,9 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  Tooltip
+  Tooltip,
+  useTheme,
+  useMediaQuery
 } from '@mui/material'
 import { getData } from '../../api/api'
 import { useState, useEffect, memo } from 'react'
@@ -282,6 +284,9 @@ const CourseRow = memo(({ course, studentId }) => {
   const [openDialog, setOpenDialog] = useState(false)
   const [openAIDialog, setOpenAIDialog] = useState(false)
 
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+
   const { data: progressData, isLoading: progressLoading } = useCourseProgress(studentId, course.id)
   const { data: dueDates } = useAssessmentDueDates(course.id, course.enrollmentDate)
 
@@ -353,6 +358,222 @@ const CourseRow = memo(({ course, studentId }) => {
     setOpenAIDialog(false)
   }
 
+  if (isMobile) {
+    return (
+      <Card
+        sx={{
+          mb: 2,
+          width: '100%',
+          overflow: 'hidden',
+          borderRadius: '16px',
+          bgcolor: 'primary.main',
+          color: 'white',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          p: 2,
+        }}
+      >
+        {/* Course Image */}
+        <Box
+          onClick={handleThumbnailClick}
+          sx={{
+            width: '100%',
+            aspectRatio: '1/1',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            bgcolor: 'white',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            mb: 1,
+            cursor: 'pointer',
+            '&:hover': { opacity: 0.9 }
+          }}
+        >
+          {thumbnailLoading ? (
+            <CircularProgress size={32} />
+          ) : (course.thumbnail || course.image) && !imageError && thumbnailUrl ? (
+            <Box
+              component='img'
+              src={thumbnailUrl}
+              alt={course.name}
+              onError={() => setImageError(true)}
+              sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          ) : (
+            <Box
+              sx={{
+                width: '100%',
+                height: '100%',
+                bgcolor: '#e75480',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Box
+                component='img'
+                src='/course-card-placeholder-icon.svg'
+                alt='Course placeholder'
+                sx={{ width: '48px', height: '48px' }}
+              />
+            </Box>
+          )}
+        </Box>
+
+        {/* Course Name */}
+        <Typography
+          sx={{
+            mt: 1,
+            mb: 1,
+            fontSize: '16px',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            color: 'white',
+            width: '100%'
+          }}
+        >
+          {course.name}
+        </Typography>
+
+        {/* Progress View Buttons */}
+        <Box
+          sx={{
+            width: '100%',
+            bgcolor: 'white',
+            borderRadius: '12px',
+            p: 2,
+            mb: 1.5,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%', justifyContent: 'center' }}>
+            <Button
+              onClick={handleQuickView}
+              sx={{
+                fontSize: '13px',
+                fontWeight: 'bold',
+                textTransform: 'capitalize',
+                color: 'primary.main'
+              }}
+            >
+              Quick View
+            </Button>
+            <SpeedIcon sx={{ fontSize: 36, color: 'primary.main' }} />
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%', justifyContent: 'center' }}>
+            <Button
+              onClick={handleDetailView}
+              sx={{
+                fontSize: '13px',
+                fontWeight: 'bold',
+                textTransform: 'capitalize',
+                color: 'primary.main'
+              }}
+            >
+              Detailed View
+            </Button>
+            <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+              <CircularProgress
+                variant="determinate"
+                value={100}
+                size={36}
+                thickness={5}
+                sx={{ color: 'grey.200' }}
+              />
+              <CircularProgress
+                variant="determinate"
+                value={progressLoading ? 0 : progress}
+                size={36}
+                thickness={5}
+                sx={{
+                  color: 'primary.main',
+                  position: 'absolute',
+                  left: 0,
+                }}
+              />
+              <Box
+                sx={{
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  display: 'flex',
+                  position: 'absolute',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Typography variant="caption" sx={{ fontSize: '10px', fontWeight: 'bold', color: 'primary.main' }}>
+                  {progressLoading ? '...' : `${progress}%`}
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+
+        {/* Course Progress Label */}
+        <Typography
+          sx={{
+            mt: 1,
+            mb: 1,
+            fontSize: '15px',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            color: 'white',
+            width: '100%'
+          }}
+        >
+          Course Progress
+        </Typography>
+
+        {/* AI Tutor Image */}
+        <Box
+          onClick={handleAIDialogOpen}
+          sx={{
+            width: '100%',
+            aspectRatio: '1/1',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            bgcolor: 'white',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            mb: 1,
+            cursor: 'pointer',
+            '&:hover': { opacity: 0.9 }
+          }}
+        >
+          <Box
+            component='img'
+            src='/ai-education.png'
+            alt="AI Education"
+            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        </Box>
+
+        {/* Test Your Understanding Label */}
+        <Typography
+          sx={{
+            mt: 1,
+            fontSize: '15px',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            color: 'white',
+            width: '100%'
+          }}
+        >
+          Test Your Understanding
+        </Typography>
+      </Card>
+    )
+  }
+
+  // Tablet & desktop layout (restored)
   return (
     <Card
       sx={{
@@ -566,230 +787,6 @@ const CourseRow = memo(({ course, studentId }) => {
           Test Your Understanding
         </Typography>
       </Box>
-
-      <Dialog
-        open={openDialog}
-        onClose={handleCloseDialog}
-        maxWidth='md'
-        PaperProps={{
-          sx: {
-            borderRadius: '12px',
-            p: 3,
-            maxWidth: '900px'
-          }
-        }}
-      >
-        <DialogTitle sx={{ pb: 2 }}>
-          <Typography
-            variant='h6'
-            sx={{ fontSize: '24px', fontWeight: 'bold', textAlign: 'center' }}
-          >
-            {course.name}
-          </Typography>
-        </DialogTitle>
-        <DialogContent
-          sx={{
-            '&::-webkit-scrollbar': {
-              width: '8px',
-              height: '8px'
-            },
-            '&::-webkit-scrollbar-track': {
-              background: '#f1f1f1',
-              borderRadius: '4px'
-            },
-            '&::-webkit-scrollbar-thumb': {
-              background: '#3366CC',
-              borderRadius: '4px',
-              '&:hover': {
-                background: '#254e99'
-              }
-            }
-          }}
-        >
-          <Grid container spacing={3}>
-            {progressData?.length > 0 ? (
-              progressData.map(unit => (
-                <Grid key={unit._id} item size={3}>
-                  <Box
-                    sx={{
-                      p: 3,
-                      border: '1px solid rgba(0, 0, 0, 0.12)',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: 1
-                    }}
-                  >
-                    <Tooltip title={unit.name} placement='top'>
-                      <Typography
-                        variant='h6'
-                        sx={{
-                          fontSize: '16px',
-                          fontWeight: 500,
-                          textAlign: 'center',
-                          width: '100%',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}
-                      >
-                        {unit.name}
-                      </Typography>
-                    </Tooltip>
-                    <Typography
-                      variant='body2'
-                      color='text.secondary'
-                      sx={{
-                        textAlign: 'center',
-                        mb: 1
-                      }}
-                    >
-                      {unit.viewedResources} out of {unit.totalResources}{' '}
-                      resources viewed
-                    </Typography>
-                    <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-                      <CircularProgress
-                        variant='determinate'
-                        value={100}
-                        size={80}
-                        thickness={4}
-                        sx={{ color: '#E5E5EF' }}
-                      />
-                      <CircularProgress
-                        variant='determinate'
-                        value={unit.progress}
-                        size={80}
-                        thickness={4}
-                        sx={{
-                          color: '#3366CC',
-                          position: 'absolute',
-                          left: 0
-                        }}
-                      />
-                      <Box
-                        sx={{
-                          top: 0,
-                          left: 0,
-                          bottom: 0,
-                          right: 0,
-                          position: 'absolute',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        <Typography
-                          variant='h6'
-                          sx={{ fontSize: '18px', fontWeight: 'bold' }}
-                        >
-                          {unit.progress}%
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Box>
-                </Grid>
-              ))
-            ) : (
-              <Grid item xs={12}>
-                <Typography
-                  color='text.secondary'
-                  align='center'
-                  sx={{ py: 3 }}
-                >
-                  No progress data available
-                </Typography>
-              </Grid>
-            )}
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ justifyContent: 'center', pt: 2 }}>
-          <Button
-            onClick={handleCloseDialog}
-            variant='contained'
-            sx={{
-              bgcolor: '#3366CC',
-              px: 4
-            }}
-          >
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* AI Dialog */}
-      <Dialog
-        open={openAIDialog}
-        onClose={handleAIDialogClose}
-        PaperProps={{
-          sx: {
-            borderRadius: '12px',
-            p: 3,
-            maxWidth: '400px',
-            width: '100%'
-          }
-        }}
-      >
-        <DialogTitle>
-          <Typography
-            variant="h6"
-            sx={{
-              fontSize: '20px',
-              fontWeight: 'bold',
-              textAlign: 'center',
-              color: 'primary.main'
-            }}
-          >
-            AI Tutor Feature
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 2,
-              py: 2
-            }}
-          >
-            <Box
-              component="img"
-              src="/ai-education.png"
-              alt="AI Education"
-              sx={{
-                width: '120px',
-                height: '120px',
-                objectFit: 'contain'
-              }}
-            />
-            <Typography
-              variant="body1"
-              sx={{
-                textAlign: 'center',
-                color: 'text.secondary',
-                fontSize: '16px'
-              }}
-            >
-              Coming Soon! Our AI tutor feature will help you learn more effectively with personalized assistance.
-            </Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ justifyContent: 'center', pb: 2 }}>
-          <Button
-            onClick={handleAIDialogClose}
-            variant="contained"
-            sx={{
-              bgcolor: 'primary.main',
-              '&:hover': {
-                bgcolor: 'primary.dark'
-              }
-            }}
-          >
-            Got it!
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Card>
   )
 })
@@ -799,6 +796,12 @@ const StudentDashboard = () => {
   const courseIds = user?.courseIds?.map(course => course.courseId) || []
   const { data: courses } = useEnrolledCourses(courseIds)
   const { allDueDates, error } = useAllAssessmentDueDates(user?.courseIds)
+  
+  // Responsive breakpoints
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'))
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'))
 
   if (error) {
     console.error('Error loading assessment due dates:', error)
@@ -806,7 +809,24 @@ const StudentDashboard = () => {
 
   return (
     <Grid container spacing={2}>
-      <Grid size={8}>
+      {/* Calendar Section - Top on mobile/tablet, right side on desktop */}
+      <Grid 
+        size={{ xs: 12, md: 4 }}
+        order={{ xs: 1, md: 2 }} // Order 1 on mobile/tablet (top), 2 on desktop (right)
+      >
+        <Paper
+          elevation={5}
+          sx={{ backgroundColor: 'transparent', borderRadius: 2 }}
+        >
+          <Calendar assessmentDueDates={allDueDates} />
+        </Paper>
+      </Grid>
+
+      {/* Course Cards Section - Bottom on mobile/tablet, left side on desktop */}
+      <Grid 
+        size={{ xs: 12, md: 8 }}
+        order={{ xs: 2, md: 1 }} // Order 2 on mobile/tablet (bottom), 1 on desktop (left)
+      >
         <Paper elevation={5} sx={{ p: 3, borderRadius: '16px' }}>
           <Typography
             variant='h6'
@@ -836,14 +856,6 @@ const StudentDashboard = () => {
               </Grid>
             )}
           </Grid>
-        </Paper>
-      </Grid>
-      <Grid size={4}>
-        <Paper
-          elevation={5}
-          sx={{ backgroundColor: 'transparent', borderRadius: 2 }}
-        >
-          <Calendar assessmentDueDates={allDueDates} />
         </Paper>
       </Grid>
     </Grid>

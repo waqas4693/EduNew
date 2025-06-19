@@ -46,6 +46,18 @@ export const getUnlockStatus = async (req, res) => {
         unlockedUnits: [firstUnit._id],
         unlockedSections: [firstSection._id]
       })
+    } else {
+      // For existing unlock status, ensure first sections are unlocked for all unlocked units
+      const unlockedUnits = unlockStatus.unlockedUnits
+      for (const unitId of unlockedUnits) {
+        const firstSection = await Section.findOne({ unitId }).sort({ number: 1 })
+        if (firstSection && !unlockStatus.unlockedSections.includes(firstSection._id)) {
+          unlockStatus.unlockedSections.push(firstSection._id)
+        }
+      }
+      if (unlockStatus.isModified('unlockedSections')) {
+        await unlockStatus.save()
+      }
     }
 
     res.status(200).json({
@@ -204,6 +216,19 @@ export const checkAndUnlockNext = async (req, res) => {
               number: nextUnit.number 
             })
             await unlockStatus.unlockUnit(nextUnit._id)
+
+            // Get and unlock the first section of the next unit
+            const firstSectionOfNextUnit = await Section.findOne({
+              unitId: nextUnit._id
+            }).sort({ number: 1 })
+
+            if (firstSectionOfNextUnit) {
+              console.log('🔓 Unlocking first section of next unit:', {
+                id: firstSectionOfNextUnit._id,
+                number: firstSectionOfNextUnit.number
+              })
+              await unlockStatus.unlockSection(firstSectionOfNextUnit._id)
+            }
           }
         } else {
           console.log('🏆 Course completed! This is the last unit')
@@ -260,10 +285,25 @@ export const unlockUnit = async (req, res) => {
       },
       { upsert: true }
     )
+
+    // Get and unlock the first section of the unit
+    const firstSection = await Section.findOne({
+      unitId
+    }).sort({ number: 1 })
+
+    if (firstSection) {
+      await SectionUnlockStatus.findOneAndUpdate(
+        { studentId, courseId },
+        {
+          $addToSet: { unlockedSections: firstSection._id },
+          lastUpdated: Date.now()
+        }
+      )
+    }
     
     res.status(200).json({
       success: true,
-      message: 'Unit unlocked successfully'
+      message: 'Unit and its first section unlocked successfully'
     })
   } catch (error) {
     handleError(res, error)

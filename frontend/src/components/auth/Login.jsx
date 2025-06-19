@@ -11,7 +11,9 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  useTheme,
+  useMediaQuery
 } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import { postData } from '../../api/api'
@@ -36,6 +38,11 @@ const Login = () => {
   const [dialogTitle, setDialogTitle] = useState('')
   const navigate = useNavigate()
   const { login } = useAuth()
+  
+  // Responsive breakpoints
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'))
 
   const handleChange = e => {
     setFormData({
@@ -136,16 +143,17 @@ const Login = () => {
       <Box
         sx={{
           width: '100%',
-          height: '150px',
+          height: { xs: '100px', sm: '120px', md: '150px' },
           display: 'flex',
-          alignItems: 'center'
+          alignItems: 'center',
+          px: { xs: 1, sm: 2, md: 3 }
         }}
       >
         <Box
           sx={{
-            mr: 3,
-            width: '10%',
-            height: '35%',
+            mr: { xs: 1, sm: 2, md: 3 },
+            width: { xs: '8%', sm: '9%', md: '10%' },
+            height: { xs: '25px', sm: '30px', md: '35%' },
             background: 'linear-gradient(90deg, #ff2b0c 0%, #ff6b0c 100%)'
           }}
         />
@@ -154,17 +162,17 @@ const Login = () => {
           src='/logo.png'
           component='img'
           sx={{
-            px: 1,
-            width: '15%',
+            px: { xs: 0.5, sm: 1 },
+            width: { xs: '25%', sm: '20%', md: '15%' },
             height: '100%',
             objectFit: 'contain'
           }}
         />
         <Box
           sx={{
-            ml: 3,
+            ml: { xs: 1, sm: 2, md: 3 },
             flexGrow: 1,
-            height: '35%',
+            height: { xs: '25px', sm: '30px', md: '35%' },
             background: 'linear-gradient(90deg, #ff2b0c 0%, #ff6b0c 100%)'
           }}
         />
@@ -176,14 +184,16 @@ const Login = () => {
           flex: 1,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          px: { xs: 2, sm: 3, md: 4 }
         }}
       >
         <Paper
           sx={{
-            p: '60px',
-            width: '40%',
-            borderRadius: '16px',
+            p: { xs: 3, sm: 4, md: '60px' },
+            width: { xs: '100%', sm: '80%', md: '40%' },
+            maxWidth: { xs: '400px', sm: '500px', md: '600px' },
+            borderRadius: { xs: '12px', sm: '14px', md: '16px' },
             backgroundColor: '#ffffff',
             boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)'
           }}
@@ -191,7 +201,12 @@ const Login = () => {
           <Typography
             variant='h5'
             component='h1'
-            sx={{ mb: 3, fontSize: '20px', textAlign: 'center', fontWeight: 500 }}
+            sx={{ 
+              mb: { xs: 2, sm: 2.5, md: 3 }, 
+              fontSize: { xs: '18px', sm: '19px', md: '20px' }, 
+              textAlign: 'center', 
+              fontWeight: 500 
+            }}
           >
             Login
           </Typography>
@@ -205,9 +220,10 @@ const Login = () => {
               onChange={handleChange}
               required
               sx={{
-                mb: 3,
+                mb: { xs: 2, sm: 2.5, md: 3 },
                 '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px'
+                  borderRadius: { xs: '6px', sm: '7px', md: '8px' },
+                  fontSize: { xs: '14px', sm: '15px', md: '16px' }
                 }
               }}
               variant='outlined'
@@ -221,16 +237,23 @@ const Login = () => {
               onChange={handleChange}
               required
               sx={{
-                mb: 3,
+                mb: { xs: 2, sm: 2.5, md: 3 },
                 '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px'
+                  borderRadius: { xs: '6px', sm: '7px', md: '8px' },
+                  fontSize: { xs: '14px', sm: '15px', md: '16px' }
                 }
               }}
               variant='outlined'
               InputProps={{
                 endAdornment: (
                   <InputAdornment position='end'>
-                    <IconButton onClick={handleClickShowPassword} edge='end'>
+                    <IconButton 
+                      onClick={handleClickShowPassword} 
+                      edge='end'
+                      sx={{
+                        fontSize: { xs: '18px', sm: '20px', md: '24px' }
+                      }}
+                    >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
@@ -239,15 +262,16 @@ const Login = () => {
             />
             <Button
               type='submit'
-              size='large'
+              size={isMobile ? 'medium' : 'large'}
               variant='contained'
               sx={{
-                borderRadius: '8px',
-                fontSize: '16px',
+                borderRadius: { xs: '6px', sm: '7px', md: '8px' },
+                fontSize: { xs: '14px', sm: '15px', md: '16px' },
                 textTransform: 'none',
                 display: 'block',
                 mx: 'auto',
-                px: '30px',
+                px: { xs: '20px', sm: '25px', md: '30px' },
+                py: { xs: 1, sm: 1.2, md: 1.5 },
                 backgroundColor: '#1F7EC2',
                 '&:hover': {
                   backgroundColor: '#1769aa'
@@ -264,16 +288,17 @@ const Login = () => {
       <Box
         sx={{
           width: '100%',
-          height: '150px',
+          height: { xs: '100px', sm: '120px', md: '150px' },
           display: 'flex',
-          alignItems: 'center'
+          alignItems: 'center',
+          px: { xs: 1, sm: 2, md: 3 }
         }}
       >
         <Box
           sx={{
-            mr: 3,
-            width: '75%',
-            height: '30%',
+            mr: { xs: 1, sm: 2, md: 3 },
+            width: { xs: '45%', sm: '60%', md: '75%' },
+            height: { xs: '25px', sm: '30px', md: '30%' },
             background: 'linear-gradient(90deg, #0070c0 0%, #00a0c0 100%)'
           }}
         />
@@ -282,17 +307,17 @@ const Login = () => {
           src='/ehouse-logo.svg'
           component='img'
           sx={{
-            px: 1,
-            width: '10%',
+            px: { xs: 0.5, sm: 1 },
+            width: { xs: '20%', sm: '15%', md: '10%' },
             height: '90%',
             objectFit: 'contain'
           }}
         />
         <Box
           sx={{
-            ml: 3,
+            ml: { xs: 1, sm: 2, md: 3 },
             flexGrow: 1,
-            height: '30%',
+            height: { xs: '25px', sm: '30px', md: '30%' },
             background: 'linear-gradient(90deg, #0070c0 0%, #00a0c0 100%)'
           }}
         />
@@ -303,17 +328,29 @@ const Login = () => {
         onClose={handleCloseDialog}
         PaperProps={{
           sx: {
-            borderRadius: 2,
-            minWidth: 300
+            borderRadius: { xs: 1, sm: 1.5, md: 2 },
+            minWidth: { xs: 280, sm: 300, md: 350 },
+            mx: { xs: 2, sm: 3, md: 4 }
           }
         }}
       >
-        <DialogTitle sx={{ pb: 2 }}>{dialogTitle}</DialogTitle>
+        <DialogTitle sx={{ pb: 2, fontSize: { xs: '16px', sm: '18px', md: '20px' } }}>
+          {dialogTitle}
+        </DialogTitle>
         <DialogContent>
-          <Typography>{error}</Typography>
+          <Typography sx={{ fontSize: { xs: '14px', sm: '15px', md: '16px' } }}>
+            {error}
+          </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog} variant='contained'>
+          <Button 
+            onClick={handleCloseDialog} 
+            variant='contained'
+            size={isMobile ? 'small' : 'medium'}
+            sx={{
+              fontSize: { xs: '14px', sm: '15px', md: '16px' }
+            }}
+          >
             Close
           </Button>
         </DialogActions>

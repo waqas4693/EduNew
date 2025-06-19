@@ -647,7 +647,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                               label={`Choose ${resource.resourceType}`}
                               value={resource.content.file}
                               accept={getFileAcceptTypes(resource.resourceType)}
-                              onChange={e => handleContentChange(index, 'file', e.target.files[0])}
+                              onChange={file => handleContentChange(index, 'file', file)}
                               editMode={editMode}
                               existingFile={resource.content.fileName}
                               onView={() => handleViewMedia(resource)}
@@ -657,7 +657,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                                 label='Choose Background'
                                 value={resource.content.backgroundImage}
                                 accept='image/*'
-                                onChange={e => handleContentChange(index, 'backgroundImage', e.target.files[0])}
+                                onChange={file => handleContentChange(index, 'backgroundImage', file)}
                                 editMode={editMode}
                                 existingFile={resource.content.backgroundImage}
                                 type="secondary"
@@ -669,7 +669,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                                 label='Choose Audio'
                                 value={resource.content.audioFile}
                                 accept='audio/*'
-                                onChange={e => handleContentChange(index, 'audioFile', e.target.files[0])}
+                                onChange={file => handleContentChange(index, 'audioFile', file)}
                                 editMode={editMode}
                                 existingFile={resource.content.audioFile}
                                 type="secondary"
@@ -712,7 +712,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
                             label='Choose Background'
                             value={resource.content.backgroundImage}
                             accept='image/*'
-                            onChange={e => handleContentChange(index, 'backgroundImage', e.target.files[0])}
+                            onChange={file => handleContentChange(index, 'backgroundImage', file)}
                             editMode={editMode}
                             existingFile={resource.content.backgroundImage}
                             type="secondary"
