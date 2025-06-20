@@ -4,6 +4,6 @@ import { grantPartialAccess } from '../controllers/scriptController.js'
 const router = express.Router()
 
 // Endpoint to grant partial course access to a specific student
-router.post('/grant-partial-access', grantPartialAccess)
+router.get('/grant-partial-access', grantPartialAccess)
 
 export default router 
