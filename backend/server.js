@@ -27,6 +27,7 @@ import sectionUnlockStatusRoutes from './routes/sectionUnlockStatusRoutes.js'
 import studentProgressRoutes from './routes/studentProgress.js'
 import bulkUploadRoutes from './routes/bulkUpload.js'
 import statsRouter from './routes/stats.js'
+import scriptRoutes from './routes/scriptRoutes.js'
 import { countAllExistingStats } from './controllers/stats.js'
 
 import Course from './models/course.js'
@@ -99,6 +100,7 @@ app.use('/api/users', userRoutes)
 app.use('/api/bulk-upload', bulkUploadRoutes)
 app.use('/api/student-progress', studentProgressRoutes)
 app.use('/api/stats', statsRouter)
+app.use('/api/scripts', scriptRoutes)
 mongoose.set('strictQuery', false)
 
 await mongoose
