@@ -15,6 +15,7 @@ import StudentProgress from './components/students/StudentProgress'
 import LearnerFrame from './components/app-components/LearnerFrame'
 import StudentDashboard from './components/dashboard/StudentDashboard'
 import ViewAssessment from './components/app-components/ViewAssessment'
+import EmailVerification from './components/EmailVerification'
 
 import InactiveStudents from './components/students/InactiveStudents'
 import StudentCourses from './components/students/StudentCourses'
@@ -82,6 +83,7 @@ function App() {
                   <Routes>
                     <Route path="/" element={<SplashScreen />} />
                     <Route path="/login" element={<Login />} />
+                    <Route path="/verify-email" element={<EmailVerification />} />
                     
                     {/* Admin & Assessment Roles Routes */}
                     <Route

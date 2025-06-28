@@ -338,7 +338,7 @@ const CourseRow = memo(({ course, studentId }) => {
   const handleQuickView = e => {
     e.stopPropagation()
     if (handleCourseAccess('quickView')) {
-      setOpenDialog(true)
+    setOpenDialog(true)
     }
   }
 
@@ -348,33 +348,33 @@ const CourseRow = memo(({ course, studentId }) => {
 
   const handleThumbnailClick = () => {
     if (handleCourseAccess('thumbnail')) {
-      dispatch(
-        setCurrentCourse({
-          id: course.id,
-          name: course.name,
-          image: thumbnailUrl || course.thumbnail || course.image
-        })
-      )
-      navigate(`/units/${course.id}`)
+    dispatch(
+      setCurrentCourse({
+        id: course.id,
+        name: course.name,
+        image: thumbnailUrl || course.thumbnail || course.image
+      })
+    )
+    navigate(`/units/${course.id}`)
     }
   }
 
   const handleDetailView = (e) => {
     e.stopPropagation()
     if (handleCourseAccess('detailView')) {
-      navigate(`/students/${studentId}/courses/${course.id}/progress`, {
-        state: {
-          courseName: course.name,
-          studentName: ''
-        }
-      })
+    navigate(`/students/${studentId}/courses/${course.id}/progress`, {
+      state: {
+        courseName: course.name,
+        studentName: ''
+      }
+    })
     }
   }
 
   const handleAIDialogOpen = (e) => {
     e.stopPropagation()
     if (handleCourseAccess('aiDialog')) {
-      setOpenAIDialog(true)
+    setOpenAIDialog(true)
     }
   }
 
@@ -389,217 +389,217 @@ const CourseRow = memo(({ course, studentId }) => {
   if (isMobile) {
     return (
       <>
-        <Card
+      <Card
+        sx={{
+          mb: 2,
+          width: '100%',
+          overflow: 'hidden',
+          borderRadius: '16px',
+          bgcolor: 'primary.main',
+          color: 'white',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          p: 2,
+            opacity: isEmailVerified ? 1 : 0.7,
+        }}
+      >
+        {/* Course Image */}
+        <Box
+          onClick={handleThumbnailClick}
           sx={{
-            mb: 2,
             width: '100%',
+            aspectRatio: '1/1',
+            borderRadius: '12px',
             overflow: 'hidden',
-            borderRadius: '16px',
-            bgcolor: 'primary.main',
+            bgcolor: 'white',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            mb: 1,
+            cursor: 'pointer',
+            '&:hover': { opacity: 0.9 }
+          }}
+        >
+          {thumbnailLoading ? (
+            <CircularProgress size={32} />
+          ) : (course.thumbnail || course.image) && !imageError && thumbnailUrl ? (
+            <Box
+              component='img'
+              src={thumbnailUrl}
+              alt={course.name}
+              onError={() => setImageError(true)}
+              sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          ) : (
+            <Box
+              sx={{
+                width: '100%',
+                height: '100%',
+                bgcolor: '#e75480',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Box
+                component='img'
+                src='/course-card-placeholder-icon.svg'
+                alt='Course placeholder'
+                sx={{ width: '48px', height: '48px' }}
+              />
+            </Box>
+          )}
+        </Box>
+
+        {/* Course Name */}
+        <Typography
+          sx={{
+            mt: 1,
+            mb: 1,
+            fontSize: '16px',
+            fontWeight: 'bold',
+            textAlign: 'center',
             color: 'white',
+            width: '100%'
+          }}
+        >
+          {course.name}
+        </Typography>
+
+        {/* Progress View Buttons */}
+        <Box
+          sx={{
+            width: '100%',
+            bgcolor: 'white',
+            borderRadius: '12px',
+            p: 2,
+            mb: 1.5,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            p: 2,
-            opacity: isEmailVerified ? 1 : 0.7,
+            gap: 2
           }}
         >
-          {/* Course Image */}
-          <Box
-            onClick={handleThumbnailClick}
-            sx={{
-              width: '100%',
-              aspectRatio: '1/1',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              bgcolor: 'white',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              mb: 1,
-              cursor: 'pointer',
-              '&:hover': { opacity: 0.9 }
-            }}
-          >
-            {thumbnailLoading ? (
-              <CircularProgress size={32} />
-            ) : (course.thumbnail || course.image) && !imageError && thumbnailUrl ? (
-              <Box
-                component='img'
-                src={thumbnailUrl}
-                alt={course.name}
-                onError={() => setImageError(true)}
-                sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%', justifyContent: 'center' }}>
+            <Button
+              onClick={handleQuickView}
+              sx={{
+                fontSize: '13px',
+                fontWeight: 'bold',
+                textTransform: 'capitalize',
+                color: 'primary.main'
+              }}
+            >
+              Quick View
+            </Button>
+            <SpeedIcon sx={{ fontSize: 36, color: 'primary.main' }} />
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%', justifyContent: 'center' }}>
+            <Button
+              onClick={handleDetailView}
+              sx={{
+                fontSize: '13px',
+                fontWeight: 'bold',
+                textTransform: 'capitalize',
+                color: 'primary.main'
+              }}
+            >
+              Detailed View
+            </Button>
+            <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+              <CircularProgress
+                variant="determinate"
+                value={100}
+                size={36}
+                thickness={5}
+                sx={{ color: 'grey.200' }}
               />
-            ) : (
+              <CircularProgress
+                variant="determinate"
+                value={progressLoading ? 0 : progress}
+                size={36}
+                thickness={5}
+                sx={{
+                  color: 'primary.main',
+                  position: 'absolute',
+                  left: 0,
+                }}
+              />
               <Box
                 sx={{
-                  width: '100%',
-                  height: '100%',
-                  bgcolor: '#e75480',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
                   display: 'flex',
+                  position: 'absolute',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
                 }}
               >
-                <Box
-                  component='img'
-                  src='/course-card-placeholder-icon.svg'
-                  alt='Course placeholder'
-                  sx={{ width: '48px', height: '48px' }}
-                />
-              </Box>
-            )}
-          </Box>
-
-          {/* Course Name */}
-          <Typography
-            sx={{
-              mt: 1,
-              mb: 1,
-              fontSize: '16px',
-              fontWeight: 'bold',
-              textAlign: 'center',
-              color: 'white',
-              width: '100%'
-            }}
-          >
-            {course.name}
-          </Typography>
-
-          {/* Progress View Buttons */}
-          <Box
-            sx={{
-              width: '100%',
-              bgcolor: 'white',
-              borderRadius: '12px',
-              p: 2,
-              mb: 1.5,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 2
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%', justifyContent: 'center' }}>
-              <Button
-                onClick={handleQuickView}
-                sx={{
-                  fontSize: '13px',
-                  fontWeight: 'bold',
-                  textTransform: 'capitalize',
-                  color: 'primary.main'
-                }}
-              >
-                Quick View
-              </Button>
-              <SpeedIcon sx={{ fontSize: 36, color: 'primary.main' }} />
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%', justifyContent: 'center' }}>
-              <Button
-                onClick={handleDetailView}
-                sx={{
-                  fontSize: '13px',
-                  fontWeight: 'bold',
-                  textTransform: 'capitalize',
-                  color: 'primary.main'
-                }}
-              >
-                Detailed View
-              </Button>
-              <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-                <CircularProgress
-                  variant="determinate"
-                  value={100}
-                  size={36}
-                  thickness={5}
-                  sx={{ color: 'grey.200' }}
-                />
-                <CircularProgress
-                  variant="determinate"
-                  value={progressLoading ? 0 : progress}
-                  size={36}
-                  thickness={5}
-                  sx={{
-                    color: 'primary.main',
-                    position: 'absolute',
-                    left: 0,
-                  }}
-                />
-                <Box
-                  sx={{
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    display: 'flex',
-                    position: 'absolute',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Typography variant="caption" sx={{ fontSize: '10px', fontWeight: 'bold', color: 'primary.main' }}>
-                    {progressLoading ? '...' : `${progress}%`}
-                  </Typography>
-                </Box>
+                <Typography variant="caption" sx={{ fontSize: '10px', fontWeight: 'bold', color: 'primary.main' }}>
+                  {progressLoading ? '...' : `${progress}%`}
+                </Typography>
               </Box>
             </Box>
           </Box>
+        </Box>
 
-          {/* Course Progress Label */}
-          <Typography
-            sx={{
-              mt: 1,
-              mb: 1,
-              fontSize: '15px',
-              fontWeight: 'bold',
-              textAlign: 'center',
-              color: 'white',
-              width: '100%'
-            }}
-          >
-            Course Progress
-          </Typography>
+        {/* Course Progress Label */}
+        <Typography
+          sx={{
+            mt: 1,
+            mb: 1,
+            fontSize: '15px',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            color: 'white',
+            width: '100%'
+          }}
+        >
+          Course Progress
+        </Typography>
 
-          {/* AI Tutor Image */}
+        {/* AI Tutor Image */}
+        <Box
+          onClick={handleAIDialogOpen}
+          sx={{
+            width: '100%',
+            aspectRatio: '1/1',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            bgcolor: 'white',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            mb: 1,
+            cursor: 'pointer',
+            '&:hover': { opacity: 0.9 }
+          }}
+        >
           <Box
-            onClick={handleAIDialogOpen}
-            sx={{
-              width: '100%',
-              aspectRatio: '1/1',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              bgcolor: 'white',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              mb: 1,
-              cursor: 'pointer',
-              '&:hover': { opacity: 0.9 }
-            }}
-          >
-            <Box
-              component='img'
-              src='/ai-education.png'
-              alt="AI Education"
-              sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          </Box>
+            component='img'
+            src='/ai-education.png'
+            alt="AI Education"
+            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        </Box>
 
-          {/* Test Your Understanding Label */}
-          <Typography
-            sx={{
-              mt: 1,
-              fontSize: '15px',
-              fontWeight: 'bold',
-              textAlign: 'center',
-              color: 'white',
-              width: '100%'
-            }}
-          >
-            Test Your Understanding
-          </Typography>
-        </Card>
+        {/* Test Your Understanding Label */}
+        <Typography
+          sx={{
+            mt: 1,
+            fontSize: '15px',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            color: 'white',
+            width: '100%'
+          }}
+        >
+          Test Your Understanding
+        </Typography>
+      </Card>
 
         {/* Email Verification Dialog */}
         <Dialog
@@ -650,220 +650,220 @@ const CourseRow = memo(({ course, studentId }) => {
   // Tablet & desktop layout (restored)
   return (
     <>
-      <Card
-        sx={{
-          mb: 2,
-          width: '100%',
-          overflow: 'hidden',
-          borderRadius: '12px',
-          bgcolor: 'primary.main',
-          color: 'white',
-          display: 'flex',
-          flexDirection: 'column',
+    <Card
+      sx={{
+        mb: 2,
+        width: '100%',
+        overflow: 'hidden',
+        borderRadius: '12px',
+        bgcolor: 'primary.main',
+        color: 'white',
+        display: 'flex',
+        flexDirection: 'column',
           opacity: isEmailVerified ? 1 : 0.7,
-        }}
-      >
-        {/* Main content container */}
-        <Box sx={{ display: 'flex', p: 2, gap: 2 }}>
-          {/* Thumbnail Box */}
+      }}
+    >
+      {/* Main content container */}
+      <Box sx={{ display: 'flex', p: 2, gap: 2 }}>
+        {/* Thumbnail Box */}
+        <Box
+          onClick={handleThumbnailClick}
+          sx={{
+            flex: 1,
+            aspectRatio: '1/1',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            bgcolor: 'white',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            cursor: 'pointer',
+            '&:hover': {
+              opacity: 0.9
+            }
+          }}
+        >
+          {thumbnailLoading ? (
+            <CircularProgress size={32} />
+          ) : (course.thumbnail || course.image) && !imageError && thumbnailUrl ? (
+            <Box
+              component='img'
+              src={thumbnailUrl}
+              alt={course.name}
+              onError={() => setImageError(true)}
+              sx={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
+              }}
+            />
+          ) : (
+            <Box
+              sx={{
+                width: '100%',
+                height: '100%',
+                bgcolor: '#e75480',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Box
+                component='img'
+                src='/course-card-placeholder-icon.svg'
+                alt='Course placeholder'
+                sx={{ width: '48px', height: '48px' }}
+              />
+            </Box>
+          )}
+        </Box>
+
+        {/* Progress Box */}
+        <Box
+          sx={{
+            flex: 1,
+            aspectRatio: '1/1',
+            borderRadius: '8px',
+            bgcolor: '#fff',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 2
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Button
+              onClick={handleQuickView}
+              sx={{
+                fontSize: '13px',
+                fontWeight: 'bold',
+                textTransform: 'capitalize'
+              }}
+            >
+              Quick View
+            </Button>
+            <SpeedIcon 
+              sx={{ 
+                fontSize: 50,
+                color: 'primary.main'
+              }} 
+            />
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Button
+              onClick={handleDetailView}
+              sx={{
+                fontSize: '13px',
+                fontWeight: 'bold',
+                textTransform: 'capitalize'
+              }}
+            >
+              Detailed View
+            </Button>
+            <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+              <CircularProgress
+                variant="determinate"
+                value={100}
+                size={65}
+                thickness={8}
+                sx={{ color: 'grey.200' }}
+              />
+              <CircularProgress
+                variant="determinate"
+                value={progressLoading ? 0 : progress}
+                size={65}
+                thickness={8}
+                sx={{
+                  color: 'primary.main',
+                  position: 'absolute',
+                  left: 0,
+                }}
+              />
+              <Box
+                sx={{
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  display: 'flex',
+                  position: 'absolute',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Typography variant="caption" sx={{ fontSize: '12px', fontWeight: 'bold', color: 'primary.main' }}>
+                  {progressLoading ? '...' : `${progress}%`}
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+
+        {/* AI Tutor Box */}
+        <Box
+          sx={{
+            flex: 1,
+            aspectRatio: '1/1',
+            borderRadius: '8px',
+            bgcolor: '#fff',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}
+        >
           <Box
-            onClick={handleThumbnailClick}
+            component='img'
+            src='/ai-education.png'
+            alt="AI Education"
+            onClick={handleAIDialogOpen}
             sx={{
-              flex: 1,
-              aspectRatio: '1/1',
-              borderRadius: '8px',
-              overflow: 'hidden',
-              bgcolor: 'white',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
               cursor: 'pointer',
               '&:hover': {
                 opacity: 0.9
               }
             }}
-          >
-            {thumbnailLoading ? (
-              <CircularProgress size={32} />
-            ) : (course.thumbnail || course.image) && !imageError && thumbnailUrl ? (
-              <Box
-                component='img'
-                src={thumbnailUrl}
-                alt={course.name}
-                onError={() => setImageError(true)}
-                sx={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover'
-                }}
-              />
-            ) : (
-              <Box
-                sx={{
-                  width: '100%',
-                  height: '100%',
-                  bgcolor: '#e75480',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <Box
-                  component='img'
-                  src='/course-card-placeholder-icon.svg'
-                  alt='Course placeholder'
-                  sx={{ width: '48px', height: '48px' }}
-                />
-              </Box>
-            )}
-          </Box>
-
-          {/* Progress Box */}
-          <Box
-            sx={{
-              flex: 1,
-              aspectRatio: '1/1',
-              borderRadius: '8px',
-              bgcolor: '#fff',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: 2
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Button
-                onClick={handleQuickView}
-                sx={{
-                  fontSize: '13px',
-                  fontWeight: 'bold',
-                  textTransform: 'capitalize'
-                }}
-              >
-                Quick View
-              </Button>
-              <SpeedIcon 
-                sx={{ 
-                  fontSize: 50,
-                  color: 'primary.main'
-                }} 
-              />
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Button
-                onClick={handleDetailView}
-                sx={{
-                  fontSize: '13px',
-                  fontWeight: 'bold',
-                  textTransform: 'capitalize'
-                }}
-              >
-                Detailed View
-              </Button>
-              <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-                <CircularProgress
-                  variant="determinate"
-                  value={100}
-                  size={65}
-                  thickness={8}
-                  sx={{ color: 'grey.200' }}
-                />
-                <CircularProgress
-                  variant="determinate"
-                  value={progressLoading ? 0 : progress}
-                  size={65}
-                  thickness={8}
-                  sx={{
-                    color: 'primary.main',
-                    position: 'absolute',
-                    left: 0,
-                  }}
-                />
-                <Box
-                  sx={{
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    display: 'flex',
-                    position: 'absolute',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Typography variant="caption" sx={{ fontSize: '12px', fontWeight: 'bold', color: 'primary.main' }}>
-                    {progressLoading ? '...' : `${progress}%`}
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-          </Box>
-
-          {/* AI Tutor Box */}
-          <Box
-            sx={{
-              flex: 1,
-              aspectRatio: '1/1',
-              borderRadius: '8px',
-              bgcolor: '#fff',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}
-          >
-            <Box
-              component='img'
-              src='/ai-education.png'
-              alt="AI Education"
-              onClick={handleAIDialogOpen}
-              sx={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                cursor: 'pointer',
-                '&:hover': {
-                  opacity: 0.9
-                }
-              }}
-            />
-          </Box>
+          />
         </Box>
+      </Box>
 
-        {/* Labels container */}
-        <Box sx={{ display: 'flex', pb: 1 }}>
-          <Typography
-            sx={{
-              flex: 1,
-              fontSize: '14px',
-              fontWeight: 'bold',
-              textAlign: 'center'
-            }}
-          >
-            {course.name}
-          </Typography>
-          <Typography
-            sx={{
-              flex: 1,
-              textAlign: 'center',
-              fontSize: '14px',
-              fontWeight: 'bold'
-            }}
-          >
-            Course Progress
-          </Typography>
-          <Typography
-            sx={{
-              flex: 1,
-              textAlign: 'center',
-              fontSize: '14px',
-              fontWeight: 'bold'
-            }}
-          >
-            Test Your Understanding
-          </Typography>
-        </Box>
-      </Card>
+      {/* Labels container */}
+      <Box sx={{ display: 'flex', pb: 1 }}>
+        <Typography
+          sx={{
+            flex: 1,
+            fontSize: '14px',
+            fontWeight: 'bold',
+            textAlign: 'center'
+          }}
+        >
+          {course.name}
+        </Typography>
+        <Typography
+          sx={{
+            flex: 1,
+            textAlign: 'center',
+            fontSize: '14px',
+            fontWeight: 'bold'
+          }}
+        >
+          Course Progress
+        </Typography>
+        <Typography
+          sx={{
+            flex: 1,
+            textAlign: 'center',
+            fontSize: '14px',
+            fontWeight: 'bold'
+          }}
+        >
+          Test Your Understanding
+        </Typography>
+      </Box>
+    </Card>
 
       {/* Email Verification Dialog */}
       <Dialog
@@ -951,57 +951,57 @@ const StudentDashboard = () => {
         </Alert>
       )}
 
-      <Grid container spacing={2}>
-        {/* Calendar Section - Top on mobile/tablet, right side on desktop */}
-        <Grid 
-          size={{ xs: 12, md: 4 }}
-          order={{ xs: 1, md: 2 }} // Order 1 on mobile/tablet (top), 2 on desktop (right)
+    <Grid container spacing={2}>
+      {/* Calendar Section - Top on mobile/tablet, right side on desktop */}
+      <Grid 
+        size={{ xs: 12, md: 4 }}
+        order={{ xs: 1, md: 2 }} // Order 1 on mobile/tablet (top), 2 on desktop (right)
+      >
+        <Paper
+          elevation={5}
+          sx={{ backgroundColor: 'transparent', borderRadius: 2 }}
         >
-          <Paper
-            elevation={5}
-            sx={{ backgroundColor: 'transparent', borderRadius: 2 }}
-          >
-            <Calendar assessmentDueDates={allDueDates} />
-          </Paper>
-        </Grid>
-
-        {/* Course Cards Section - Bottom on mobile/tablet, left side on desktop */}
-        <Grid 
-          size={{ xs: 12, md: 8 }}
-          order={{ xs: 2, md: 1 }} // Order 2 on mobile/tablet (bottom), 1 on desktop (left)
-        >
-          <Paper elevation={5} sx={{ p: 3, borderRadius: '16px' }}>
-            <Typography
-              variant='h6'
-              sx={{
-                mb: 3,
-                fontSize: '24px',
-                textAlign: 'center',
-                fontWeight: 'bold'
-              }}
-            >
-              Current Courses
-            </Typography>
-            <Grid container spacing={2}>
-              {courses?.length > 0 ? (
-                courses.map(course => (
-                  <Grid key={course.id} xs={12} md={6} lg={4}>
-                    <CourseRow course={course} studentId={user.studentId} />
-                  </Grid>
-                ))
-              ) : (
-                <Grid xs={12}>
-                  <Typography
-                    sx={{ textAlign: 'center', color: 'text.secondary' }}
-                  >
-                    No courses enrolled yet
-                  </Typography>
-                </Grid>
-              )}
-            </Grid>
-          </Paper>
-        </Grid>
+          <Calendar assessmentDueDates={allDueDates} />
+        </Paper>
       </Grid>
+
+      {/* Course Cards Section - Bottom on mobile/tablet, left side on desktop */}
+      <Grid 
+        size={{ xs: 12, md: 8 }}
+        order={{ xs: 2, md: 1 }} // Order 2 on mobile/tablet (bottom), 1 on desktop (left)
+      >
+        <Paper elevation={5} sx={{ p: 3, borderRadius: '16px' }}>
+          <Typography
+            variant='h6'
+            sx={{
+              mb: 3,
+              fontSize: '24px',
+              textAlign: 'center',
+              fontWeight: 'bold'
+            }}
+          >
+            Current Courses
+          </Typography>
+          <Grid container spacing={2}>
+            {courses?.length > 0 ? (
+              courses.map(course => (
+                <Grid key={course.id} xs={12} md={6} lg={4}>
+                  <CourseRow course={course} studentId={user.studentId} />
+                </Grid>
+              ))
+            ) : (
+              <Grid xs={12}>
+                <Typography
+                  sx={{ textAlign: 'center', color: 'text.secondary' }}
+                >
+                  No courses enrolled yet
+                </Typography>
+              </Grid>
+            )}
+          </Grid>
+        </Paper>
+      </Grid>
+    </Grid>
     </Box>
   )
 }
