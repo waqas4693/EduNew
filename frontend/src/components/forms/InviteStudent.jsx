@@ -62,7 +62,7 @@ const InviteStudent = () => {
     e.preventDefault()
     try {
       const response = await postData('student', formData)
-      setSuccess('Student invited successfully')
+      setSuccess('Student invited successfully! A verification email has been sent to the student with their login credentials.')
       setFormData({
         name: '',
         email: '',  

@@ -4,6 +4,8 @@ import Course from '../models/course.js'
 import Student from '../models/student.js'
 import Section from '../models/section.js'
 import SectionUnlockStatus from '../models/sectionUnlockStatus.js'
+import EmailVerification from '../models/emailVerification.js'
+import { generateVerificationToken, sendVerificationEmail } from '../utils/emailService.js'
 
 export const newStudent = async (req, res) => {
   try {
@@ -19,7 +21,8 @@ export const newStudent = async (req, res) => {
       password: password,
       role: 2,
       status: 1,
-      isDemo: isDemo || false
+      isDemo: isDemo || false,
+      emailVerified: false
     })
     await user.save()
 
@@ -38,6 +41,20 @@ export const newStudent = async (req, res) => {
     })
     await student.save()
 
+    // Create email verification token
+    const verificationToken = generateVerificationToken()
+    const expiresAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000) // 2 days from now
+
+    await EmailVerification.create({
+      userId: user._id,
+      studentId: student._id,
+      token: verificationToken,
+      expiresAt: expiresAt
+    })
+
+    // Send verification email
+    const emailSent = await sendVerificationEmail(email, name, verificationToken, password)
+
     // Create initial unlock status for the first unit and section
     const firstUnit = await Unit.findOne({ courseId }).sort({ number: 1 })
     if (firstUnit) {
@@ -53,7 +70,7 @@ export const newStudent = async (req, res) => {
     }
 
     res.status(201).json({
-      message: 'Student created successfully',
+      message: emailSent ? 'Student created successfully. Verification email sent.' : 'Student created successfully. Failed to send verification email.',
       student: {
         name: student.name,
         email: student.email,
@@ -61,7 +78,8 @@ export const newStudent = async (req, res) => {
         address: student.address,
         status: student.status,
         isDemo: student.isDemo,
-        courses: student.courses
+        courses: student.courses,
+        emailVerified: false
       }
     })
   } catch (error) {

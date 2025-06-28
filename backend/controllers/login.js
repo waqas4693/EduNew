@@ -1,3 +1,7 @@
+import User from '../models/user.js'
+import Student from '../models/student.js'
+import jwt from 'jsonwebtoken'
+
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body
@@ -27,7 +31,8 @@ export const login = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      isDemo: user.isDemo
+      isDemo: user.isDemo,
+      emailVerified: user.emailVerified
     }
 
     if (user.role === 2) { // Student
@@ -35,6 +40,7 @@ export const login = async (req, res) => {
       if (student) {
         userData = {
           ...userData,
+          studentId: student._id,
           courseIds: student.courses.map(course => ({
             courseId: course.courseId,
             enrollmentDate: course.enrollmentDate

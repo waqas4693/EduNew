@@ -28,6 +28,10 @@ const userSchema = new mongoose.Schema(
     isDemo: {
       type: Boolean,
       default: false
+    },
+    emailVerified: {
+      type: Boolean,
+      default: false
     }
   },
   { timestamps: false }
