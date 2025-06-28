@@ -397,53 +397,53 @@ const LearnerFrame = () => {
                 })}
 
                 {/* Navigation Buttons */}
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button
-                    variant='contained'
-                    color='inherit'
-                    size='small'
-                    disabled={currentIndex === 0 || isCompleting}
-                    onClick={handlePrevious}
-                    sx={{
-                      minWidth: '36px',
-                      bgcolor: 'rgba(255, 255, 255, 0.2)',
-                      color: 'white',
-                      '&:hover': {
-                        bgcolor: 'rgba(255, 255, 255, 0.3)'
-                      },
-                      '&.Mui-disabled': {
-                        bgcolor: 'rgba(255, 255, 255, 0.1)',
-                        color: 'rgba(255, 255, 255, 0.5)'
-                      }
-                    }}
-                  >
-                    <ChevronLeft />
-                  </Button>
-                  <Button
-                    variant='contained'
-                    color='inherit'
-                    size='small'
-                    disabled={isNextButtonDisabled() || isCompleting}
-                    onClick={handleNext}
-                    sx={{
-                      minWidth: currentIndex === resources.length - 1 ? '120px' : '36px',
-                      bgcolor: 'rgba(255, 255, 255, 0.2)',
-                      color: 'white',
-                      '&:hover': {
-                        bgcolor: 'rgba(255, 255, 255, 0.3)'
-                      },
-                      '&.Mui-disabled': {
-                        bgcolor: 'rgba(255, 255, 255, 0.1)',
-                        color: 'rgba(255, 255, 255, 0.5)'
-                      }
-                    }}
-                  >
-                    {isCompleting ? (
-                      <CircularProgress size={20} color="inherit" />
-                    ) : (
-                      getNextButtonText()
-                    )}
-                  </Button>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  variant='contained'
+                  color='inherit'
+                  size='small'
+                  disabled={currentIndex === 0 || isCompleting}
+                  onClick={handlePrevious}
+                  sx={{
+                    minWidth: '36px',
+                    bgcolor: 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    '&:hover': {
+                      bgcolor: 'rgba(255, 255, 255, 0.3)'
+                    },
+                    '&.Mui-disabled': {
+                      bgcolor: 'rgba(255, 255, 255, 0.1)',
+                      color: 'rgba(255, 255, 255, 0.5)'
+                    }
+                  }}
+                >
+                  <ChevronLeft />
+                </Button>
+                <Button
+                  variant='contained'
+                  color='inherit'
+                  size='small'
+                  disabled={isNextButtonDisabled() || isCompleting}
+                  onClick={handleNext}
+                  sx={{
+                    minWidth: currentIndex === resources.length - 1 ? '120px' : '36px',
+                    bgcolor: 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    '&:hover': {
+                      bgcolor: 'rgba(255, 255, 255, 0.3)'
+                    },
+                    '&.Mui-disabled': {
+                      bgcolor: 'rgba(255, 255, 255, 0.1)',
+                      color: 'rgba(255, 255, 255, 0.5)'
+                    }
+                  }}
+                >
+                  {isCompleting ? (
+                    <CircularProgress size={20} color="inherit" />
+                  ) : (
+                    getNextButtonText()
+                  )}
+                </Button>
                 </Box>
               </Box>
             </Box>
