@@ -1,7 +1,7 @@
 import EmailVerification from '../models/emailVerification.js'
 import User from '../models/user.js'
 import Student from '../models/student.js'
-import { generateVerificationToken, sendVerificationSuccessEmail, sendResendVerificationEmail } from '../utils/emailService.js'
+import { generateVerificationToken, sendVerificationEmail, sendVerificationSuccessEmail, sendResendVerificationEmail, testSMTPConnection } from '../utils/emailService.js'
 
 // Verify email with token
 export const verifyEmail = async (req, res) => {
@@ -176,6 +176,37 @@ export const getUnverifiedStudents = async (req, res) => {
       success: false,
       message: 'Internal server error',
       error: error.message
+    })
+  }
+}
+
+// Test SMTP connection
+export const testSMTP = async (req, res) => {
+  try {
+    const isConnected = await testSMTPConnection()
+    
+    if (isConnected) {
+      res.json({ 
+        success: true, 
+        message: 'SMTP connection working!',
+        config: {
+          host: process.env.SMTP_HOST || 'smtp.gmail.com',
+          port: process.env.SMTP_PORT || 587,
+          user: process.env.SMTP_USER,
+          frontendUrl: process.env.FRONTEND_URL || 'https://edusupplements.co.uk'
+        }
+      })
+    } else {
+      res.status(500).json({ 
+        success: false, 
+        message: 'SMTP connection failed' 
+      })
+    }
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Test failed', 
+      error: error.message 
     })
   }
 } 

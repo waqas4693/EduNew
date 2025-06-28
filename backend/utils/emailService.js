@@ -3,18 +3,24 @@ import crypto from 'crypto'
 
 // Create transporter for SMTP
 const createTransporter = () => {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'mail.ehouse.org.uk',
-    port: process.env.SMTP_PORT || 465,
-    secure: true, // true for 465, false for other ports
+  const config = {
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: process.env.SMTP_PORT || 587,
+    secure: false, // true for 465, false for other ports
     auth: {
       user: process.env.SMTP_USER || 'no-reply@ehouse.org.uk',
       pass: process.env.SMTP_PASSWORD
-    },
-    tls: {
-      rejectUnauthorized: false
     }
+  }
+
+  console.log('SMTP Config:', {
+    host: config.host,
+    port: config.port,
+    user: config.auth.user,
+    secure: config.secure
   })
+
+  return nodemailer.createTransporter(config)
 }
 
 // Generate verification token
@@ -27,7 +33,7 @@ export const sendVerificationEmail = async (email, name, token, password) => {
   try {
     const transporter = createTransporter()
     
-    const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${token}`
+    const verificationUrl = `${process.env.FRONTEND_URL || 'https://edusupplements.co.uk'}/verify-email?token=${token}`
     
     const mailOptions = {
       from: process.env.SMTP_USER || 'no-reply@ehouse.org.uk',
@@ -107,7 +113,7 @@ export const sendVerificationSuccessEmail = async (email, name) => {
               </p>
             </div>
             
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login" 
+            <a href="${process.env.FRONTEND_URL || 'https://edusupplements.co.uk'}/login" 
                style="background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
               Login to Your Account
             </a>
@@ -134,7 +140,7 @@ export const sendResendVerificationEmail = async (email, name, token, password) 
   try {
     const transporter = createTransporter()
     
-    const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${token}`
+    const verificationUrl = `${process.env.FRONTEND_URL || 'https://edusupplements.co.uk'}/verify-email?token=${token}`
     
     const mailOptions = {
       from: process.env.SMTP_USER || 'no-reply@ehouse.org.uk',
@@ -185,6 +191,19 @@ export const sendResendVerificationEmail = async (email, name, token, password) 
     return true
   } catch (error) {
     console.error('Error sending resend verification email:', error)
+    return false
+  }
+}
+
+// Test SMTP connection
+export const testSMTPConnection = async () => {
+  try {
+    const transporter = createTransporter()
+    await transporter.verify()
+    console.log('✅ SMTP connection successful')
+    return true
+  } catch (error) {
+    console.error('❌ SMTP connection failed:', error.message)
     return false
   }
 } 
