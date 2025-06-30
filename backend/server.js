@@ -74,6 +74,7 @@ const __dirname = dirname(__filename)
 
 // Default route
 app.get('/api/', function (req, res) {
+  countAllExistingStats()
   res.json('Server Running')
 })
 
