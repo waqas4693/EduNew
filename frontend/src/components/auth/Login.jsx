@@ -83,13 +83,8 @@ const Login = () => {
           localStorage.setItem('enrollmentDates', JSON.stringify(enrollmentDates))
         }
 
-        const userWithDemo = {
-          ...user,
-          isDemo: user.isDemo || false
-        }
-
         // Login with user data and token
-        login(userWithDemo, token)
+        login(user, token)
 
         // Navigate based on role
         switch(user.role) {
