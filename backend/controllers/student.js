@@ -69,18 +69,10 @@ export const newStudent = async (req, res) => {
       }
     }
 
+    console.log('First Unit:', firstUnit)
+
     res.status(201).json({
       message: emailSent ? 'Student created successfully. Verification email sent.' : 'Student created successfully. Failed to send verification email.',
-      student: {
-        name: student.name,
-        email: student.email,
-        contactNo: student.contactNo,
-        address: student.address,
-        status: student.status,
-        isDemo: student.isDemo,
-        courses: student.courses,
-        emailVerified: false
-      }
     })
   } catch (error) {
     console.error('Error creating student:', error)
