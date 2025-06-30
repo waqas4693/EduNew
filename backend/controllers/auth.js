@@ -33,6 +33,7 @@ export const loginUser = async (req, res) => {
       id: user._id,
       email: user.email,
       role: user.role,
+      emailVerified: user.emailVerified || false,
       isDemo: user.isDemo || false
     }
 
@@ -48,7 +49,6 @@ export const loginUser = async (req, res) => {
           contactNo: student.contactNo,
           address: student.address,
           isDemo: student.isDemo || false,
-          emailVerified: student.emailVerified || false,
           courseIds: student.courses
             .filter(course => course.courseStatus === 1)
             .map(course => ({
