@@ -97,6 +97,32 @@ export const useUpdateProgress = () => {
         return { data: { success: true, message: 'Section already completed' } }
       }
 
+      // Check if resource is already viewed (only for non-MCQ updates)
+      if (!mcqData && currentProgress?.data?.progress?.viewedResources) {
+        const isAlreadyViewed = currentProgress.data.progress.viewedResources.some(
+          vr => vr.resourceId === resourceId
+        )
+        if (isAlreadyViewed) {
+          console.log('Resource already viewed, skipping view recording:', resourceId)
+          return { 
+            data: { 
+              success: true, 
+              message: 'Resource already viewed',
+              progress: {
+                resourceProgressPercentage: currentProgress.data.resourceProgressPercentage,
+                mcqProgressPercentage: currentProgress.data.mcqProgressPercentage,
+                totalResources: currentProgress.data.totalResources,
+                totalMcqs: currentProgress.data.totalMcqs,
+                completedMcqs: currentProgress.data.completedMcqs,
+                viewedResources: currentProgress.data.progress.viewedResources.length,
+                lastAccessedResource: resourceId,
+                viewRecorded: false
+              }
+            } 
+          }
+        }
+      }
+
       // Prepare request body
       const requestBody = {
         resourceId,

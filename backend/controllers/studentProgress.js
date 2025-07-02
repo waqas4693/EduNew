@@ -120,15 +120,40 @@ export const updateProgress = async (req, res) => {
       })
     }
 
+    // Get current progress to check if resource is already viewed
+    let currentProgress = await StudentProgress.findOne({
+      studentId,
+      courseId,
+      unitId,
+      sectionId
+    })
+
+    // Check if resource is already viewed (only for non-MCQ updates)
+    let shouldRecordView = true
+    if (!mcqData && currentProgress) {
+      const isAlreadyViewed = currentProgress.viewedResources.some(
+        vr => vr.resourceId.toString() === resourceId
+      )
+      shouldRecordView = !isAlreadyViewed
+      console.log('Resource view check:', { 
+        resourceId, 
+        isAlreadyViewed, 
+        shouldRecordView 
+      })
+    }
+
     // Prepare update object
     const updateObj = {
       lastAccessedResource: resourceObjectId,
       lastAccessedAt: new Date()
     }
 
-    // Only add to viewedResources if this is not an MCQ update
-    if (!mcqData) {
+    // Only add to viewedResources if this is not an MCQ update AND not already viewed
+    if (!mcqData && shouldRecordView) {
       updateObj.$addToSet = { viewedResources: { resourceId: resourceObjectId, resourceNumber } }
+      console.log('Will record new resource view')
+    } else if (!mcqData && !shouldRecordView) {
+      console.log('Skipping resource view recording - already viewed')
     }
 
     // Add MCQ progress if provided
@@ -208,7 +233,8 @@ export const updateProgress = async (req, res) => {
           totalMcqs: sectionStats.totalMcqs,
           completedMcqs,
           viewedResources: progress.viewedResources.length,
-          lastAccessedResource: resourceId
+          lastAccessedResource: resourceId,
+          viewRecorded: shouldRecordView
         }
       }
     })

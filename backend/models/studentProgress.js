@@ -128,6 +128,15 @@ studentProgressSchema.index({ lastAccessedResource: 1 })
 // Index for viewed resources
 studentProgressSchema.index({ 'viewedResources.resourceId': 1 })
 
+// Compound index for efficient view checking
+studentProgressSchema.index({ 
+  studentId: 1, 
+  courseId: 1, 
+  unitId: 1, 
+  sectionId: 1, 
+  'viewedResources.resourceId': 1 
+})
+
 // Index for MCQ progress
 studentProgressSchema.index({ 'mcqProgress.resourceId': 1 })
 
