@@ -1,13 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react'
 import {
+  Box,
   Dialog,
+  Slider,
+  IconButton,
+  Typography,
   DialogTitle,
   DialogContent,
-  IconButton,
-  Box,
-  Typography,
-  Slider,
-  Button,
   CircularProgress
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'

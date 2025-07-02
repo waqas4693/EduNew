@@ -21,13 +21,13 @@ import { useResources } from '../../hooks/useResources'
 
 const LearnerFrame = () => {
   console.log('=== LearnerFrame Component Initialized ===')
-  console.log('Route params:', { courseId, unitId, sectionId })
   
   const navigate = useNavigate()
 
   const { user } = useAuth()
   const { courseId, unitId, sectionId } = useParams()
 
+  console.log('Route params:', { courseId, unitId, sectionId })
   console.log('User context:', { studentId: user?.studentId, userId: user?.id })
 
   const [currentIndex, setCurrentIndex] = useState(0)

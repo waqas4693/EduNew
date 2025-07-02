@@ -6,10 +6,7 @@ import {
   CardMedia,
   ListItem,
   Skeleton,
-  LinearProgress,
   Tooltip,
-  Badge,
-  CircularProgress,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -17,14 +14,13 @@ import {
   useTheme,
   useMediaQuery
 } from '@mui/material'
-import { getData } from '../../api/api'
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { setCurrentUnit } from '../../redux/slices/courseSlice'
 import { useAuth } from '../../context/AuthContext'
 import { useUnitDetails } from '../../hooks/useUnits'
-import { useSections, useUnlockedSections, useSectionCompletion } from '../../hooks/useSections'
+import { useSections, useUnlockedSections } from '../../hooks/useSections'
 
 import Grid from '@mui/material/Grid2'
 import Calendar from '../calendar/Calendar'
@@ -34,7 +30,6 @@ import AssignmentOutlined from '@mui/icons-material/AssignmentOutlined'
 import SmartToyOutlined from '@mui/icons-material/SmartToyOutlined'
 import LockOutlined from '@mui/icons-material/LockOutlined'
 import LockOpenOutlined from '@mui/icons-material/LockOpenOutlined'
-import CheckCircleOutline from '@mui/icons-material/CheckCircleOutline'
 import IconButton from '@mui/material/IconButton'
 
 const Section = () => {

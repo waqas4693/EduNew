@@ -42,7 +42,7 @@ const ResourceRenderer = ({
   const { state: mcqState, actions: mcqActions } = useMcqState(mcqProgress)
   console.log('MCQ state:', mcqState)
   
-  const { progress, actions: progressActions } = useResourceProgress(
+  const { progress } = useResourceProgress(
     studentId,
     courseId,
     unitId,

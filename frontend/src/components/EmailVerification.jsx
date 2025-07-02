@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   Box,
-  Typography,
-  Alert,
   Paper,
-  CircularProgress,
-  Button
+  Button,
+  Typography,
+  CircularProgress
 } from '@mui/material'
 import { getData } from '../api/api'
 
