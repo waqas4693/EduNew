@@ -80,7 +80,6 @@ const HeaderSection = () => {
           display: 'flex',
           alignItems: 'center',
           backgroundColor: '#ffffff',
-          px: { xs: 1, sm: 2, md: 3 },
         }}
       >
         <Box
@@ -208,7 +207,6 @@ const FooterStrip = () => (
       display: 'flex',
       alignItems: 'center',
       backgroundColor: '#ffffff',
-      px: { xs: 1, sm: 2, md: 3 },
     }}
   >
     <Box
@@ -318,10 +316,10 @@ const SplashScreen = () => {
                 width: '100%',
                 height: { xs: '150px', sm: '200px', md: '180px' }, // Enlarged for mobile/tablet
                 display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
                 overflow: 'hidden',
                 position: 'relative',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
               <Box

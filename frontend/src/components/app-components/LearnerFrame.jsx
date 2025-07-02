@@ -20,14 +20,21 @@ import { ChevronLeft, ChevronRight, OpenInNew } from '@mui/icons-material'
 import { useResources } from '../../hooks/useResources'
 
 const LearnerFrame = () => {
+  console.log('=== LearnerFrame Component Initialized ===')
+  console.log('Route params:', { courseId, unitId, sectionId })
+  
   const navigate = useNavigate()
 
   const { user } = useAuth()
   const { courseId, unitId, sectionId } = useParams()
 
+  console.log('User context:', { studentId: user?.studentId, userId: user?.id })
+
   const [currentIndex, setCurrentIndex] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
   const [isCompleting, setIsCompleting] = useState(false)
+
+  console.log('Initial state:', { currentIndex, currentPage, isCompleting })
 
   // Use our new hooks
   const {
@@ -38,11 +45,30 @@ const LearnerFrame = () => {
     hasMore
   } = useResources(sectionId, currentPage)
 
+  console.log('Resources hook state:', { 
+    resourcesCount: resources.length, 
+    isLoading: resourcesLoading, 
+    isError: resourcesError, 
+    hasMore 
+  })
+
   // Only use useSignedUrls when we have a current resource
   const currentResource = resources[currentIndex]
   const { signedUrls, isLoading: urlsLoading, refreshExpiredUrls } = useSignedUrls(
     currentResource || { content: {} }
   )
+
+  console.log('Current resource:', currentResource ? {
+    id: currentResource._id,
+    name: currentResource.name,
+    type: currentResource.resourceType,
+    number: currentResource.number
+  } : null)
+
+  console.log('Signed URLs state:', { 
+    urlsCount: Object.keys(signedUrls).length, 
+    isLoading: urlsLoading 
+  })
 
   const {
     progress,
@@ -52,51 +78,95 @@ const LearnerFrame = () => {
     refetch: refetchProgress
   } = useProgress(user?.studentId, courseId, unitId, sectionId)
 
+  console.log('Progress state:', { 
+    sectionProgress: progress.section, 
+    mcqProgress: progress.mcq, 
+    isLoading: progressLoading 
+  })
+
   const updateProgressMutation = useUpdateProgress()
 
   // Fetch student progress and navigate to last accessed resource
   useEffect(() => {
+    console.log('=== Fetching Student Progress ===')
     const fetchStudentProgress = async () => {
-      if (!user?.studentId || !resources.length) return
+      if (!user?.studentId || !resources.length) {
+        console.log('Skipping progress fetch:', { 
+          hasStudentId: !!user?.studentId, 
+          resourcesLength: resources.length 
+        })
+        return
+      }
 
       try {
+        console.log('Fetching progress for student:', user.studentId)
         const response = await getData(`student-progress/${user.studentId}/${courseId}/${unitId}/${sectionId}`)
+        console.log('Progress response status:', response.status)
+        
         if (response.status === 200) {
           const progressData = response.data.data.progress
+          console.log('Progress data received:', progressData)
           
           if (progressData?.lastAccessedResource) {
+            console.log('Last accessed resource found:', progressData.lastAccessedResource)
             // Find the index of the last accessed resource
             const lastAccessedIndex = resources.findIndex(
               resource => resource._id === progressData.lastAccessedResource
             )
             
+            console.log('Last accessed resource index:', lastAccessedIndex)
+            
             if (lastAccessedIndex !== -1) {
               // If the last accessed resource is an MCQ and not completed, stay on it
               const lastResource = resources[lastAccessedIndex]
+              console.log('Last resource details:', {
+                type: lastResource.resourceType,
+                isCompleted: isResourceCompleted(lastResource._id)
+              })
+              
               if (lastResource.resourceType === 'MCQ' && !isResourceCompleted(lastResource._id)) {
+                console.log('Setting current index to last accessed MCQ (not completed)')
                 setCurrentIndex(lastAccessedIndex)
               } else {
                 // If not an MCQ or already completed, move to the next resource
                 const nextIndex = lastAccessedIndex + 1 < resources.length ? lastAccessedIndex + 1 : lastAccessedIndex
+                console.log('Setting current index to next resource:', nextIndex)
                 setCurrentIndex(nextIndex)
               }
+            } else {
+              console.log('Last accessed resource not found in current resources list')
             }
+          } else {
+            console.log('No last accessed resource found, starting from beginning')
           }
         }
       } catch (error) {
-        console.error('Error fetching student progress:', error)
+        console.error('=== Error fetching student progress ===')
+        console.error('Error details:', error)
       }
     }
 
     // Only fetch progress on initial load
     if (resources.length > 0 && currentIndex === 0) {
+      console.log('Triggering initial progress fetch')
       fetchStudentProgress()
     }
   }, [user?.studentId, courseId, unitId, sectionId, resources.length, isResourceCompleted])
 
   // Handle MCQ completion
   const handleMcqCompleted = async (resourceId, isCorrect, attempts) => {
-    if (!user?.studentId || !isCorrect) return
+    console.log('=== MCQ Completion Handler ===')
+    console.log('MCQ completion details:', { resourceId, isCorrect, attempts })
+    
+    if (!user?.studentId || !isCorrect) {
+      console.log('Skipping MCQ completion:', { 
+        hasStudentId: !!user?.studentId, 
+        isCorrect 
+      })
+      return
+    }
+    
+    console.log('Updating progress for MCQ completion')
     updateProgressMutation.mutate({
       resourceId,
       resourceNumber: currentResource.number,
@@ -110,25 +180,35 @@ const LearnerFrame = () => {
       }
     }, {
       onSuccess: () => {
+        console.log('MCQ progress updated successfully, refetching progress')
         refetchProgress()
+      },
+      onError: (error) => {
+        console.error('Error updating MCQ progress:', error)
       }
     })
   }
 
   // Handle navigation
   const handleNext = async () => {
+    console.log('=== Next Navigation Handler ===')
+    console.log('Current state:', { currentIndex, resourcesLength: resources.length })
+    
     if (currentIndex < resources.length - 1) {
       const nextIndex = currentIndex + 1
+      console.log('Moving to next resource:', nextIndex)
       setCurrentIndex(nextIndex)
       
       // Prefetch next page if needed
       if (nextIndex >= resources.length - 5 && hasMore) {
+        console.log('Prefetching next page of resources')
         setCurrentPage(prev => prev + 1)
         prefetchNextPage()
       }
       
       // Record view and update progress only when actually navigating
       if (resources[nextIndex]) {
+        console.log('Recording view for next resource:', resources[nextIndex]._id)
         updateProgressMutation.mutate({
           resourceId: resources[nextIndex]._id,
           resourceNumber: resources[nextIndex].number,
@@ -138,16 +218,22 @@ const LearnerFrame = () => {
           sectionId
         }, {
           onSuccess: () => {
+            console.log('Progress updated for next resource')
             refetchProgress()
+          },
+          onError: (error) => {
+            console.error('Error updating progress for next resource:', error)
           }
         })
       }
     } else {
       // We're at the last resource of the section
+      console.log('=== Section Completion Process Started ===')
       setIsCompleting(true)
       try {
         // First record the final view
         if (currentResource) {
+          console.log('Recording final resource view before completion')
           await updateProgressMutation.mutateAsync({
             resourceId: currentResource._id,
             resourceNumber: currentResource.number,
@@ -159,6 +245,7 @@ const LearnerFrame = () => {
         }
 
         // Then check section completion
+        console.log('Checking section completion status')
         const response = await postData('section-unlock/check-completion', {
           studentId: user?.studentId,
           courseId,
@@ -166,7 +253,10 @@ const LearnerFrame = () => {
           sectionId
         })
 
+        console.log('Section completion response:', response.data)
+
         if (response.status === 200 && response.data.isCompleted) {
+          console.log('Section completed successfully, navigating back')
           // Wait for progress to be updated
           await refetchProgress()
           
@@ -177,24 +267,33 @@ const LearnerFrame = () => {
               completedSectionId: sectionId 
             }
           })
+        } else {
+          console.log('Section not yet completed')
         }
       } catch (error) {
-        console.error('Error completing section:', error)
+        console.error('=== Error completing section ===')
+        console.error('Error details:', error)
         // Show error to user
         // You might want to add a proper error notification here
       } finally {
+        console.log('Section completion process finished')
         setIsCompleting(false)
       }
     }
   }
 
   const handlePrevious = () => {
+    console.log('=== Previous Navigation Handler ===')
+    console.log('Current index:', currentIndex)
+    
     if (currentIndex > 0) {
       const prevIndex = currentIndex - 1
+      console.log('Moving to previous resource:', prevIndex)
       setCurrentIndex(prevIndex)
       
       // Record view only when actually navigating
       if (resources[prevIndex]) {
+        console.log('Recording view for previous resource:', resources[prevIndex]._id)
         updateProgressMutation.mutate({
           resourceId: resources[prevIndex]._id,
           resourceNumber: resources[prevIndex].number,
@@ -204,10 +303,16 @@ const LearnerFrame = () => {
           sectionId
         }, {
           onSuccess: () => {
+            console.log('Progress updated for previous resource')
             refetchProgress()
+          },
+          onError: (error) => {
+            console.error('Error updating progress for previous resource:', error)
           }
         })
       }
+    } else {
+      console.log('Already at first resource, cannot go previous')
     }
   }
 
@@ -216,17 +321,26 @@ const LearnerFrame = () => {
     if (!currentResource || currentResource.resourceType !== 'MCQ') {
       return true
     }
-    return isResourceCompleted(currentResource._id)
+    const completed = isResourceCompleted(currentResource._id)
+    console.log('Current MCQ completion status:', { 
+      resourceId: currentResource._id, 
+      completed 
+    })
+    return completed
   }
 
   // Check if next button should be disabled
   const isNextButtonDisabled = () => {
     if (currentIndex === resources.length - 1) {
+      console.log('Next button enabled (last resource)')
       return false // Don't disable on last resource
     }
     if (currentResource?.resourceType === 'MCQ') {
-      return !isCurrentMcqCompleted()
+      const disabled = !isCurrentMcqCompleted()
+      console.log('Next button MCQ state:', { disabled })
+      return disabled
     }
+    console.log('Next button enabled (non-MCQ resource)')
     return false
   }
 
@@ -240,16 +354,22 @@ const LearnerFrame = () => {
 
   // Refresh expired URLs periodically
   useEffect(() => {
+    console.log('Setting up URL refresh interval (45 minutes)')
     const interval = setInterval(() => {
+      console.log('Refreshing expired URLs')
       refreshExpiredUrls()
     }, 45 * 60 * 1000) // 45 minutes
 
-    return () => clearInterval(interval)
+    return () => {
+      console.log('Clearing URL refresh interval')
+      clearInterval(interval)
+    }
   }, [refreshExpiredUrls])
 
   // Add console log to check current resource data
   useEffect(() => {
     if (currentResource) {
+      console.log('=== Current Resource Updated ===')
       console.log('Current Resource:', currentResource)
       console.log('External Links:', currentResource.content?.externalLinks)
     }
@@ -257,6 +377,14 @@ const LearnerFrame = () => {
 
   // Show loading state if any data is loading or if we don't have resources yet
   if (resourcesLoading || urlsLoading || progressLoading || !resources.length) {
+    console.log('=== Rendering Loading State ===')
+    console.log('Loading states:', { 
+      resourcesLoading, 
+      urlsLoading, 
+      progressLoading, 
+      hasResources: !!resources.length 
+    })
+    
     return (
       <Paper
         elevation={5}
@@ -285,6 +413,9 @@ const LearnerFrame = () => {
   }
 
   if (resourcesError) {
+    console.error('=== Rendering Error State ===')
+    console.error('Resources error:', resourcesError)
+    
     return (
       <Paper
         elevation={5}
@@ -301,6 +432,9 @@ const LearnerFrame = () => {
 
   // Don't render if we don't have a current resource
   if (!currentResource) {
+    console.log('=== No Current Resource ===')
+    console.log('Resources available:', resources.length)
+    
     return (
       <Paper
         elevation={5}
@@ -314,6 +448,14 @@ const LearnerFrame = () => {
       </Paper>
     )
   }
+
+  console.log('=== Rendering LearnerFrame ===')
+  console.log('Final render state:', {
+    currentIndex,
+    currentResource: currentResource.name,
+    isCompleting,
+    progress: { section: progress.section, mcq: progress.mcq }
+  })
 
   return (
     <Grid container>
@@ -335,7 +477,10 @@ const LearnerFrame = () => {
                 alignItems: 'center',
                 width: 'fit-content'
               }}
-              onClick={() => navigate(`/units/${courseId}/section/${unitId}`)}
+              onClick={() => {
+                console.log('Navigating back to section')
+                navigate(`/units/${courseId}/section/${unitId}`)
+              }}
             >
               <ChevronLeft sx={{ color: 'primary.main' }} /> Back To Section
             </Typography>
@@ -371,7 +516,7 @@ const LearnerFrame = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 {/* External Links */}
                 {currentResource.content?.externalLinks?.filter(link => link.name && link.url).map((link, index) => {
-                  console.log('Rendering link:', link) // Debug log for each link
+                  console.log('Rendering external link:', link) // Debug log for each link
                   return (
                     <Link
                       key={index}

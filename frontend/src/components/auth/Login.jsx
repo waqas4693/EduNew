@@ -1,24 +1,23 @@
-import { useState } from 'react'
 import {
   Box,
-  TextField,
-  Button,
-  Typography,
   Paper,
-  Alert,
-  IconButton,
-  InputAdornment,
+  Button,
   Dialog,
+  useTheme,
+  TextField,
+  Typography,
+  IconButton,
   DialogTitle,
+  useMediaQuery,
   DialogContent,
   DialogActions,
-  useTheme,
-  useMediaQuery
+  InputAdornment
 } from '@mui/material'
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { postData } from '../../api/api'
-import { Visibility, VisibilityOff } from '@mui/icons-material'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { Visibility, VisibilityOff } from '@mui/icons-material'
 
 const ADMIN_ROLE = 1
 const STUDENT_ROLE = 2
@@ -129,19 +128,18 @@ const Login = () => {
       sx={{
         height: '100vh',
         display: 'flex',
+        position: 'relative',
         flexDirection: 'column',
-        backgroundColor: '#ffffff',
-        position: 'relative'
+        backgroundColor: '#ffffff'
       }}
     >
       {/* Top Bar */}
       <Box
         sx={{
           width: '100%',
-          height: { xs: '100px', sm: '120px', md: '150px' },
           display: 'flex',
           alignItems: 'center',
-          px: { xs: 1, sm: 2, md: 3 }
+          height: { xs: '100px', sm: '120px', md: '150px' }     
         }}
       >
         <Box
@@ -157,10 +155,10 @@ const Login = () => {
           src='/logo.png'
           component='img'
           sx={{
-            px: { xs: 0.5, sm: 1 },
-            width: { xs: '25%', sm: '20%', md: '15%' },
             height: '100%',
-            objectFit: 'contain'
+            objectFit: 'contain',
+            px: { xs: 0.5, sm: 1 },
+            width: { xs: '25%', sm: '20%', md: '15%' }
           }}
         />
         <Box
@@ -217,8 +215,8 @@ const Login = () => {
               sx={{
                 mb: { xs: 2, sm: 2.5, md: 3 },
                 '& .MuiOutlinedInput-root': {
-                  borderRadius: { xs: '6px', sm: '7px', md: '8px' },
-                  fontSize: { xs: '14px', sm: '15px', md: '16px' }
+                  fontSize: { xs: '14px', sm: '15px', md: '16px' },
+                  borderRadius: { xs: '6px', sm: '7px', md: '8px' }
                 }
               }}
               variant='outlined'
@@ -257,17 +255,17 @@ const Login = () => {
             />
             <Button
               type='submit'
-              size={isMobile ? 'medium' : 'large'}
               variant='contained'
+              size={isMobile ? 'medium' : 'large'}
               sx={{
-                borderRadius: { xs: '6px', sm: '7px', md: '8px' },
-                fontSize: { xs: '14px', sm: '15px', md: '16px' },
-                textTransform: 'none',
-                display: 'block',
                 mx: 'auto',
-                px: { xs: '20px', sm: '25px', md: '30px' },
-                py: { xs: 1, sm: 1.2, md: 1.5 },
+                display: 'block',
+                textTransform: 'none',
                 backgroundColor: '#1F7EC2',
+                py: { xs: 1, sm: 1.2, md: 1.5 },
+                px: { xs: '20px', sm: '25px', md: '30px' },
+                fontSize: { xs: '14px', sm: '15px', md: '16px' },
+                borderRadius: { xs: '6px', sm: '7px', md: '8px' },
                 '&:hover': {
                   backgroundColor: '#1769aa'
                 }
@@ -283,10 +281,9 @@ const Login = () => {
       <Box
         sx={{
           width: '100%',
-          height: { xs: '100px', sm: '120px', md: '150px' },
           display: 'flex',
           alignItems: 'center',
-          px: { xs: 1, sm: 2, md: 3 }
+          height: { xs: '100px', sm: '120px', md: '150px' },
         }}
       >
         <Box
@@ -299,13 +296,13 @@ const Login = () => {
         />
         <Box
           alt='Logo'
-          src='/ehouse-logo.svg'
           component='img'
+          src='/ehouse-logo.svg'
           sx={{
+            height: '90%',
+            objectFit: 'contain',
             px: { xs: 0.5, sm: 1 },
             width: { xs: '20%', sm: '15%', md: '10%' },
-            height: '90%',
-            objectFit: 'contain'
           }}
         />
         <Box
@@ -339,8 +336,8 @@ const Login = () => {
         </DialogContent>
         <DialogActions>
           <Button 
-            onClick={handleCloseDialog} 
             variant='contained'
+            onClick={handleCloseDialog}
             size={isMobile ? 'small' : 'medium'}
             sx={{
               fontSize: { xs: '14px', sm: '15px', md: '16px' }

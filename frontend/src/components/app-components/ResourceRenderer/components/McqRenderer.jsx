@@ -11,6 +11,18 @@ const McqRenderer = ({
   isLastResource,
   signedUrls
 }) => {
+  console.log('=== McqRenderer Component Initialized ===')
+  console.log('MCQ resource:', {
+    id: resource._id,
+    name: resource.name,
+    question: resource.content.mcq.question,
+    optionsCount: resource.content.mcq.options.length,
+    correctAnswersCount: resource.content.mcq.correctAnswers.length,
+    numberOfCorrectAnswers: resource.content.mcq.numberOfCorrectAnswers
+  })
+  console.log('MCQ state:', state)
+  console.log('Props:', { isLastResource, hasSignedUrls: Object.keys(signedUrls).length })
+
   const { selectedAnswers, hasSubmitted, isCorrect, attempts } = state
   const alphabet = ['A', 'B', 'C', 'D', 'E', 'F']
 
@@ -40,6 +52,9 @@ const McqRenderer = ({
   }
 
   if (state.completed && !hasSubmitted) {
+    console.log('=== Rendering Completed MCQ ===')
+    console.log('MCQ already completed, showing success state')
+    
     return (
       <Box sx={{ p: 3 }}>
         <Typography variant="h6" gutterBottom sx={{ color: '#000' }}>
@@ -97,7 +112,10 @@ const McqRenderer = ({
             variant="contained"
             color="primary"
             startIcon={<NavigateNext />}
-            onClick={onNext}
+            onClick={() => {
+              console.log('Next button clicked for completed MCQ')
+              onNext()
+            }}
             sx={{ mt: 2 }}
           >
             Next
@@ -106,6 +124,16 @@ const McqRenderer = ({
       </Box>
     )
   }
+
+  console.log('=== Rendering Active MCQ ===')
+  console.log('MCQ state for rendering:', {
+    selectedAnswers,
+    hasSubmitted,
+    isCorrect,
+    attempts,
+    hasImage: !!resource.content.mcq?.imageFile,
+    hasAudio: !!resource.content.mcq?.audioFile
+  })
 
   return (
     <Box sx={{ p: 3 }}>
@@ -155,7 +183,16 @@ const McqRenderer = ({
                   : '#f5f5f5'
               }
             }}
-            onClick={() => actions.selectAnswer(option, resource.content.mcq.numberOfCorrectAnswers)}
+            onClick={() => {
+              console.log('=== Option Clicked ===')
+              console.log('Option clicked:', { option, index: index + 1 })
+              console.log('Current selected answers:', selectedAnswers)
+              console.log('Required correct answers:', resource.content.mcq.numberOfCorrectAnswers)
+              
+              actions.selectAnswer(option, resource.content.mcq.numberOfCorrectAnswers)
+              
+              console.log('Option selection action completed')
+            }}
           >
             <Typography>{`${alphabet[index]}. ${option}`}</Typography>
           </Paper>
@@ -165,7 +202,14 @@ const McqRenderer = ({
       {!hasSubmitted ? (
         <Button
           variant="contained"
-          onClick={onSubmit}
+          onClick={() => {
+            console.log('=== Submit Button Clicked ===')
+            console.log('Selected answers:', selectedAnswers)
+            console.log('Required answers:', resource.content.mcq.numberOfCorrectAnswers)
+            console.log('Correct answers:', resource.content.mcq.correctAnswers)
+            
+            onSubmit()
+          }}
           sx={{ mt: 2 }}
           disabled={selectedAnswers.length !== resource.content.mcq.numberOfCorrectAnswers}
         >
@@ -183,7 +227,11 @@ const McqRenderer = ({
               variant="contained"
               color="primary"
               startIcon={<NavigateNext />}
-              onClick={onNext}
+              onClick={() => {
+                console.log('=== Next Button Clicked (Correct Answer) ===')
+                console.log('MCQ answered correctly, proceeding to next')
+                onNext()
+              }}
               sx={{ mt: 1 }}
             >
               Next
@@ -193,7 +241,11 @@ const McqRenderer = ({
             !isCorrect && (
               <Button
                 variant="outlined"
-                onClick={actions.reset}
+                onClick={() => {
+                  console.log('=== Try Again Button Clicked ===')
+                  console.log('Resetting MCQ state for retry')
+                  actions.reset()
+                }}
                 sx={{ mt: 1 }}
               >
                 Try Again
