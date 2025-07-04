@@ -29,6 +29,7 @@ import bulkUploadRoutes from './routes/bulkUpload.js'
 import statsRouter from './routes/stats.js'
 import scriptRoutes from './routes/scriptRoutes.js'
 import emailVerificationRoutes from './routes/emailVerification.js'
+import passwordResetRoutes from './routes/passwordReset.js'
 import { countAllExistingStats } from './controllers/stats.js'
 
 import Course from './models/course.js'
@@ -104,6 +105,7 @@ app.use('/api/student-progress', studentProgressRoutes)
 app.use('/api/stats', statsRouter)
 app.use('/api/scripts', scriptRoutes)
 app.use('/api/email-verification', emailVerificationRoutes)
+app.use('/api/password-reset', passwordResetRoutes)
 mongoose.set('strictQuery', false)
 
 await mongoose

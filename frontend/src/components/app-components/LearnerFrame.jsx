@@ -2,22 +2,21 @@ import Grid from '@mui/material/Grid2'
 import ResourceRenderer from './ResourceRenderer'
 import {
   Box,
-  Typography,
+  Link,
   Paper,
   Button,
-  CircularProgress,
+  Typography,
   LinearProgress,
-  Link
+  CircularProgress
 } from '@mui/material'
-
 import { useState, useEffect } from 'react'
 import { getData, postData } from '../../api/api'
 import { useAuth } from '../../context/AuthContext'
-import { useProgress, useUpdateProgress } from '../../hooks/useProgress'
+import { useResources } from '../../hooks/useResources'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useSignedUrls } from '../../hooks/useSignedUrls'
+import { useProgress, useUpdateProgress } from '../../hooks/useProgress'
 import { ChevronLeft, ChevronRight, OpenInNew } from '@mui/icons-material'
-import { useResources } from '../../hooks/useResources'
 
 const LearnerFrame = () => {
   console.log('=== LearnerFrame Component Initialized ===')
