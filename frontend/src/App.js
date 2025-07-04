@@ -16,6 +16,8 @@ import LearnerFrame from './components/app-components/LearnerFrame'
 import StudentDashboard from './components/dashboard/StudentDashboard'
 import ViewAssessment from './components/app-components/ViewAssessment'
 import EmailVerification from './components/EmailVerification'
+import ForgotPassword from './components/auth/ForgotPassword'
+import ResetPassword from './components/auth/ResetPassword'
 
 import InactiveStudents from './components/students/InactiveStudents'
 import StudentCourses from './components/students/StudentCourses'
@@ -84,6 +86,8 @@ function App() {
                     <Route path="/" element={<SplashScreen />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/verify-email" element={<EmailVerification />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
                     
                     {/* Admin & Assessment Roles Routes */}
                     <Route

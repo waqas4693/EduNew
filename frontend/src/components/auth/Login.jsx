@@ -11,7 +11,8 @@ import {
   useMediaQuery,
   DialogContent,
   DialogActions,
-  InputAdornment
+  InputAdornment,
+  Link
 } from '@mui/material'
 import { useState } from 'react'
 import { postData } from '../../api/api'
@@ -230,7 +231,7 @@ const Login = () => {
               onChange={handleChange}
               required
               sx={{
-                mb: { xs: 2, sm: 2.5, md: 3 },
+                mb: { xs: 1, sm: 1.5, md: 2 },
                 '& .MuiOutlinedInput-root': {
                   borderRadius: { xs: '6px', sm: '7px', md: '8px' },
                   fontSize: { xs: '14px', sm: '15px', md: '16px' }
@@ -253,6 +254,27 @@ const Login = () => {
                 )
               }}
             />
+            
+            {/* Forgot Password Link */}
+            <Box sx={{ textAlign: 'right', mb: { xs: 2, sm: 2.5, md: 3 } }}>
+              <Link
+                component="button"
+                variant="body2"
+                onClick={() => navigate('/forgot-password')}
+                sx={{
+                  color: '#1F7EC2',
+                  textDecoration: 'none',
+                  fontSize: { xs: '13px', sm: '14px', md: '15px' },
+                  '&:hover': {
+                    textDecoration: 'underline',
+                    color: '#1769aa'
+                  }
+                }}
+              >
+                Forgot Password?
+              </Link>
+            </Box>
+            
             <Button
               type='submit'
               variant='contained'
