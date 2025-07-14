@@ -199,8 +199,8 @@ export const updateProgress = async (req, res) => {
     if (sectionStats.totalMcqs > 0) {
       completedMcqs = progress.mcqProgress.filter(mcq => mcq.completed).length
       mcqProgressPercentage = Math.round(
-        (completedMcqs / sectionStats.totalMcqs) * 100
-      )
+      (completedMcqs / sectionStats.totalMcqs) * 100
+    )
     }
 
     console.log('Calculated percentages:', {
