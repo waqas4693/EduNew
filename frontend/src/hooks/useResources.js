@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { getData } from '../api/api'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -24,23 +24,25 @@ export const useResources = (sectionId, page = 1) => {
     keepPreviousData: true, // Keep previous data while fetching new data
   })
 
-  // Get all resources from the cache
-  const getAllResources = () => {
-    const allResources = []
+  // Get all resources from the cache using useMemo for better performance
+  const allResources = useMemo(() => {
+    const resources = []
     let currentPage = 1
     
     while (true) {
       const pageData = queryClient.getQueryData(['resources', sectionId, currentPage])
       if (!pageData) break
       
-      allResources.push(...pageData.resources)
-      if (!pageData.hasMore) break
+      if (pageData.resources && Array.isArray(pageData.resources)) {
+        resources.push(...pageData.resources)
+      }
       
+      if (!pageData.hasMore) break
       currentPage++
     }
     
-    return allResources
-  }
+    return resources
+  }, [queryClient, sectionId, data]) // Include data in dependencies to re-compute when new data arrives
 
   // Prefetch next page
   const prefetchNextPage = () => {
@@ -63,7 +65,7 @@ export const useResources = (sectionId, page = 1) => {
   }, [data?.hasMore])
 
   return {
-    resources: getAllResources(),
+    resources: allResources,
     total: data?.total || 0,
     totalPages: data?.totalPages || 0,
     hasMore: data?.hasMore || false,

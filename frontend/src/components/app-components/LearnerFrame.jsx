@@ -136,13 +136,25 @@ const LearnerFrame = () => {
 
     if (currentIndex < resources.length - 1) {
       const nextIndex = currentIndex + 1
-      setCurrentIndex(nextIndex)
       
-      // Prefetch next page if needed
+      // Prefetch next page if needed (do this before navigation)
       if (nextIndex >= resources.length - 5 && hasMore) {
-        setCurrentPage(prev => prev + 1)
-        prefetchNextPage()
+        try {
+          setCurrentPage(prev => prev + 1)
+          // Add timeout to prevent infinite loading
+          const prefetchPromise = prefetchNextPage()
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Prefetch timeout')), 5000)
+          )
+          
+          await Promise.race([prefetchPromise, timeoutPromise])
+        } catch (error) {
+          console.error('Error prefetching next page:', error)
+          // Continue with navigation even if prefetch fails
+        }
       }
+      
+      setCurrentIndex(nextIndex)
       
       // Refetch progress after recording the view
       refetchProgress()
@@ -238,6 +250,17 @@ const LearnerFrame = () => {
 
   // Show loading state if any data is loading or if we don't have resources yet
   if (resourcesLoading || urlsLoading || progressLoading || !resources.length) {
+    console.log('=== Rendering Loading State ===')
+    console.log('Loading states:', { 
+      resourcesLoading, 
+      urlsLoading, 
+      progressLoading, 
+      hasResources: !!resources.length,
+      resourcesCount: resources.length,
+      currentIndex,
+      hasMore
+    })
+    
     return (
       <Paper
         elevation={5}
