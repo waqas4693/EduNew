@@ -98,6 +98,14 @@ const LearnerFrame = () => {
     if (!user?.studentId || !isCorrect) {      
       return
     }
+    // Prevent duplicate MCQ progress submissions
+    const alreadyAttempted = progress.mcqProgress?.some(
+      (entry) => entry.resourceId === resourceId
+    )
+    if (alreadyAttempted) {
+      // Optionally show a message or just silently return
+      return
+    }
     
     updateProgressMutation.mutate({
       resourceId,
