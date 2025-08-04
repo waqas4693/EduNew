@@ -3,6 +3,7 @@ import { Box, useMediaQuery, useTheme, IconButton, Dialog, Grid2 } from '@mui/ma
 import Navbar from './Navbar'
 import Sidebar from './Sidebar'
 import PaletteIcon from '@mui/icons-material/Palette'
+import Calendar from '../calendar/Calendar'
 
 const backgroundImages = [
   '1.jpg',
@@ -17,6 +18,7 @@ const DashboardLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile)
   const [background, setBackground] = useState(`/background-images/${backgroundImages[3]}`)
   const [openDialog, setOpenDialog] = useState(false)
+  const [calendarOpen, setCalendarOpen] = useState(false)
 
   const handleImageSelect = (image) => {
     setBackground(`/background-images/${image}`)
@@ -27,11 +29,19 @@ const DashboardLayout = ({ children }) => {
     setSidebarOpen(!sidebarOpen)
   }
 
+  const handleCalendarClick = () => {
+    setCalendarOpen(true)
+  }
+
+  const handleCalendarClose = () => {
+    setCalendarOpen(false)
+  }
+
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar open={sidebarOpen} onClose={toggleSidebar} />
       <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-        <Navbar onMenuClick={toggleSidebar}>
+        <Navbar onMenuClick={toggleSidebar} onCalendarClick={handleCalendarClick}>
           <IconButton
             onClick={() => setOpenDialog(true)}
             sx={{ 
@@ -61,6 +71,7 @@ const DashboardLayout = ({ children }) => {
         </Box>
       </Box>
 
+      {/* Background Selection Dialog */}
       <Dialog 
         open={openDialog} 
         onClose={() => setOpenDialog(false)}
@@ -87,6 +98,22 @@ const DashboardLayout = ({ children }) => {
             ))}
           </Grid2>
         </Box>
+      </Dialog>
+
+      {/* Calendar Dialog */}
+      <Dialog
+        open={calendarOpen}
+        onClose={handleCalendarClose}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '12px',
+            p: 2
+          }
+        }}
+      >
+        <Calendar />
       </Dialog>
     </Box>
   )

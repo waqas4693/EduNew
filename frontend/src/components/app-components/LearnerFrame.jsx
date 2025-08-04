@@ -56,7 +56,7 @@ const LearnerFrame = () => {
   // Fetch student progress and navigate to last accessed resource
   useEffect(() => {
     const fetchStudentProgress = async () => {
-      if (!user?.studentId || !resources.length) {        
+      if (!user?.studentId || !resources.length) {
         return
       }
 
@@ -66,7 +66,7 @@ const LearnerFrame = () => {
         if (response.status === 200) {
           const progressData = response.data.data.progress
           
-          if (progressData?.lastAccessedResource) {            
+          if (progressData?.lastAccessedResource) {
             // Find the index of the last accessed resource
             const lastAccessedIndex = resources.findIndex(
               resource => resource._id === progressData.lastAccessedResource
@@ -75,8 +75,8 @@ const LearnerFrame = () => {
             if (lastAccessedIndex !== -1) {
               // The lastAccessedResource is the one that was recorded as viewed
               // So we should navigate to the NEXT resource after it
-              const nextIndex = lastAccessedIndex + 1 < resources.length ? lastAccessedIndex + 1 : lastAccessedIndex
-              setCurrentIndex(nextIndex)
+                const nextIndex = lastAccessedIndex + 1 < resources.length ? lastAccessedIndex + 1 : lastAccessedIndex
+                setCurrentIndex(nextIndex)
             }
           }
         }
@@ -95,7 +95,7 @@ const LearnerFrame = () => {
 
   // Handle MCQ completion
   const handleMcqCompleted = async (resourceId, isCorrect, attempts) => {
-    if (!user?.studentId || !isCorrect) {      
+    if (!user?.studentId || !isCorrect) {
       return
     }
     // Prevent duplicate MCQ progress submissions
@@ -131,16 +131,16 @@ const LearnerFrame = () => {
   // Handle navigation
   const handleNext = async () => {
     // Always record view for current resource first
-    if (currentResource) {
-      await updateProgressMutation.mutateAsync({
-        resourceId: currentResource._id,
-        resourceNumber: currentResource.number,
-        studentId: user?.studentId,
-        courseId,
-        unitId,
-        sectionId
-      })
-    }
+        if (currentResource) {
+          await updateProgressMutation.mutateAsync({
+            resourceId: currentResource._id,
+            resourceNumber: currentResource.number,
+            studentId: user?.studentId,
+            courseId,
+            unitId,
+            sectionId
+          })
+        }
 
     if (currentIndex < resources.length - 1) {
       const nextIndex = currentIndex + 1
@@ -178,7 +178,7 @@ const LearnerFrame = () => {
           sectionId
         })
 
-        if (response.status === 200 && response.data.isCompleted) {          
+        if (response.status === 200 && response.data.isCompleted) {
           navigate(`/units/${courseId}/section/${unitId}`, {
             state: { 
               refresh: true,
@@ -222,8 +222,13 @@ const LearnerFrame = () => {
   // Check if next button should be disabled
   const isNextButtonDisabled = () => {
     if (currentIndex === resources.length - 1) {
+      // If section is already completed, disable the button
+      if (progress.section === 100) {
+        console.log('Next button disabled (section already completed)')
+        return true
+      }
       console.log('Next button enabled (last resource)')
-      return false // Don't disable on last resource
+      return false // Don't disable on last resource unless completed
     }
     if (currentResource?.resourceType === 'MCQ') {
       const disabled = !isCurrentMcqCompleted()
@@ -237,7 +242,7 @@ const LearnerFrame = () => {
   // Get button text based on resource type and position
   const getNextButtonText = () => {
     if (currentIndex === resources.length - 1) {
-      return 'Complete Section'
+      return progress.section === 100 ? 'Section Completed' : 'Complete Section'
     }
     return <ChevronRight />
   }
@@ -373,7 +378,7 @@ const LearnerFrame = () => {
 
           <Box
             sx={{
-              bgcolor: 'primary.main',
+              bgcolor: progress.section === 100 ? 'success.main' : 'primary.main',
               color: 'white',
               overflow: 'hidden',
               display: 'flex',
@@ -453,10 +458,14 @@ const LearnerFrame = () => {
                   onClick={handleNext}
                   sx={{
                     minWidth: currentIndex === resources.length - 1 ? '120px' : '36px',
-                    bgcolor: 'rgba(255, 255, 255, 0.2)',
+                    bgcolor: progress.section === 100 && currentIndex === resources.length - 1 
+                      ? 'rgba(255, 255, 255, 0.3)' 
+                      : 'rgba(255, 255, 255, 0.2)',
                     color: 'white',
                     '&:hover': {
-                      bgcolor: 'rgba(255, 255, 255, 0.3)'
+                      bgcolor: progress.section === 100 && currentIndex === resources.length - 1
+                        ? 'rgba(255, 255, 255, 0.4)'
+                        : 'rgba(255, 255, 255, 0.3)'
                     },
                     '&.Mui-disabled': {
                       bgcolor: 'rgba(255, 255, 255, 0.1)',

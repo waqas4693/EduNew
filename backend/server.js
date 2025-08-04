@@ -25,6 +25,7 @@ import assessmentAttemptRoutes from './routes/assessmentAttempt.js'
 import s3Routes from './routes/s3.js'
 import sectionUnlockStatusRoutes from './routes/sectionUnlockStatusRoutes.js'
 import studentProgressRoutes from './routes/studentProgress.js'
+import progressRoutes from './routes/progress.js'
 import bulkUploadRoutes from './routes/bulkUpload.js'
 import statsRouter from './routes/stats.js'
 import scriptRoutes from './routes/scriptRoutes.js'
@@ -102,6 +103,7 @@ app.use('/api/upload', uploadRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/bulk-upload', bulkUploadRoutes)
 app.use('/api/student-progress', studentProgressRoutes)
+app.use('/api/progress', progressRoutes)
 app.use('/api/stats', statsRouter)
 app.use('/api/scripts', scriptRoutes)
 app.use('/api/email-verification', emailVerificationRoutes)

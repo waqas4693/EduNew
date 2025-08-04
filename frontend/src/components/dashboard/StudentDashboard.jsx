@@ -26,7 +26,8 @@ import { setCurrentCourse } from '../../redux/slices/courseSlice'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import SpeedIcon from '@mui/icons-material/Speed'
 import EmailIcon from '@mui/icons-material/Email'
-import { useEnrolledCourses, useCourseProgress, useAssessmentDueDates } from '../../hooks/useCourses'
+import { useEnrolledCourses, useAssessmentDueDates } from '../../hooks/useCourses'
+import { useCourseProgress } from '../../hooks/useCourseProgress'
 
 const getThumbnailUrl = fileName => {
   if (!fileName) return ''
@@ -38,9 +39,7 @@ const CourseProgressCard = memo(({ courseId, studentId }) => {
   const [openDialog, setOpenDialog] = useState(false)
   const { data: progressData, isLoading } = useCourseProgress(studentId, courseId)
 
-  const overallProgress = progressData?.length > 0
-    ? Math.round(progressData.reduce((sum, unit) => sum + unit.progress, 0) / progressData.length)
-    : 0
+  const overallProgress = progressData?.progressPercentage || 0
 
   const handleCardClick = () => {
     setOpenDialog(true)
@@ -144,41 +143,45 @@ const CourseProgressCard = memo(({ courseId, studentId }) => {
           </Typography>
         </DialogTitle>
         <DialogContent>
-          {progressData?.length > 0 ? (
+          {progressData ? (
             <Box sx={{ mt: 2 }}>
-              {progressData.map(unit => (
-                <Box key={unit._id} sx={{ mb: 3 }}>
-                  <Typography variant='body1' sx={{ mb: 1, fontWeight: 500 }}>
-                    {unit.name}
-                  </Typography>
-                  <Box sx={{ position: 'relative', mb: 0.5 }}>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant='body1' sx={{ mb: 1, fontWeight: 500 }}>
+                  Course Progress Summary
+                </Typography>
+                <Box sx={{ position: 'relative', mb: 0.5 }}>
+                  <Box
+                    sx={{
+                      width: '100%',
+                      height: 10,
+                      bgcolor: 'grey.100',
+                      borderRadius: 1
+                    }}
+                  >
                     <Box
                       sx={{
-                        width: '100%',
-                        height: 10,
-                        bgcolor: 'grey.100',
-                        borderRadius: 1
+                        width: `${progressData.progressPercentage}%`,
+                        height: '100%',
+                        bgcolor: 'primary.main',
+                        borderRadius: 1,
+                        transition: 'width 0.5s ease-in-out'
                       }}
-                    >
-                      <Box
-                        sx={{
-                          width: `${unit.progress}%`,
-                          height: '100%',
-                          bgcolor: 'primary.main',
-                          borderRadius: 1,
-                          transition: 'width 0.5s ease-in-out'
-                        }}
-                      />
-                    </Box>
-                    <Typography
-                      variant='body2'
-                      sx={{ color: 'text.secondary', mt: 0.5 }}
-                    >
-                      {unit.progress}% Complete
-                    </Typography>
+                    />
                   </Box>
+                  <Typography
+                    variant='body2'
+                    sx={{ color: 'text.secondary', mt: 0.5 }}
+                  >
+                    {progressData.progressPercentage}% Complete
+                  </Typography>
                 </Box>
-              ))}
+                <Typography
+                  variant='body2'
+                  sx={{ color: 'text.secondary', mt: 1 }}
+                >
+                  {progressData.completedUnits} of {progressData.totalUnits} units completed
+                </Typography>
+              </Box>
             </Box>
           ) : (
             <Typography color='text.secondary' align='center' sx={{ py: 3 }}>
@@ -294,9 +297,7 @@ const CourseRow = memo(({ course, studentId }) => {
   const { data: progressData, isLoading: progressLoading } = useCourseProgress(studentId, course.id)
   const { data: dueDates } = useAssessmentDueDates(course.id, course.enrollmentDate)
 
-  const progress = progressData?.length > 0
-    ? Math.round(progressData.reduce((sum, unit) => sum + unit.progress, 0) / progressData.length)
-    : 0
+  const progress = progressData?.progressPercentage || 0
 
   // Check if user is verified
   const isEmailVerified = user?.emailVerified
@@ -952,23 +953,10 @@ const StudentDashboard = () => {
       )}
 
     <Grid container spacing={2}>
-      {/* Calendar Section - Top on mobile/tablet, right side on desktop */}
-      <Grid 
-        size={{ xs: 12, md: 4 }}
-        order={{ xs: 1, md: 2 }} // Order 1 on mobile/tablet (top), 2 on desktop (right)
-      >
-        <Paper
-          elevation={5}
-          sx={{ backgroundColor: 'transparent', borderRadius: 2 }}
-        >
-          <Calendar assessmentDueDates={allDueDates} />
-        </Paper>
-      </Grid>
-
-      {/* Course Cards Section - Bottom on mobile/tablet, left side on desktop */}
+      {/* Course Cards Section - Left side on tablet/desktop */}
       <Grid 
         size={{ xs: 12, md: 8 }}
-        order={{ xs: 2, md: 1 }} // Order 2 on mobile/tablet (bottom), 1 on desktop (left)
+        order={{ xs: 1, md: 1 }}
       >
         <Paper elevation={5} sx={{ p: 3, borderRadius: '16px' }}>
           <Typography
@@ -1001,6 +989,21 @@ const StudentDashboard = () => {
           </Grid>
         </Paper>
       </Grid>
+
+      {/* Calendar Section - Right side on tablet/desktop */}
+      {!isMobile && (
+        <Grid 
+          size={{ md: 4 }}
+          order={{ md: 2 }}
+        >
+          <Paper
+            elevation={5}
+            sx={{ backgroundColor: 'transparent', borderRadius: 2 }}
+          >
+            <Calendar assessmentDueDates={allDueDates} />
+          </Paper>
+        </Grid>
+      )}
     </Grid>
     </Box>
   )

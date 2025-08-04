@@ -1,7 +1,11 @@
 import MenuIcon from '@mui/icons-material/Menu'
-import { AppBar, IconButton, Toolbar, Typography } from '@mui/material'
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
+import { AppBar, IconButton, Toolbar, Typography, useTheme, useMediaQuery, Box } from '@mui/material'
 
-const Navbar = ({ onMenuClick, children }) => {
+const Navbar = ({ onMenuClick, children, onCalendarClick }) => {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+
   return (
     <AppBar 
       position="static" 
@@ -28,7 +32,17 @@ const Navbar = ({ onMenuClick, children }) => {
         >
           EDU SUPPLEMENTS
         </Typography>
-        {children}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {isMobile && onCalendarClick && (
+            <IconButton
+              onClick={onCalendarClick}
+              sx={{ color: 'primary.main' }}
+            >
+              <CalendarTodayIcon />
+            </IconButton>
+          )}
+          {children}
+        </Box>
       </Toolbar>
     </AppBar>
   )

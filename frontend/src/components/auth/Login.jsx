@@ -140,14 +140,14 @@ const Login = () => {
           width: '100%',
           display: 'flex',
           alignItems: 'center',
-          height: { xs: '100px', sm: '120px', md: '150px' }     
+          height: { xs: '70px', sm: '80px', md: '100px' }
         }}
       >
         <Box
           sx={{
             mr: { xs: 1, sm: 2, md: 3 },
-            width: { xs: '8%', sm: '9%', md: '10%' },
-            height: { xs: '25px', sm: '30px', md: '35%' },
+            width: { xs: '8%', sm: '6%', md: '10%' },
+            height: { xs: '25px', sm: '30px', md: '35px' },
             background: 'linear-gradient(90deg, #ff2b0c 0%, #ff6b0c 100%)'
           }}
         />
@@ -159,14 +159,14 @@ const Login = () => {
             height: '100%',
             objectFit: 'contain',
             px: { xs: 0.5, sm: 1 },
-            width: { xs: '25%', sm: '20%', md: '15%' }
+            width: { xs: '25%', sm: '22%', md: '15%' }
           }}
         />
         <Box
           sx={{
             ml: { xs: 1, sm: 2, md: 3 },
             flexGrow: 1,
-            height: { xs: '25px', sm: '30px', md: '35%' },
+            height: { xs: '25px', sm: '30px', md: '35px' },
             background: 'linear-gradient(90deg, #ff2b0c 0%, #ff6b0c 100%)'
           }}
         />
@@ -184,19 +184,19 @@ const Login = () => {
       >
         <Paper
           sx={{
-            p: { xs: 3, sm: 4, md: '60px' },
+            p: { xs: 2, sm: 3, md: 4 },
             width: { xs: '100%', sm: '80%', md: '40%' },
             maxWidth: { xs: '400px', sm: '500px', md: '600px' },
             borderRadius: { xs: '12px', sm: '14px', md: '16px' },
             backgroundColor: '#ffffff',
-            boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)'
+            boxShadow: '0px 1px 20px rgba(0, 0, 0, 0.3)'
           }}
         >
           <Typography
             variant='h5'
             component='h1'
             sx={{ 
-              mb: { xs: 2, sm: 2.5, md: 3 }, 
+              mb: { xs: 1.5, sm: 2, md: 2.5 }, 
               fontSize: { xs: '18px', sm: '19px', md: '20px' }, 
               textAlign: 'center', 
               fontWeight: 500 
@@ -214,7 +214,7 @@ const Login = () => {
               onChange={handleChange}
               required
               sx={{
-                mb: { xs: 2, sm: 2.5, md: 3 },
+                mb: { xs: 1.5, sm: 2, md: 2.5 },
                 '& .MuiOutlinedInput-root': {
                   fontSize: { xs: '14px', sm: '15px', md: '16px' },
                   borderRadius: { xs: '6px', sm: '7px', md: '8px' }
@@ -231,7 +231,7 @@ const Login = () => {
               onChange={handleChange}
               required
               sx={{
-                mb: { xs: 1, sm: 1.5, md: 2 },
+                mb: { xs: 0.5, sm: 1, md: 1.5 },
                 '& .MuiOutlinedInput-root': {
                   borderRadius: { xs: '6px', sm: '7px', md: '8px' },
                   fontSize: { xs: '14px', sm: '15px', md: '16px' }
@@ -255,8 +255,29 @@ const Login = () => {
               }}
             />
             
+            <Button
+              type='submit'
+              variant='contained'
+              size={isMobile ? 'medium' : 'large'}
+              sx={{
+                mx: 'auto',
+                display: 'block',
+                textTransform: 'none',
+                backgroundColor: '#1F7EC2',
+                py: { xs: 0.8, sm: 1, md: 1.2 },
+                px: { xs: '20px', sm: '25px', md: '30px' },
+                fontSize: { xs: '14px', sm: '15px', md: '16px' },
+                borderRadius: { xs: '6px', sm: '7px', md: '8px' },
+                '&:hover': {
+                  backgroundColor: '#1769aa'
+                }
+              }}
+            >
+              Log In
+            </Button>
+            
             {/* Forgot Password Link */}
-            <Box sx={{ textAlign: 'right', mb: { xs: 2, sm: 2.5, md: 3 } }}>
+            <Box sx={{ textAlign: 'center', mt: { xs: 1.5, sm: 2, md: 2.5 } }}>
               <Link
                 component="button"
                 variant="body2"
@@ -274,27 +295,6 @@ const Login = () => {
                 Forgot Password?
               </Link>
             </Box>
-            
-            <Button
-              type='submit'
-              variant='contained'
-              size={isMobile ? 'medium' : 'large'}
-              sx={{
-                mx: 'auto',
-                display: 'block',
-                textTransform: 'none',
-                backgroundColor: '#1F7EC2',
-                py: { xs: 1, sm: 1.2, md: 1.5 },
-                px: { xs: '20px', sm: '25px', md: '30px' },
-                fontSize: { xs: '14px', sm: '15px', md: '16px' },
-                borderRadius: { xs: '6px', sm: '7px', md: '8px' },
-                '&:hover': {
-                  backgroundColor: '#1769aa'
-                }
-              }}
-            >
-              Log In
-            </Button>
           </form>
         </Paper>
       </Box>
@@ -305,14 +305,14 @@ const Login = () => {
           width: '100%',
           display: 'flex',
           alignItems: 'center',
-          height: { xs: '100px', sm: '120px', md: '150px' },
+          height: { xs: '70px', sm: '80px', md: '100px' },
         }}
       >
         <Box
           sx={{
             mr: { xs: 1, sm: 2, md: 3 },
             width: { xs: '45%', sm: '60%', md: '75%' },
-            height: { xs: '25px', sm: '30px', md: '30%' },
+            height: { xs: '25px', sm: '30px', md: '35px' },
             background: 'linear-gradient(90deg, #0070c0 0%, #00a0c0 100%)'
           }}
         />
@@ -331,7 +331,7 @@ const Login = () => {
           sx={{
             ml: { xs: 1, sm: 2, md: 3 },
             flexGrow: 1,
-            height: { xs: '25px', sm: '30px', md: '30%' },
+            height: { xs: '25px', sm: '30px', md: '35px' },
             background: 'linear-gradient(90deg, #0070c0 0%, #00a0c0 100%)'
           }}
         />

@@ -13,7 +13,8 @@ import {
   PlayArrow,
   AssignmentOutlined,
   ChevronRight,
-  LockOutlined
+  LockOutlined,
+  CheckCircle
 } from '@mui/icons-material'
 import { getData } from '../../api/api'
 import { useState, useEffect } from 'react'
@@ -41,6 +42,13 @@ const Units = () => {
 
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+
+  // Helper function to determine if a unit is completed
+  const isUnitCompleted = (unitId) => {
+    if (!unlockStatus?.unlockedUnits || unlockStatus.unlockedUnits.length <= 1) return false
+    const unitIndex = unlockStatus.unlockedUnits.indexOf(unitId)
+    return unitIndex !== -1 && unitIndex !== unlockStatus.unlockedUnits.length - 1
+  }
 
   useEffect(() => {
     const fetchCourseDetails = async () => {
@@ -81,19 +89,9 @@ const Units = () => {
   }
 
   if (isMobile) {
-    // Mobile: Calendar on top, then units
+    // Mobile: Only units, no calendar
     return (
       <Box>
-        <Paper
-          elevation={5}
-          sx={{
-            backgroundColor: 'transparent',
-            borderRadius: 2,
-            mb: 2
-          }}
-        >
-          <Calendar />
-        </Paper>
         <Paper
           elevation={5}
           sx={{
@@ -142,62 +140,6 @@ const Units = () => {
             </Typography>
           </Box>
 
-          {/* <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-            <Box
-              sx={{
-                border: '1px solid',
-                borderColor: 'primary.main',
-                color: 'primary.main',
-                p: 1,
-                borderRadius: '8px',
-                cursor: 'pointer',
-                textAlign: 'center',
-                width: '48%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 1
-              }}
-            >
-              <AssignmentOutlined sx={{ fontSize: 20 }} />
-              Continue Diagnostic Assessment
-            </Box>
-            <Box
-              sx={{
-                bgcolor: 'primary.main',
-                color: 'white',
-                p: 1,
-                borderRadius: '8px',
-                cursor: 'pointer',
-                textAlign: 'center',
-                width: '48%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 1
-              }}
-            >
-              <Box
-                sx={{
-                  bgcolor: 'rgba(255, 255, 255, 0.2)',
-                  borderRadius: '50%',
-                  width: 24,
-                  height: 24,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <PlayArrow sx={{ fontSize: 16 }} />
-              </Box>
-              Resume Learning
-            </Box>
-          </Box> */}
-
-          {/* <Typography variant='body2' sx={{ mb: 2 }}>
-            Last Visit: 11/11/2024 at 2 am
-          </Typography> */}
-
           {isLoading ? (
             [...Array(3)].map((_, index) => (
               <Box key={index} sx={{ mb: 3 }}>
@@ -213,6 +155,7 @@ const Units = () => {
           ) : (
             units?.map((unit) => {
               const isUnlocked = unlockStatus?.unlockedUnits?.includes(unit._id)
+              const isCompleted = isUnitCompleted(unit._id)
               return (
                 <ListItem
                   key={unit._id}
@@ -237,7 +180,7 @@ const Units = () => {
                       mr: 2,
                       color: 'white',
                       minWidth: '70px',
-                      bgcolor: isUnlocked ? '#4169e1' : '#9e9e9e',
+                      bgcolor: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
                       textAlign: 'center',
                       borderTopLeftRadius: '6px',
                       borderBottomLeftRadius: '6px',
@@ -281,7 +224,11 @@ const Units = () => {
                     </Typography>
                   </Box>
                   {isUnlocked ? (
-                    <ChevronRight sx={{ color: 'primary.main' }} />
+                    isCompleted ? (
+                      <CheckCircle sx={{ color: 'success.main' }} />
+                    ) : (
+                      <ChevronRight sx={{ color: 'primary.main' }} />
+                    )
                   ) : (
                     <LockOutlined sx={{ color: 'text.secondary' }} />
                   )}
@@ -417,6 +364,7 @@ const Units = () => {
           ) : (
             units?.map((unit) => {
               const isUnlocked = unlockStatus?.unlockedUnits?.includes(unit._id)
+              const isCompleted = isUnitCompleted(unit._id)
               return (
                 <ListItem
                   key={unit._id}
@@ -441,7 +389,7 @@ const Units = () => {
                       mr: 2,
                       color: 'white',
                       minWidth: '70px',
-                      bgcolor: isUnlocked ? '#4169e1' : '#9e9e9e',
+                      bgcolor: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
                       textAlign: 'center',
                       borderTopLeftRadius: '6px',
                       borderBottomLeftRadius: '6px',
@@ -485,7 +433,11 @@ const Units = () => {
                     </Typography>
                   </Box>
                   {isUnlocked ? (
-                    <ChevronRight sx={{ color: 'primary.main' }} />
+                    isCompleted ? (
+                      <CheckCircle sx={{ color: 'success.main' }} />
+                    ) : (
+                      <ChevronRight sx={{ color: 'primary.main' }} />
+                    )
                   ) : (
                     <LockOutlined sx={{ color: 'text.secondary' }} />
                   )}

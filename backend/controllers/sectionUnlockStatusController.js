@@ -4,6 +4,7 @@ import Section from '../models/section.js'
 import SectionStats from '../models/sectionStats.js'
 import { handleError } from '../utils/errorHandler.js'
 import Unit from '../models/unit.js'
+import { calculateAndSaveUnitProgress } from '../utils/progressCalculator.js'
 
 // Get unlocked sections and units for a student in a course
 export const getUnlockStatus = async (req, res) => {
@@ -116,6 +117,15 @@ export const checkAndUnlockNext = async (req, res) => {
 
     if (isCompleted) {
       console.log('✅ Section is completed, checking for next section/unit')
+      
+      // Calculate and save unit progress
+      try {
+        await calculateAndSaveUnitProgress(studentId, courseId, unitId)
+        console.log('✅ Unit progress calculated and saved')
+      } catch (error) {
+        console.error('❌ Error calculating unit progress:', error)
+        // Continue with unlock logic even if progress calculation fails
+      }
       
       // Get current section and its unit
       const currentSection = await Section.findById(sectionId)

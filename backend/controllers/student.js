@@ -13,7 +13,19 @@ export const newStudent = async (req, res) => {
 
     const existingUser = await User.findOne({ email })
     if (existingUser) {
-      return res.status(400).json({ message: 'Email already exists' })
+      return res.status(400).json({ 
+        success: false,
+        message: 'An account with this email address already exists. Please use a different email.' 
+      })
+    }
+
+    // Validate course exists
+    const course = await Course.findById(courseId)
+    if (!course) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Selected course not found. Please choose a valid course.' 
+      })
     }
 
     const user = new User({
@@ -72,14 +84,25 @@ export const newStudent = async (req, res) => {
     console.log('First Unit:', firstUnit)
 
     res.status(201).json({
-      message: emailSent ? 'Student created successfully. Verification email sent.' : 'Student created successfully. Failed to send verification email.',
+      success: true,
+      message: emailSent 
+        ? `Student "${name}" has been successfully invited! A verification email with login credentials has been sent to ${email}.` 
+        : `Student "${name}" has been successfully invited! However, the verification email could not be sent to ${email}. Please contact the student directly with their login credentials.`
     })
   } catch (error) {
     console.error('Error creating student:', error)
+    
+    // Handle specific database errors
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'An account with this email address already exists. Please use a different email.'
+      })
+    }
+    
     res.status(500).json({
       success: false,
-      message: 'Internal server error',
-      error: error.message
+      message: 'Failed to create student account. Please try again or contact support if the problem persists.'
     })
   }
 }

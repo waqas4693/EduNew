@@ -4,6 +4,7 @@ import SectionStats from '../models/sectionStats.js'
 
 import { uploadToS3 } from './s3.js'
 import { handleError } from '../utils/errorHandler.js'
+import { deleteFromS3 } from './s3.js'
 
 export const createResource = async (req, res) => {
   console.log('=== Resource Creation Started ===')
@@ -737,6 +738,70 @@ export const deleteResource = async (req, res) => {
     }
 
     console.log('Resource found:', { name: resource.name, type: resource.resourceType, sectionId: resource.sectionId })
+
+    // Delete associated S3 files before deleting the resource
+    const filesToDelete = []
+    
+    // Main file
+    if (resource.content?.fileName) {
+      filesToDelete.push({
+        folder: resource.resourceType,
+        filename: resource.content.fileName
+      })
+    }
+    
+    // Thumbnail
+    if (resource.content?.thumbnailUrl) {
+      filesToDelete.push({
+        folder: 'THUMBNAILS',
+        filename: resource.content.thumbnailUrl
+      })
+    }
+    
+    // Background image
+    if (resource.content?.backgroundImage) {
+      filesToDelete.push({
+        folder: 'BACKGROUNDS',
+        filename: resource.content.backgroundImage
+      })
+    }
+    
+    // Audio file
+    if (resource.content?.audioFile) {
+      filesToDelete.push({
+        folder: 'AUDIO',
+        filename: resource.content.audioFile
+      })
+    }
+    
+    // MCQ files
+    if (resource.content?.mcq?.imageFile) {
+      filesToDelete.push({
+        folder: 'MCQ_IMAGES',
+        filename: resource.content.mcq.imageFile
+      })
+    }
+    if (resource.content?.mcq?.audioFile) {
+      filesToDelete.push({
+        folder: 'MCQ_AUDIO',
+        filename: resource.content.mcq.audioFile
+      })
+    }
+    
+    // Delete S3 files
+    if (filesToDelete.length > 0) {
+      console.log(`🗑️ Deleting ${filesToDelete.length} S3 files...`)
+      
+      for (const file of filesToDelete) {
+        try {
+          await deleteFromS3(file.folder, file.filename)
+          console.log(`✅ Deleted S3 file: ${file.folder}/${file.filename}`)
+        } catch (error) {
+          console.error(`❌ Failed to delete S3 file: ${file.folder}/${file.filename}`, error)
+          // Continue with deletion even if S3 file deletion fails
+        }
+      }
+    }
 
     // Soft delete by updating status
     console.log('Performing soft delete (updating status to 2)...')

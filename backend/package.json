@@ -3,7 +3,10 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "cleanup:dry-run": "node scripts/cleanup-orphaned-files.js --dry-run",
+    "cleanup": "node scripts/cleanup-orphaned-files.js",
+    "cleanup:help": "echo \"Usage: npm run cleanup:dry-run (to preview) or npm run cleanup (to delete)\""
   },
   "dependencies": {
     "aws-sdk": "^2.1692.0",

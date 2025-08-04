@@ -30,6 +30,7 @@ import AssignmentOutlined from '@mui/icons-material/AssignmentOutlined'
 import SmartToyOutlined from '@mui/icons-material/SmartToyOutlined'
 import LockOutlined from '@mui/icons-material/LockOutlined'
 import LockOpenOutlined from '@mui/icons-material/LockOpenOutlined'
+import CheckCircle from '@mui/icons-material/CheckCircle'
 import IconButton from '@mui/material/IconButton'
 
 const Section = () => {
@@ -46,6 +47,13 @@ const Section = () => {
   const { data: unitDetails } = useUnitDetails(unitId)
   const { data: sections, isLoading: sectionsLoading, refetch } = useSections(unitId)
   const { data: unlockedSections, refetch: refetchUnlockedSections } = useUnlockedSections(user?.studentId, courseId, unitId)
+
+  // Helper function to determine if a section is completed
+  const isSectionCompleted = (sectionId) => {
+    if (!unlockedSections || unlockedSections.length <= 1) return false
+    const sectionIndex = unlockedSections.indexOf(sectionId)
+    return sectionIndex !== -1 && sectionIndex !== unlockedSections.length - 1
+  }
 
   // Update unit details in Redux when they change
   useEffect(() => {
@@ -134,19 +142,9 @@ const Section = () => {
   }
 
   if (isMobile) {
-    // Mobile: Calendar on top, then section content
+    // Mobile: Only section content, no calendar
     return (
       <Box>
-        <Paper
-          elevation={5}
-          sx={{
-            backgroundColor: 'transparent',
-            borderRadius: 2,
-            mb: 2
-          }}
-        >
-          <Calendar />
-        </Paper>
         <Paper
           elevation={5}
           sx={{
@@ -232,6 +230,7 @@ const Section = () => {
             sections?.map((section, index) => {
               const isUnlocked = isSectionUnlocked(section._id)
               const isAccessible = isSectionAccessible(index)
+              const isCompleted = isSectionCompleted(section._id)
 
               return (
                 <ListItem
@@ -259,7 +258,7 @@ const Section = () => {
                       mr: 2,
                       color: 'white',
                       minWidth: '70px',
-                      bgcolor: isUnlocked ? '#4169e1' : '#9e9e9e',
+                      bgcolor: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
                       textAlign: 'center',
                       borderTopLeftRadius: '6px',
                       borderBottomLeftRadius: '6px',
@@ -296,7 +295,11 @@ const Section = () => {
                       {section.name}
                     </Typography>
                     
-                    {isUnlocked ? (
+                    {isCompleted ? (
+                      <CheckCircle 
+                        sx={{ ml: 1, color: 'success.main', fontSize: '18px' }} 
+                      />
+                    ) : isUnlocked ? (
                       <LockOpenOutlined 
                         sx={{ ml: 1, color: 'primary.main', fontSize: '18px' }} 
                       />
@@ -314,15 +317,15 @@ const Section = () => {
                       <Tooltip title="Learning" placement="top" enterTouchDelay={0} leaveTouchDelay={1500}>
                         <span>
                           <IconButton
-                            color={isUnlocked ? 'primary' : 'default'}
+                            color={isCompleted ? 'success' : (isUnlocked ? 'primary' : 'default')}
                             onClick={() => handleSectionClick(section, isUnlocked)}
                             disabled={!isUnlocked}
                             sx={{
-                              bgcolor: isUnlocked ? '#4169e1' : '#9e9e9e',
+                              bgcolor: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
                               color: 'white',
                               borderRadius: '8px',
                               '&:hover': {
-                                bgcolor: isUnlocked ? '#3557c5' : '#9e9e9e'
+                                bgcolor: isCompleted ? 'success.dark' : (isUnlocked ? '#3557c5' : '#9e9e9e')
                               }
                             }}
                           >
@@ -335,7 +338,7 @@ const Section = () => {
                     <Tooltip title="AI Practice" placement="top" enterTouchDelay={0} leaveTouchDelay={1500}>
                       <span>
                         <IconButton
-                          color={isUnlocked ? 'primary' : 'default'}
+                          color={isCompleted ? 'success' : (isUnlocked ? 'primary' : 'default')}
                           disabled={!isUnlocked}
                           onClick={() => {
                             if (!isAccessible) {
@@ -343,11 +346,11 @@ const Section = () => {
                             }
                           }}
                           sx={{
-                            color: isUnlocked ? '#4169e1' : '#9e9e9e',
-                            border: `1.5px solid ${isUnlocked ? '#4169e1' : '#9e9e9e'}`,
+                            color: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
+                            border: `1.5px solid ${isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e')}`,
                             borderRadius: '8px',
                             '&:hover': {
-                              bgcolor: isUnlocked ? 'rgba(65, 105, 225, 0.08)' : 'transparent'
+                              bgcolor: isCompleted ? 'rgba(76, 175, 80, 0.08)' : (isUnlocked ? 'rgba(65, 105, 225, 0.08)' : 'transparent')
                             }
                           }}
                         >
@@ -360,15 +363,15 @@ const Section = () => {
                       <Tooltip title="Assessment" placement="top" enterTouchDelay={0} leaveTouchDelay={1500}>
                         <span>
                           <IconButton
-                            color={isUnlocked ? 'primary' : 'default'}
+                            color={isCompleted ? 'success' : (isUnlocked ? 'primary' : 'default')}
                             onClick={() => handleAssessmentClick(section, isUnlocked)}
                             disabled={!isUnlocked}
                             sx={{
-                              color: isUnlocked ? '#4169e1' : '#9e9e9e',
-                              border: `1.5px solid ${isUnlocked ? '#4169e1' : '#9e9e9e'}`,
+                              color: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
+                              border: `1.5px solid ${isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e')}`,
                               borderRadius: '8px',
                               '&:hover': {
-                                bgcolor: isUnlocked ? 'rgba(65, 105, 225, 0.08)' : 'transparent'
+                                bgcolor: isCompleted ? 'rgba(76, 175, 80, 0.08)' : (isUnlocked ? 'rgba(65, 105, 225, 0.08)' : 'transparent')
                               }
                             }}
                           >
@@ -498,6 +501,7 @@ const Section = () => {
             sections?.map((section, index) => {
               const isUnlocked = isSectionUnlocked(section._id)
               const isAccessible = isSectionAccessible(index)
+              const isCompleted = isSectionCompleted(section._id)
 
               return (
                 <ListItem
@@ -525,7 +529,7 @@ const Section = () => {
                       mr: 2,
                       color: 'white',
                       minWidth: '70px',
-                      bgcolor: isUnlocked ? '#4169e1' : '#9e9e9e',
+                      bgcolor: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
                       textAlign: 'center',
                       borderTopLeftRadius: '6px',
                       borderBottomLeftRadius: '6px',
@@ -561,7 +565,11 @@ const Section = () => {
                     >
                       {section.name}
                     </Typography>
-                    {isUnlocked ? (
+                    {isCompleted ? (
+                      <CheckCircle 
+                        sx={{ ml: 1, color: 'success.main', fontSize: '18px' }} 
+                      />
+                    ) : isUnlocked ? (
                       <LockOpenOutlined 
                         sx={{ ml: 1, color: 'primary.main', fontSize: '18px' }} 
                       />
@@ -585,12 +593,12 @@ const Section = () => {
                             onClick={() => handleSectionClick(section, isUnlocked)}
                             disabled={!isUnlocked}
                             sx={{
-                              bgcolor: isUnlocked ? '#4169e1' : '#9e9e9e',
+                              bgcolor: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
                               color: 'white',
                               borderRadius: '8px',
                               textTransform: 'none',
                               '&:hover': {
-                                bgcolor: isUnlocked ? '#3557c5' : '#9e9e9e'
+                                bgcolor: isCompleted ? 'success.dark' : (isUnlocked ? '#3557c5' : '#9e9e9e')
                               }
                             }}
                           >
@@ -612,13 +620,13 @@ const Section = () => {
                             }
                           }}
                           sx={{
-                            color: isUnlocked ? '#4169e1' : '#9e9e9e',
-                            borderColor: isUnlocked ? '#4169e1' : '#9e9e9e',
+                            color: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
+                            borderColor: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
                             borderRadius: '8px',
                             textTransform: 'none',
                             '&:hover': {
-                              borderColor: isUnlocked ? '#4169e1' : '#9e9e9e',
-                              backgroundColor: isUnlocked ? 'rgba(65, 105, 225, 0.04)' : 'transparent'
+                              borderColor: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
+                              backgroundColor: isCompleted ? 'rgba(76, 175, 80, 0.04)' : (isUnlocked ? 'rgba(65, 105, 225, 0.04)' : 'transparent')
                             }
                           }}
                         >
@@ -636,13 +644,13 @@ const Section = () => {
                             onClick={() => handleAssessmentClick(section, isUnlocked)}
                             disabled={!isUnlocked}
                             sx={{
-                              color: isUnlocked ? '#4169e1' : '#9e9e9e',
-                              borderColor: isUnlocked ? '#4169e1' : '#9e9e9e',
+                              color: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
+                              borderColor: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
                               borderRadius: '8px',
                               textTransform: 'none',
                               '&:hover': {
-                                borderColor: isUnlocked ? '#4169e1' : '#9e9e9e',
-                                backgroundColor: isUnlocked ? 'rgba(65, 105, 225, 0.04)' : 'transparent'
+                                borderColor: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
+                                backgroundColor: isCompleted ? 'rgba(76, 175, 80, 0.04)' : (isUnlocked ? 'rgba(65, 105, 225, 0.04)' : 'transparent')
                               }
                             }}
                           >
