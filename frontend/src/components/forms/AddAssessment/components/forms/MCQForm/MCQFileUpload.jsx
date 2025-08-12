@@ -1,7 +1,14 @@
 import { Box, Button, Typography } from '@mui/material'
 import PropTypes from 'prop-types'
 import { FORM_FIELD_STYLES } from '../../../utils/constants'
-import { truncateFileName } from '../../../utils/fileHelpers'
+// Utility function for truncating file names
+const truncateFileName = (fileName, maxLength = 5) => {
+  if (!fileName) return ''
+  const extension = fileName.split('.').pop()
+  const name = fileName.split('.').slice(0, -1).join('.')
+  if (name.length <= maxLength) return fileName
+  return `${name.substring(0, maxLength)}...${extension}`
+}
 
 /**
  * MCQ file upload component for image and audio files

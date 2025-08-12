@@ -33,15 +33,13 @@ AddAssessment/
 │       └── SubmitButton.jsx
 ├── hooks/                              # Custom hooks
 │   ├── useAssessmentForm.js            # Form state management
-│   ├── useAssessmentAPI.js             # API operations
+│   ├── useAssessmentAPI.js             # API operations (includes file upload)
 │   ├── useHierarchyData.js             # Course/unit/section data
 │   ├── useMCQManagement.js             # MCQ-specific logic
-│   ├── useFormValidation.js            # Validation logic
-│   └── useFileUpload.js                # File upload operations
+│   └── useFormValidation.js            # Validation logic
 ├── utils/                              # Utility functions
 │   ├── constants.js                    # Constants and enums
 │   ├── validationRules.js              # Validation functions
-│   ├── fileHelpers.js                  # File processing
 │   └── assessmentHelpers.js            # Assessment utilities
 └── types/
     └── assessmentTypes.js              # PropTypes definitions
@@ -74,7 +72,7 @@ import AddAssessment from './components/forms/AddAssessment'
 
 ### 🎯 **Separation of Concerns**
 - **Form State**: Managed by `useAssessmentForm`
-- **API Operations**: Handled by `useAssessmentAPI`
+- **API Operations**: Handled by `useAssessmentAPI` (includes file uploads via FormData)
 - **Data Hierarchies**: Managed by `useHierarchyData`
 - **MCQ Logic**: Isolated in `useMCQManagement`
 - **Validation**: Centralized in `useFormValidation`

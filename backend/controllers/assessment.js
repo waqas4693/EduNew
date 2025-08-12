@@ -45,11 +45,14 @@ export const createAssessment = async (req, res) => {
       })
     }
 
+    // Parse content if it's a JSON string (from FormData)
+    const content = typeof req.body.content === 'string' ? JSON.parse(req.body.content) : req.body.content
+
     // Handle MCQ file uploads if assessment type is MCQ
-    let assessmentData = { ...req.body }
-    if (req.body.assessmentType === 'MCQ' && req.body.content && req.body.content.mcqs) {
+    let assessmentData = { ...req.body, content }
+    if (req.body.assessmentType === 'MCQ' && content && content.mcqs) {
       const mcqsWithFiles = await Promise.all(
-        req.body.content.mcqs.map(async (mcq, index) => {
+        content.mcqs.map(async (mcq, index) => {
           const updatedMcq = { ...mcq }
           
           // Handle MCQ image upload

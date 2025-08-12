@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { getData } from '../../../../api/api'
 import axios from 'axios'
 import url from '../../../config/server-url'
-import { uploadMCQFiles } from '../utils/fileHelpers'
+
 import { prepareAssessmentData } from '../utils/assessmentHelpers'
 
 /**
@@ -35,14 +35,50 @@ export const useAssessmentAPI = () => {
     try {
       const assessmentData = prepareAssessmentData(formData, courseId, unitId, sectionId)
       
-      // Handle MCQ file uploads if present
-      if (formData.assessmentType === 'MCQ' && formData.content?.mcqs) {
-        const mcqsWithFiles = await uploadMCQFiles(formData.content.mcqs)
-        assessmentData.content.mcqs = mcqsWithFiles
-      }
+      // Create FormData for file uploads
+      const submitFormData = new FormData()
       
-      // Submit the assessment
-      const response = await axios.post(`${url}assessments`, assessmentData)
+      // Add all assessment fields to FormData
+      Object.keys(assessmentData).forEach(key => {
+        if (key === 'content') {
+          // Handle content separately to process files
+          const contentCopy = { ...assessmentData.content }
+          
+          // If MCQ type, process MCQ files
+          if (formData.assessmentType === 'MCQ' && contentCopy.mcqs) {
+            contentCopy.mcqs = contentCopy.mcqs.map((mcq, index) => {
+              const mcqCopy = { ...mcq }
+              
+              // Add MCQ image file to FormData if it's a File object
+              if (mcq.imageFile && mcq.imageFile instanceof File) {
+                submitFormData.append(`mcqImage_${index}`, mcq.imageFile)
+                // Remove the file object from content, backend will set the filename
+                delete mcqCopy.imageFile
+              }
+              
+              // Add MCQ audio file to FormData if it's a File object
+              if (mcq.audioFile && mcq.audioFile instanceof File) {
+                submitFormData.append(`mcqAudio_${index}`, mcq.audioFile)
+                // Remove the file object from content, backend will set the filename
+                delete mcqCopy.audioFile
+              }
+              
+              return mcqCopy
+            })
+          }
+          
+          submitFormData.append('content', JSON.stringify(contentCopy))
+        } else {
+          submitFormData.append(key, assessmentData[key])
+        }
+      })
+      
+      // Submit the assessment with FormData
+      const response = await axios.post(`${url}assessments`, submitFormData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
       
       if (response.status === 201) {
         return {
