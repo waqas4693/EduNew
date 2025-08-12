@@ -81,14 +81,12 @@ const LearnerFrame = () => {
           }
         }
       } catch (error) {
-        console.error('=== Error fetching student progress ===')
-        console.error('Error details:', error)
+        console.error('Error fetching student progress:', error)
       }
     }
 
     // Only fetch progress on initial load
     if (resources.length > 0 && currentIndex === 0) {
-      console.log('Triggering initial progress fetch')
       fetchStudentProgress()
     }
   }, [user?.studentId, courseId, unitId, sectionId, resources.length, isResourceCompleted])
@@ -185,8 +183,6 @@ const LearnerFrame = () => {
               completedSectionId: sectionId 
             }
           })
-        } else {
-          console.log('Section not yet completed')
         }
       } catch (error) {
         console.error('=== Error completing section ===')
@@ -201,8 +197,6 @@ const LearnerFrame = () => {
     if (currentIndex > 0) {
       const prevIndex = currentIndex - 1
       setCurrentIndex(prevIndex)
-    } else {
-      console.log('Already at first resource, cannot go previous')
     }
   }
 
@@ -211,11 +205,7 @@ const LearnerFrame = () => {
     if (!currentResource || currentResource.resourceType !== 'MCQ') {
       return true
     }
-    const completed = isResourceCompleted(currentResource._id)
-    console.log('Current MCQ completion status:', { 
-      resourceId: currentResource._id, 
-      completed 
-    })
+    const completed = isResourceCompleted(currentResource._id)  
     return completed
   }
 
@@ -224,18 +214,14 @@ const LearnerFrame = () => {
     if (currentIndex === resources.length - 1) {
       // If section is already completed, disable the button
       if (progress.section === 100) {
-        console.log('Next button disabled (section already completed)')
         return true
       }
-      console.log('Next button enabled (last resource)')
       return false // Don't disable on last resource unless completed
     }
     if (currentResource?.resourceType === 'MCQ') {
       const disabled = !isCurrentMcqCompleted()
-      console.log('Next button MCQ state:', { disabled })
       return disabled
     }
-    console.log('Next button enabled (non-MCQ resource)')
     return false
   }
 
@@ -249,30 +235,17 @@ const LearnerFrame = () => {
 
   // Refresh expired URLs periodically
   useEffect(() => {
-    console.log('Setting up URL refresh interval (45 minutes)')
     const interval = setInterval(() => {
-      console.log('Refreshing expired URLs')
       refreshExpiredUrls()
     }, 45 * 60 * 1000) // 45 minutes
 
     return () => {
-      console.log('Clearing URL refresh interval')
       clearInterval(interval)
     }
   }, [refreshExpiredUrls])
 
   // Show loading state if any data is loading or if we don't have resources yet
   if (resourcesLoading || urlsLoading || progressLoading || !resources.length) {
-    console.log('=== Rendering Loading State ===')
-    console.log('Loading states:', { 
-      resourcesLoading, 
-      urlsLoading, 
-      progressLoading, 
-      hasResources: !!resources.length,
-      resourcesCount: resources.length,
-      currentIndex,
-      hasMore
-    })
     
     return (
       <Paper
@@ -318,9 +291,6 @@ const LearnerFrame = () => {
 
   // Don't render if we don't have a current resource
   if (!currentResource) {
-    console.log('=== No Current Resource ===')
-    console.log('Resources available:', resources.length)
-    
     return (
       <Paper
         elevation={5}
@@ -334,14 +304,6 @@ const LearnerFrame = () => {
       </Paper>
     )
   }
-
-  console.log('=== Rendering LearnerFrame ===')
-  console.log('Final render state:', {
-    currentIndex,
-    currentResource: currentResource.name,
-    isCompleting,
-    progress: { section: progress.section, mcq: progress.mcq }
-  })
 
   return (
     <Grid container>
@@ -402,7 +364,6 @@ const LearnerFrame = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 {/* External Links */}
                 {currentResource.content?.externalLinks?.filter(link => link.name && link.url).map((link, index) => {
-                  console.log('Rendering external link:', link) // Debug log for each link
                   return (
                     <Link
                       key={index}

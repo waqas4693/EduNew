@@ -316,7 +316,7 @@ const AssessmentRenderer = ({
             {currentMcq.imageFile && (
               <Box sx={{ mb: 2, textAlign: 'center' }}>
                 <img
-                  src={mcqImageUrls[currentMcq.imageFile] || `${url}s3/url/MCQ_IMAGES/${currentMcq.imageFile}`}
+                  src={mcqImageUrls[currentMcq.imageFile]}
                   alt="Question Image"
                   style={{
                     maxWidth: '100%',
@@ -573,6 +573,7 @@ const ViewAssessment = () => {
   const [assessments, setAssessments] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [mcqImageUrls, setMcqImageUrls] = useState({})
+  const [mcqAudioUrls, setMcqAudioUrls] = useState({})
   const [audioPlayer, setAudioPlayer] = useState(null)
   const [existingAttempt, setExistingAttempt] = useState(null)
   const [selectedAssessment, setSelectedAssessment] = useState(null)
@@ -599,10 +600,20 @@ const ViewAssessment = () => {
 
   const getMCQImageUrl = async (imageFile) => {
     try {
-      const response = await axios.get(`${url}s3/url/MCQ_IMAGES/${imageFile}`)
+      const response = await getData(`resources/files/url/MCQ_IMAGES/${imageFile}`)
       return response.data.signedUrl
     } catch (error) {
       console.error('Error getting MCQ image signed URL:', error)
+      return null
+    }
+  }
+
+  const getMCQAudioUrl = async (audioFile) => {
+    try {
+      const response = await getData(`resources/files/url/MCQ_AUDIO/${audioFile}`)
+      return response.data.signedUrl
+    } catch (error) {
+      console.error('Error getting MCQ audio signed URL:', error)
       return null
     }
   }
@@ -620,10 +631,17 @@ const ViewAssessment = () => {
     setMcqImageUrls(imageUrls)
   }
 
-  const getAudioUrl = audioFileName => {
-    if (!audioFileName) return null
-    // Ensure we're using the correct path to access the audio file
-    return `${url}resources/files/ASSESSMENT_FILES/${encodeURIComponent(audioFileName)}`
+  const fetchMCQAudioUrls = async (mcqs) => {
+    const audioUrls = {}
+    for (const mcq of mcqs) {
+      if (mcq.audioFile) {
+        const signedUrl = await getMCQAudioUrl(mcq.audioFile)
+        if (signedUrl) {
+          audioUrls[mcq.audioFile] = signedUrl
+        }
+      }
+    }
+    setMcqAudioUrls(audioUrls)
   }
 
   const handlePlayAudio = async audioFileName => {
@@ -634,9 +652,21 @@ const ViewAssessment = () => {
         audioPlayer.currentTime = 0
       }
 
-      const audioUrl = getAudioUrl(audioFileName)
+      // Use the cached audio URL if available, otherwise fetch it
+      let audioUrl = mcqAudioUrls[audioFileName]
+      if (!audioUrl) {
+        audioUrl = await getMCQAudioUrl(audioFileName)
+        if (audioUrl) {
+          setMcqAudioUrls(prev => ({
+            ...prev,
+            [audioFileName]: audioUrl
+          }))
+        }
+      }
+
       if (!audioUrl) {
         console.error('No audio URL available')
+        alert('Audio file not available')
         return
       }
 
@@ -873,9 +903,10 @@ const ViewAssessment = () => {
       setExistingAttempt(null)
     }
     
-    // Fetch MCQ image URLs if assessment has MCQs
+    // Fetch MCQ image and audio URLs if assessment has MCQs
     if (assessment.assessmentType === 'MCQ' && assessment.content?.mcqs) {
       fetchMCQImageUrls(assessment.content.mcqs)
+      fetchMCQAudioUrls(assessment.content.mcqs)
     }
   }
 
