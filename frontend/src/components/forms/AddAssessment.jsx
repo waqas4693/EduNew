@@ -11,7 +11,8 @@ import {
   InputLabel,
   IconButton,
   FormControlLabel,
-  Switch
+  Switch,
+  OutlinedInput
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -35,18 +36,17 @@ const truncateFileName = (fileName, maxLength = 5) => {
 
 const AddAssessment = () => {
   const [formData, setFormData] = useState({
-    assessmentType: '',
+    assessmentType: 'MCQ',
+    title: '',
+    description: '',
     totalMarks: '',
     percentage: '',
     interval: '',
     isTimeBound: false,
     timeAllowed: '',
-    assessor: null,
-    moderator: null,
-    verifier: null,
     content: {
-      questions: [],
       mcqs: [],
+      questions: [],
       assessmentFile: null,
       supportingFile: null
     }
@@ -63,6 +63,10 @@ const AddAssessment = () => {
   const [assessors, setAssessors] = useState([])
   const [moderators, setModerators] = useState([])
   const [verifiers, setVerifiers] = useState([])
+  const [mcqOptionCounts, setMcqOptionCounts] = useState({}) // Track option counts for each MCQ
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
     fetchCourses()
@@ -89,6 +93,18 @@ const AddAssessment = () => {
   useEffect(() => {
     fetchUsers()
   }, [])
+
+  // Initialize MCQ option counts when MCQs change
+  useEffect(() => {
+    if (formData.content?.mcqs) {
+      const counts = {}
+      formData.content.mcqs.forEach((mcq, index) => {
+        counts[index] = mcq.options?.length || 2
+      })
+      console.log('Initializing MCQ option counts:', counts)
+      setMcqOptionCounts(counts)
+    }
+  }, [formData.content?.mcqs])
 
   const fetchCourses = async () => {
     try {
@@ -172,18 +188,34 @@ const AddAssessment = () => {
   }
 
   const addMCQ = () => {
+    const newMCQ = {
+      question: '',
+      options: ['', ''],
+      numberOfCorrectAnswers: 1,
+      correctAnswers: [],
+      imageFile: null,
+      audioFile: null
+    }
+    
+    const newIndex = formData.content?.mcqs?.length || 0
+    console.log('Adding MCQ at index:', newIndex)
+    
     setFormData(prev => ({
       ...prev,
       content: {
         ...prev.content,
-        mcqs: [...prev.content.mcqs, {
-          question: '',
-          options: ['', '', '', ''],
-          correctAnswer: '',
-          audioFile: null
-        }]
+        mcqs: [...(prev.content?.mcqs || []), newMCQ]
       }
     }))
+    
+    setMcqOptionCounts(prev => {
+      const newCounts = {
+        ...prev,
+        [newIndex]: 2
+      }
+      console.log('Updated MCQ option counts:', newCounts)
+      return newCounts
+    })
   }
 
   const handleQuestionChange = (index, value) => {
@@ -200,19 +232,72 @@ const AddAssessment = () => {
     })
   }
 
-  const handleMCQChange = (index, field, value, optionIndex = null) => {
+  const handleMCQChange = (index, field, value) => {
     setFormData(prev => {
-      const newMCQs = [...prev.content.mcqs]
-      if (field === 'options') {
-        newMCQs[index].options[optionIndex] = value
+      const updatedMcqs = [...(prev.content?.mcqs || [])]
+      
+      if (field === 'numberOfCorrectAnswers') {
+        // Update numberOfCorrectAnswers
+        updatedMcqs[index] = {
+          ...updatedMcqs[index],
+          numberOfCorrectAnswers: value,
+          // Adjust correctAnswers array if needed
+          correctAnswers: updatedMcqs[index].correctAnswers?.slice(0, value) || []
+        }
+      } else if (field === 'correctAnswers') {
+        // Handle correctAnswers array
+        let newCorrectAnswers
+        if (Array.isArray(value)) {
+          newCorrectAnswers = value
+        } else {
+          // If it's a single value, convert to array
+          newCorrectAnswers = [value]
+        }
+        
+        updatedMcqs[index] = {
+          ...updatedMcqs[index],
+          correctAnswers: newCorrectAnswers
+        }
+      } else if (field === 'options') {
+        // Handle options array
+        updatedMcqs[index] = {
+          ...updatedMcqs[index],
+          options: value
+        }
       } else {
-        newMCQs[index][field] = value
+        // Handle other fields
+        updatedMcqs[index] = {
+          ...updatedMcqs[index],
+          [field]: value
+        }
       }
+      
       return {
         ...prev,
         content: {
           ...prev.content,
-          mcqs: newMCQs
+          mcqs: updatedMcqs
+        }
+      }
+    })
+  }
+
+  const handleMCQOptionChange = (mcqIndex, optionIndex, value) => {
+    setFormData(prev => {
+      const updatedMcqs = [...(prev.content?.mcqs || [])]
+      const currentOptions = [...(updatedMcqs[mcqIndex]?.options || [])]
+      currentOptions[optionIndex] = value
+      
+      updatedMcqs[mcqIndex] = {
+        ...updatedMcqs[mcqIndex],
+        options: currentOptions
+      }
+      
+      return {
+        ...prev,
+        content: {
+          ...prev.content,
+          mcqs: updatedMcqs
         }
       }
     })
@@ -250,6 +335,99 @@ const AddAssessment = () => {
         content: {
           ...prev.content,
           mcqs: newMCQs
+        }
+      }
+    })
+  }
+
+  const handleMCQImageChange = (index, file) => {
+    setFormData(prev => {
+      const newMCQs = [...prev.content.mcqs]
+      newMCQs[index] = {
+        ...newMCQs[index],
+        imageFile: file
+      }
+      return {
+        ...prev,
+        content: {
+          ...prev.content,
+          mcqs: newMCQs
+        }
+      }
+    })
+  }
+
+  const addMCQOption = (mcqIndex) => {
+    console.log('Adding option for MCQ index:', mcqIndex)
+    setFormData(prev => {
+      const updatedMcqs = [...(prev.content?.mcqs || [])]
+      const currentOptions = updatedMcqs[mcqIndex]?.options || []
+      
+      if (currentOptions.length < 6) {
+        updatedMcqs[mcqIndex] = {
+          ...updatedMcqs[mcqIndex],
+          options: [...currentOptions, '']
+        }
+        
+        // Update option count
+        setMcqOptionCounts(prevCounts => {
+          const newCounts = {
+            ...prevCounts,
+            [mcqIndex]: currentOptions.length + 1
+          }
+          console.log('Updated option counts after adding:', newCounts)
+          return newCounts
+        })
+      }
+      
+      return {
+        ...prev,
+        content: {
+          ...prev.content,
+          mcqs: updatedMcqs
+        }
+      }
+    })
+  }
+
+  const removeMCQOption = (mcqIndex, optionIndex) => {
+    console.log('Removing option for MCQ index:', mcqIndex, 'option index:', optionIndex)
+    setFormData(prev => {
+      const updatedMcqs = [...(prev.content?.mcqs || [])]
+      const currentOptions = updatedMcqs[mcqIndex]?.options || []
+      
+      if (currentOptions.length > 2) {
+        const newOptions = currentOptions.filter((_, index) => index !== optionIndex)
+        updatedMcqs[mcqIndex] = {
+          ...updatedMcqs[mcqIndex],
+          options: newOptions
+        }
+        
+        // Update option count
+        setMcqOptionCounts(prevCounts => {
+          const newCounts = {
+            ...prevCounts,
+            [mcqIndex]: newOptions.length
+          }
+          console.log('Updated option counts after removing:', newCounts)
+          return newCounts
+        })
+        
+        // Adjust correctAnswers if needed
+        const currentCorrectAnswers = updatedMcqs[mcqIndex].correctAnswers || []
+        const removedOption = currentOptions[optionIndex]
+        if (currentCorrectAnswers.includes(removedOption)) {
+          updatedMcqs[mcqIndex].correctAnswers = currentCorrectAnswers.filter(
+            answer => answer !== removedOption
+          )
+        }
+      }
+      
+      return {
+        ...prev,
+        content: {
+          ...prev.content,
+          mcqs: updatedMcqs
         }
       }
     })
@@ -320,74 +498,19 @@ const AddAssessment = () => {
       case 'MCQ':
         return (
           <Box>
-            {formData.content.mcqs.map((mcq, index) => (
-              <Box key={index} sx={{ mb: 2 }}>
-                <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'flex-start' }}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label={`Question ${index + 1}`}
-                    value={mcq.question}
-                    onChange={e => handleMCQChange(index, 'question', e.target.value)}
-                    sx={{
-                      mb: 2,
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: '8px',
-                        border: '1px solid #20202033',
-                        '& fieldset': {
-                          border: 'none'
-                        }
-                      },
-                      '& .MuiInputLabel-root': {
-                        color: '#8F8F8F',
-                        backgroundColor: 'white',
-                        padding: '0 4px'
-                      }
-                    }}
-                  />
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    sx={{
-                      height: '40px',
-                      borderRadius: '8px',
-                      border: '1px solid #20202033',
-                      minWidth: '150px',
-                      '&:hover': {
-                        border: '1px solid #20202033',
-                        bgcolor: 'rgba(0, 0, 0, 0.04)'
-                      }
-                    }}
-                  >
-                    <Typography 
-                      sx={{ 
-                        maxWidth: '130px',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                      }}
-                    >
-                      {mcq.audioFile ? truncateFileName(mcq.audioFile.name) : 'Add Audio'}
-                    </Typography>
-                    <input
-                      type="file"
-                      hidden
-                      accept="audio/*"
-                      onChange={e => handleMCQAudioChange(index, e.target.files[0])}
-                    />
-                  </Button>
-                </Box>
-
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
-                  {mcq.options.map((option, optionIndex) => (
+            {formData.content.mcqs.map((mcq, index) => {
+              console.log(`Rendering MCQ ${index}, mcqOptionCounts:`, mcqOptionCounts)
+              return (
+                <Box key={index} sx={{ border: '1px solid #ddd', p: 2, mb: 2, borderRadius: 1 }}>
+                  <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'flex-start' }}>
                     <TextField
-                      key={optionIndex}
+                      fullWidth
                       size="small"
-                      label={`Option ${optionIndex + 1}`}
-                      value={option}
-                      onChange={e => handleMCQChange(index, 'options', e.target.value, optionIndex)}
+                      label={`Question ${index + 1}`}
+                      value={mcq.question}
+                      onChange={e => handleMCQChange(index, 'question', e.target.value)}
                       sx={{
-                        width: 'calc(50% - 8px)',
+                        mb: 2,
                         '& .MuiOutlinedInput-root': {
                           borderRadius: '8px',
                           border: '1px solid #20202033',
@@ -402,42 +525,164 @@ const AddAssessment = () => {
                         }
                       }}
                     />
-                  ))}
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      sx={{
+                        height: '40px',
+                        borderRadius: '8px',
+                        border: '1px solid #20202033',
+                        minWidth: '150px',
+                        '&:hover': {
+                          border: '1px solid #20202033',
+                          bgcolor: 'rgba(0, 0, 0, 0.04)'
+                        }
+                      }}
+                    >
+                      <Typography 
+                        sx={{ 
+                          maxWidth: '130px',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
+                        {mcq.audioFile ? truncateFileName(mcq.audioFile.name) : 'Add Audio'}
+                      </Typography>
+                      <input
+                        type="file"
+                        hidden
+                        accept="audio/*"
+                        onChange={e => handleMCQAudioChange(index, e.target.files[0])}
+                      />
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      sx={{
+                        height: '40px',
+                        borderRadius: '8px',
+                        border: '1px solid #20202033',
+                        minWidth: '150px',
+                        '&:hover': {
+                          border: '1px solid #20202033',
+                          bgcolor: 'rgba(0, 0, 0, 0.04)'
+                        }
+                      }}
+                    >
+                      <Typography 
+                        sx={{ 
+                          maxWidth: '130px',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
+                        {mcq.imageFile ? truncateFileName(mcq.imageFile.name) : 'Add Image'}
+                      </Typography>
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        onChange={e => handleMCQImageChange(index, e.target.files[0])}
+                      />
+                    </Button>
+                  </Box>
+
+                  {/* MCQ Options */}
+                  {mcq.options.map((option, optionIndex) => {
+                    console.log(`Rendering MCQ ${index}, option ${optionIndex}, mcqOptionCounts[${index}]:`, mcqOptionCounts[index])
+                    return (
+                      <Box key={optionIndex} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <TextField
+                          label={`Option ${optionIndex + 1}`}
+                          value={option}
+                          onChange={e => handleMCQOptionChange(index, optionIndex, e.target.value)}
+                          sx={{
+                            flex: 1,
+                            '& .MuiInputBase-root': {
+                              height: '40px'
+                            }
+                          }}
+                        />
+                        {(() => {
+                          console.log(`Remove option button for MCQ ${index}, option ${optionIndex}, mcqOptionCounts[${index}]:`, mcqOptionCounts[index])
+                          return mcqOptionCounts[index] > 2 && (
+                            <IconButton
+                              onClick={() => removeMCQOption(index, optionIndex)}
+                              color="error"
+                              size="small"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          )
+                        })()}
+                      </Box>
+                    )
+                  })}
+                  
+                  {/* Add Option Button */}
+                  {(() => {
+                    console.log(`Add option button for MCQ ${index}, mcqOptionCounts[${index}]:`, mcqOptionCounts[index])
+                    return mcqOptionCounts[index] < 6 && (
+                      <Button
+                        onClick={() => addMCQOption(index)}
+                        variant="outlined"
+                        size="small"
+                        startIcon={<AddIcon />}
+                        sx={{ mt: 1 }}
+                      >
+                        Add Option
+                      </Button>
+                    )
+                  })()}
+                  
+                  {/* Number of Correct Answers */}
+                  <TextField
+                    label="Number of Correct Answers"
+                    type="number"
+                    value={mcq.numberOfCorrectAnswers}
+                    onChange={e => handleMCQChange(index, 'numberOfCorrectAnswers', parseInt(e.target.value))}
+                    inputProps={{ min: 1, max: 6 }}
+                    sx={{ mt: 2, width: '200px' }}
+                  />
+                  
+                  {/* Correct Answers Selection */}
+                  <FormControl sx={{ mt: 2, minWidth: '300px' }}>
+                    <InputLabel>Correct Answers</InputLabel>
+                    <Select
+                      multiple
+                      value={mcq.correctAnswers || []}
+                      onChange={e => handleMCQChange(index, 'correctAnswers', e.target.value)}
+                      input={<OutlinedInput label="Correct Answers" />}
+                      renderValue={(selected) => selected.join(', ')}
+                    >
+                      {mcq.options.map((option, optIndex) => (
+                        <MenuItem key={optIndex} value={option}>
+                          {option || `Option ${optIndex + 1}`}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  {mcq.audioFile && (
+                    <Typography variant="caption" sx={{ display: 'block', mb: 1, color: 'success.main' }}>
+                      Audio file uploaded: {mcq.audioFile.name}
+                    </Typography>
+                  )}
+
+                  {mcq.imageFile && (
+                    <Typography variant="caption" sx={{ display: 'block', mb: 1, color: 'success.main' }}>
+                      Image file uploaded: {mcq.imageFile.name}
+                    </Typography>
+                  )}
+
+                  <IconButton onClick={() => removeMCQ(index)} color="error">
+                    <DeleteIcon />
+                  </IconButton>
                 </Box>
-                <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-                  <InputLabel sx={{ color: '#8F8F8F', backgroundColor: 'white', padding: '0 4px' }}>
-                    Correct Answer
-                  </InputLabel>
-                  <Select
-                    value={mcq.correctAnswer}
-                    onChange={e => handleMCQChange(index, 'correctAnswer', e.target.value)}
-                    sx={{
-                      borderRadius: '8px',
-                      border: '1px solid #20202033',
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        border: 'none'
-                      }
-                    }}
-                  >
-                    {mcq.options.map((option, optionIndex) => (
-                      <MenuItem key={optionIndex} value={option}>
-                        {option || `Option ${optionIndex + 1}`}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                {mcq.audioFile && (
-                  <Typography variant="caption" sx={{ display: 'block', mb: 1, color: 'success.main' }}>
-                    Audio file uploaded: {mcq.audioFile.name}
-                  </Typography>
-                )}
-
-                <IconButton onClick={() => removeMCQ(index)} color="error">
-                  <DeleteIcon />
-                </IconButton>
-              </Box>
-            ))}
+              )
+            })}
             <Button startIcon={<AddIcon />} onClick={addMCQ}>
               Add MCQ
             </Button>
@@ -643,74 +888,102 @@ const AddAssessment = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    try {
-      if (!validateForm()) {
-        return
-      }
+    
+    if (!validateForm()) {
+      return
+    }
 
-      let assessmentData = {
+    setIsSubmitting(true)
+    
+    try {
+      // Prepare the assessment data
+      const assessmentData = { 
         ...formData,
         sectionId,
         courseId,
-        isTimeBound: formData.isTimeBound,
-        timeAllowed: formData.timeAllowed,
-        content: { ...formData.content }
+        unitId
       }
-
-      // Handle file uploads for FILE type assessment
-      if (formData.assessmentType === 'FILE') {
-        if (formData.content.assessmentFile) {
-          const assessmentFileName = await handleFileUpload(formData.content.assessmentFile)
-          assessmentData.content.assessmentFile = assessmentFileName
-        }
-        
-        if (formData.content.supportingFile) {
-          const supportingFileName = await handleFileUpload(formData.content.supportingFile)
-          assessmentData.content.supportingFile = supportingFileName
-        }
-      }
-
-      // Handle MCQ audio file uploads
-      if (formData.assessmentType === 'MCQ') {
-        const mcqsWithAudio = await Promise.all(
+      
+      // Handle MCQ file uploads if present
+      if (formData.assessmentType === 'MCQ' && formData.content?.mcqs) {
+        const mcqsWithFiles = await Promise.all(
           formData.content.mcqs.map(async (mcq, index) => {
-            if (mcq.audioFile) {
-              const audioFormData = new FormData()
-              audioFormData.append('file', mcq.audioFile)
+            const updatedMcq = { ...mcq }
+            
+            // Handle MCQ image upload
+            if (mcq.imageFile && mcq.imageFile instanceof File) {
+              const formData = new FormData()
+              formData.append('file', mcq.imageFile)
               
-              const response = await postData('upload/file?type=ASSESSMENT', audioFormData, {
-                headers: {
-                  'Content-Type': 'multipart/form-data'
-                }
-              })
-              
-              if (response.data && response.data.fileName) {
-                return {
-                  ...mcq,
-                  audioFile: response.data.fileName
-                }
+              try {
+                const uploadResponse = await axios.post(
+                  `${url}upload/file?type=MCQ_IMAGE`,
+                  formData,
+                  {
+                    headers: {
+                      'Content-Type': 'multipart/form-data'
+                    }
+                  }
+                )
+                updatedMcq.imageFile = uploadResponse.data.fileName
+              } catch (error) {
+                console.error('Error uploading MCQ image:', error)
+                throw new Error(`Failed to upload image for MCQ ${index + 1}`)
               }
             }
-            return mcq
+            
+            // Handle MCQ audio upload
+            if (mcq.audioFile && mcq.audioFile instanceof File) {
+              const formData = new FormData()
+              formData.append('file', mcq.audioFile)
+              
+              try {
+                const uploadResponse = await axios.post(
+                  `${url}upload/file?type=MCQ_AUDIO`,
+                  formData,
+                  {
+                    headers: {
+                      'Content-Type': 'multipart/form-data'
+                    }
+                  }
+                )
+                updatedMcq.audioFile = uploadResponse.data.fileName
+              } catch (error) {
+                console.error('Error uploading MCQ audio:', error)
+                throw new Error(`Failed to upload audio for MCQ ${index + 1}`)
+              }
+            }
+            
+            return updatedMcq
           })
         )
         
-        assessmentData.content.mcqs = mcqsWithAudio
+        assessmentData.content.mcqs = mcqsWithFiles
       }
-
-      const response = await postData('assessments', assessmentData)
+      
+      // Submit the assessment
+      const response = await axios.post(`${url}assessments`, assessmentData)
+      
       if (response.status === 201) {
-        resetForm()
-        alert('Assessment added successfully')
+        // Show success message
+        setSuccessMessage('Assessment created successfully!')
+        
+        // Reset form after successful submission
+        setTimeout(() => {
+          resetForm()
+          setSuccessMessage('')
+        }, 2000)
       }
     } catch (error) {
-      console.error('Error adding assessment:', error)
-      alert('Error adding assessment. Please try again.')
+      console.error('Error creating assessment:', error)
+      setErrorMessage(error.response?.data?.message || error.message || 'Error creating assessment')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const validateForm = () => {
-    if (!sectionId || !formData.assessmentType || !formData.totalMarks || !formData.percentage || !formData.interval) {
+    if (!sectionId || !formData.title || !formData.assessmentType || !formData.totalMarks || !formData.percentage || !formData.interval) {
       alert('Please fill all required fields')
       return false
     }
@@ -732,20 +1005,46 @@ const AddAssessment = () => {
       }
     }
 
+    // Validate MCQ content
+    if (formData.assessmentType === 'MCQ') {
+      for (let i = 0; i < formData.content.mcqs.length; i++) {
+        const mcq = formData.content.mcqs[i]
+        
+        if (!mcq.question.trim()) {
+          alert(`Please enter a question for MCQ ${i + 1}`)
+          return false
+        }
+        
+        if (mcq.options.filter(opt => opt.trim()).length < 2) {
+          alert(`MCQ ${i + 1} must have at least 2 options`)
+          return false
+        }
+        
+        if (mcq.correctAnswers.length === 0) {
+          alert(`Please select correct answers for MCQ ${i + 1}`)
+          return false
+        }
+        
+        if (mcq.correctAnswers.length > mcq.numberOfCorrectAnswers) {
+          alert(`MCQ ${i + 1} has more correct answers selected than allowed`)
+          return false
+        }
+      }
+    }
+
     return true
   }
 
   const resetForm = () => {
     setFormData({
-      assessmentType: '',
+      assessmentType: 'MCQ',
+      title: '',
+      description: '',
       totalMarks: '',
       percentage: '',
       interval: '',
       isTimeBound: false,
       timeAllowed: '',
-      assessor: null,
-      moderator: null,
-      verifier: null,
       content: {
         questions: [],
         mcqs: [],
@@ -753,11 +1052,37 @@ const AddAssessment = () => {
         supportingFile: null
       }
     })
+    setMcqOptionCounts({})
+    setSuccessMessage('')
+    setErrorMessage('')
     fetchExistingAssessments()
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h5" sx={{ mb: 3 }}>
+        Add New Assessment
+      </Typography>
+      
+      {/* Success Message */}
+      {successMessage && (
+        <Box sx={{ mb: 2, p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
+          <Typography color="success.contrastText">
+            {successMessage}
+          </Typography>
+        </Box>
+      )}
+      
+      {/* Error Message */}
+      {errorMessage && (
+        <Box sx={{ mb: 2, p: 2, bgcolor: 'error.light', borderRadius: 1 }}>
+          <Typography color="error.contrastText">
+            {errorMessage}
+          </Typography>
+        </Box>
+      )}
+      
+      <form onSubmit={handleSubmit}>
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
         <Autocomplete
           fullWidth
@@ -847,6 +1172,55 @@ const AddAssessment = () => {
               }}
             />
           )}
+        />
+      </Box>
+
+      {/* Title and Description Fields */}
+      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+        <TextField
+          fullWidth
+          size="small"
+          label="Assessment Title"
+          value={formData.title}
+          onChange={e => handleFormChange('title', e.target.value)}
+          required
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              borderRadius: '8px',
+              border: '1px solid #20202033',
+              '& fieldset': {
+                border: 'none'
+              }
+            },
+            '& .MuiInputLabel-root': {
+              color: '#8F8F8F',
+              backgroundColor: 'white',
+              padding: '0 4px'
+            }
+          }}
+        />
+        <TextField
+          fullWidth
+          size="small"
+          label="Description"
+          value={formData.description}
+          onChange={e => handleFormChange('description', e.target.value)}
+          multiline
+          rows={2}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              borderRadius: '8px',
+              border: '1px solid #20202033',
+              '& fieldset': {
+                border: 'none'
+              }
+            },
+            '& .MuiInputLabel-root': {
+              color: '#8F8F8F',
+              backgroundColor: 'white',
+              padding: '0 4px'
+            }
+          }}
         />
       </Box>
 
@@ -955,17 +1329,15 @@ const AddAssessment = () => {
         <Button
           type="submit"
           variant="contained"
-          sx={{ 
-            minWidth: '100px',
-            width: '100px',
-            borderRadius: '8px',
-            height: '36px'
-          }}
+          color="primary"
+          disabled={isSubmitting}
+          sx={{ mt: 2 }}
         >
-          Save
+          {isSubmitting ? 'Creating Assessment...' : 'Create Assessment'}
         </Button>
       </Box>
     </form>
+    </Box>
   )
 }
 

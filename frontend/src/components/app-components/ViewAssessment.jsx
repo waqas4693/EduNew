@@ -33,14 +33,15 @@ const AssessmentRenderer = ({
   onPlayAudio,
   attemptStatus,
   existingAttempt,
-  renderSubmittedFile
+  renderSubmittedFile,
+  mcqImageUrls
 }) => {
   const [timeRemaining, setTimeRemaining] = useState(null)
   const [currentMcqIndex, setCurrentMcqIndex] = useState(0)
   const [isAssessmentEnded, setIsAssessmentEnded] = useState(false)
   const [flaggedQuestions, setFlaggedQuestions] = useState(new Set())
   const [isAssessmentStarted, setIsAssessmentStarted] = useState(false)
-
+  
   const renderAttemptStatus = () => {
     if (!attemptStatus) return null
 
@@ -180,7 +181,7 @@ const AssessmentRenderer = ({
   }
 
   const isQuestionAttempted = index => {
-    return attemptData?.mcqAnswers?.[index]?.selectedOption !== undefined
+    return attemptData?.mcqAnswers?.[index]?.selectedOptions?.length > 0
   }
 
   const getQuestionButtonStyle = index => {
@@ -230,6 +231,22 @@ const AssessmentRenderer = ({
       }
       return newFlagged
     })
+  }
+
+  const handleMCQOptionToggle = (mcqIndex, option) => {
+    // Get current MCQ answers from attemptData
+    const currentMcqAnswers = attemptData?.mcqAnswers?.[mcqIndex]?.selectedOptions || []
+    const isSelected = currentMcqAnswers.includes(option)
+
+    if (isSelected) {
+      // Remove option if already selected
+      const updatedSelectedOptions = currentMcqAnswers.filter(opt => opt !== option)
+      onAnswerChange('mcqAnswers', mcqIndex, updatedSelectedOptions)
+    } else {
+      // Add option if not selected
+      const updatedSelectedOptions = [...currentMcqAnswers, option]
+      onAnswerChange('mcqAnswers', mcqIndex, updatedSelectedOptions)
+    }
   }
 
   const renderMCQContent = () => {
@@ -289,44 +306,94 @@ const AssessmentRenderer = ({
             Question {currentMcqIndex + 1} of {assessment.content.mcqs.length}
           </Typography>
           
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 3 }}>
-            <Typography variant="h6" sx={{ flex: 1 }}>
+          {/* Question Text and Media */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>
               {currentMcq.question}
             </Typography>
-            {currentMcq.audioFile && (
-              <IconButton
-                onClick={() => onPlayAudio(currentMcq.audioFile)}
-                sx={{ color: 'primary.main' }}
-              >
-                <VolumeUpIcon />
-              </IconButton>
+            
+            {/* MCQ Image */}
+            {currentMcq.imageFile && (
+              <Box sx={{ mb: 2, textAlign: 'center' }}>
+                <img
+                  src={mcqImageUrls[currentMcq.imageFile] || `${url}s3/url/MCQ_IMAGES/${currentMcq.imageFile}`}
+                  alt="Question Image"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '300px',
+                    objectFit: 'contain',
+                    borderRadius: '8px',
+                    border: '1px solid #e0e0e0'
+                  }}
+                  onError={(e) => {
+                    console.error('Error loading MCQ image:', e)
+                    e.target.style.display = 'none'
+                  }}
+                />
+              </Box>
             )}
+            
+            {/* MCQ Audio */}
+            {currentMcq.audioFile && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <IconButton
+                  onClick={() => onPlayAudio(currentMcq.audioFile)}
+                  sx={{ color: 'primary.main' }}
+                >
+                  <VolumeUpIcon />
+                </IconButton>
+                <Typography variant="body2" color="text.secondary">
+                  Audio available
+                </Typography>
+              </Box>
+            )}
+          </Box>
+
+          {/* Multiple Answer Instructions */}
+          <Box sx={{ mb: 2, p: 2, bgcolor: 'info.light', borderRadius: 2 }}>
+            <Typography variant="body2" color="info.contrastText">
+              <strong>Instructions:</strong> This question has {currentMcq.numberOfCorrectAnswers} correct answer{currentMcq.numberOfCorrectAnswers > 1 ? 's' : ''}. 
+              Select all correct options.
+            </Typography>
           </Box>
 
           {/* Options */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {currentMcq.options.map((option, optIndex) => (
-              <Button
-                key={optIndex}
-                onClick={() => onAnswerChange('mcqAnswers', currentMcqIndex, option)}
-                variant={attemptData?.mcqAnswers?.[currentMcqIndex]?.selectedOption === option ? 'contained' : 'outlined'}
-                sx={{
-                  justifyContent: 'flex-start',
-                  textAlign: 'left',
-                  p: 2,
-                  borderRadius: 2,
-                  textTransform: 'none',
-                  bgcolor: attemptData?.mcqAnswers?.[currentMcqIndex]?.selectedOption === option ? 'primary.main' : 'transparent',
-                  color: attemptData?.mcqAnswers?.[currentMcqIndex]?.selectedOption === option ? 'white' : 'text.primary',
-                  '&:hover': {
-                    bgcolor: attemptData?.mcqAnswers?.[currentMcqIndex]?.selectedOption === option ? 'primary.dark' : 'action.hover'
-                  }
-                }}
-              >
-                {`${String.fromCharCode(65 + optIndex)}. ${option}`}
-              </Button>
-            ))}
+            {currentMcq.options.map((option, optIndex) => {
+              const isSelected = attemptData?.mcqAnswers?.[currentMcqIndex]?.selectedOptions?.includes(option) || false
+              return (
+                <Button
+                  key={optIndex}
+                  onClick={() => handleMCQOptionToggle(currentMcqIndex, option)}
+                  variant={isSelected ? 'contained' : 'outlined'}
+                  sx={{
+                    justifyContent: 'flex-start',
+                    textAlign: 'left',
+                    p: 2,
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    bgcolor: isSelected ? 'primary.main' : 'transparent',
+                    color: isSelected ? 'white' : 'text.primary',
+                    '&:hover': {
+                      bgcolor: isSelected ? 'primary.dark' : 'action.hover'
+                    }
+                  }}
+                >
+                  {`${String.fromCharCode(65 + optIndex)}. ${option}`}
+                </Button>
+              )
+            })}
           </Box>
+
+          {/* Selected Answers Summary */}
+          {attemptData?.mcqAnswers?.[currentMcqIndex]?.selectedOptions && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'success.light', borderRadius: 2 }}>
+              <Typography variant="body2" color="success.contrastText">
+                <strong>Selected:</strong> {attemptData.mcqAnswers[currentMcqIndex].selectedOptions.join(', ')}
+                {' '}({attemptData.mcqAnswers[currentMcqIndex].selectedOptions.length}/{currentMcq.numberOfCorrectAnswers})
+              </Typography>
+            </Box>
+          )}
         </Box>
 
         {/* Navigation Buttons */}
@@ -377,14 +444,14 @@ const AssessmentRenderer = ({
   // Helper function for question button colors
   const getQuestionButtonColor = (index) => {
     if (flaggedQuestions.has(index)) return '#ffa726' // Warning/Review color
-    if (attemptData?.mcqAnswers?.[index]) return '#4caf50' // Attempted color
+    if (attemptData?.mcqAnswers?.[index]?.selectedOptions?.length > 0) return '#4caf50' // Attempted color
     if (currentMcqIndex === index) return '#1976d2' // Current question color
     return '#e0e0e0' // Default color
   }
 
   const getQuestionButtonHoverColor = (index) => {
     if (flaggedQuestions.has(index)) return '#f57c00'
-    if (attemptData?.mcqAnswers?.[index]) return '#388e3c'
+    if (attemptData?.mcqAnswers?.[index]?.selectedOptions?.length > 0) return '#388e3c'
     if (currentMcqIndex === index) return '#1565c0'
     return '#bdbdbd'
   }
@@ -505,6 +572,7 @@ const ViewAssessment = () => {
   const [attemptData, setAttemptData] = useState({})
   const [assessments, setAssessments] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [mcqImageUrls, setMcqImageUrls] = useState({})
   const [audioPlayer, setAudioPlayer] = useState(null)
   const [existingAttempt, setExistingAttempt] = useState(null)
   const [selectedAssessment, setSelectedAssessment] = useState(null)
@@ -523,6 +591,33 @@ const ViewAssessment = () => {
     if (!fileName) return null
     const folder = isSubmission ? 'ASSESSMENT_SUBMISSIONS' : 'ASSESSMENT_FILES'
     return `${url}resources/files/${folder}/${fileName}`
+  }
+
+  const getS3BaseUrl = () => {
+    return `${url}s3/url`
+  }
+
+  const getMCQImageUrl = async (imageFile) => {
+    try {
+      const response = await axios.get(`${url}s3/url/MCQ_IMAGES/${imageFile}`)
+      return response.data.signedUrl
+    } catch (error) {
+      console.error('Error getting MCQ image signed URL:', error)
+      return null
+    }
+  }
+
+  const fetchMCQImageUrls = async (mcqs) => {
+    const imageUrls = {}
+    for (const mcq of mcqs) {
+      if (mcq.imageFile) {
+        const signedUrl = await getMCQImageUrl(mcq.imageFile)
+        if (signedUrl) {
+          imageUrls[mcq.imageFile] = signedUrl
+        }
+      }
+    }
+    setMcqImageUrls(imageUrls)
   }
 
   const getAudioUrl = audioFileName => {
@@ -698,7 +793,10 @@ const ViewAssessment = () => {
         return { ...prev, answers }
       } else if (type === 'mcqAnswers') {
         const mcqAnswers = [...(prev.mcqAnswers || [])]
-        mcqAnswers[index] = { mcqId: index.toString(), selectedOption: value }
+        mcqAnswers[index] = { 
+          mcqId: index.toString(), 
+          selectedOptions: Array.isArray(value) ? value : [value]
+        }
         return { ...prev, mcqAnswers }
       } else if (type === 'submittedFile') {
         return { ...prev, submittedFile: value }
@@ -773,6 +871,11 @@ const ViewAssessment = () => {
       setSelectedAssessment(assessment)
       setAttemptData({})
       setExistingAttempt(null)
+    }
+    
+    // Fetch MCQ image URLs if assessment has MCQs
+    if (assessment.assessmentType === 'MCQ' && assessment.content?.mcqs) {
+      fetchMCQImageUrls(assessment.content.mcqs)
     }
   }
 
@@ -917,11 +1020,8 @@ const ViewAssessment = () => {
           {selectedAssessment ? (
             <AssessmentRenderer
               assessment={selectedAssessment}
-              signedUrl={
-                selectedAssessment.assessmentType === 'FILE'
-                  ? getFileUrl(selectedAssessment.content.assessmentFile)
-                  : null
-              }
+              signedUrl={getS3BaseUrl()}
+              mcqImageUrls={mcqImageUrls}
               attemptData={attemptData}
               onAnswerChange={handleAnswerChange}
               onSubmit={handleSubmit}

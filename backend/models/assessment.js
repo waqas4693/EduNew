@@ -56,7 +56,21 @@ const assessmentSchema = new mongoose.Schema({
     mcqs: [{
       question: String,
       options: [String],
-      correctAnswer: String,
+      numberOfCorrectAnswers: {
+        type: Number,
+        min: 1,
+        max: 6,
+        required: function() {
+          return this.constructor.modelName === 'Assessment'
+        }
+      },
+      correctAnswers: {
+        type: [String],
+        required: function() {
+          return this.constructor.modelName === 'Assessment'
+        }
+      },
+      imageFile: String,
       audioFile: String
     }],
     assessmentFile: String,

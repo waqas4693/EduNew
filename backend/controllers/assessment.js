@@ -3,6 +3,7 @@ import Assessment from '../models/assessment.js'
 import Section from '../models/section.js'
 import AssessmentAttempt from '../models/AssessmentAttempt.js'
 import Course from '../models/course.js'
+import { uploadToS3 } from './s3.js'
 
 export const createAssessment = async (req, res) => {
   try {
@@ -44,8 +45,41 @@ export const createAssessment = async (req, res) => {
       })
     }
 
+    // Handle MCQ file uploads if assessment type is MCQ
+    let assessmentData = { ...req.body }
+    if (req.body.assessmentType === 'MCQ' && req.body.content && req.body.content.mcqs) {
+      const mcqsWithFiles = await Promise.all(
+        req.body.content.mcqs.map(async (mcq, index) => {
+          const updatedMcq = { ...mcq }
+          
+          // Handle MCQ image upload
+          if (req.files && req.files[`mcqImage_${index}`]) {
+            const imageFileName = await uploadToS3(
+              req.files[`mcqImage_${index}`][0],
+              'MCQ_IMAGES',
+              `${Date.now()}-${req.files[`mcqImage_${index}`][0].originalname}`
+            )
+            updatedMcq.imageFile = imageFileName
+          }
+          
+          // Handle MCQ audio upload
+          if (req.files && req.files[`mcqAudio_${index}`]) {
+            const audioFileName = await uploadToS3(
+              req.files[`mcqAudio_${index}`][0],
+              'MCQ_AUDIO',
+              `${Date.now()}-${req.files[`mcqAudio_${index}`][0].originalname}`
+            )
+            updatedMcq.audioFile = audioFileName
+          }
+          
+          return updatedMcq
+        })
+      )
+      assessmentData.content.mcqs = mcqsWithFiles
+    }
+
     const assessment = new Assessment({
-      ...req.body,
+      ...assessmentData,
       orderNumber: course.totalAssessments
     })
     
@@ -126,6 +160,56 @@ export const updateAssessment = async (req, res) => {
       content
     } = req.body
 
+    // Get the existing assessment to preserve file references
+    const existingAssessment = await Assessment.findById(id)
+    if (!existingAssessment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Assessment not found'
+      })
+    }
+
+    let updatedContent = { ...content }
+
+    // Handle MCQ file uploads if assessment type is MCQ
+    if (assessmentType === 'MCQ' && content && content.mcqs) {
+      const mcqsWithFiles = await Promise.all(
+        content.mcqs.map(async (mcq, index) => {
+          const updatedMcq = { ...mcq }
+          
+          // Preserve existing file references
+          if (existingAssessment.content && existingAssessment.content.mcqs && existingAssessment.content.mcqs[index]) {
+            const existingMcq = existingAssessment.content.mcqs[index]
+            updatedMcq.imageFile = existingMcq.imageFile
+            updatedMcq.audioFile = existingMcq.audioFile
+          }
+          
+          // Handle new MCQ image upload
+          if (req.files && req.files[`mcqImage_${index}`]) {
+            const imageFileName = await uploadToS3(
+              req.files[`mcqImage_${index}`][0],
+              'MCQ_IMAGES',
+              `${Date.now()}-${req.files[`mcqImage_${index}`][0].originalname}`
+            )
+            updatedMcq.imageFile = imageFileName
+          }
+          
+          // Handle new MCQ audio upload
+          if (req.files && req.files[`mcqAudio_${index}`]) {
+            const audioFileName = await uploadToS3(
+              req.files[`mcqAudio_${index}`][0],
+              'MCQ_AUDIO',
+              `${Date.now()}-${req.files[`mcqAudio_${index}`][0].originalname}`
+            )
+            updatedMcq.audioFile = audioFileName
+          }
+          
+          return updatedMcq
+        })
+      )
+      updatedContent.mcqs = mcqsWithFiles
+    }
+
     const assessment = await Assessment.findByIdAndUpdate(
       id,
       { 
@@ -134,7 +218,7 @@ export const updateAssessment = async (req, res) => {
         percentage,
         isTimeBound,
         timeAllowed,
-        content,
+        content: updatedContent,
         updatedAt: Date.now()
       },
       { new: true }
