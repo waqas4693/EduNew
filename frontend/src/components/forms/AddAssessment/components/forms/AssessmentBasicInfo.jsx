@@ -5,7 +5,7 @@ import { FORM_FIELD_STYLES } from '../../utils/constants'
 /**
  * Assessment basic information form component
  */
-const AssessmentBasicInfo = ({ title, onTitleChange }) => {
+const AssessmentBasicInfo = ({ title, onTitleChange, disabled = false }) => {
   return (
     <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
       <TextField
@@ -14,6 +14,7 @@ const AssessmentBasicInfo = ({ title, onTitleChange }) => {
         label="Assessment Title"
         value={title}
         onChange={e => onTitleChange(e.target.value)}
+        disabled={disabled}
         required
         sx={FORM_FIELD_STYLES.textField}
       />
@@ -23,9 +24,8 @@ const AssessmentBasicInfo = ({ title, onTitleChange }) => {
 
 AssessmentBasicInfo.propTypes = {
   title: PropTypes.string.isRequired,
-  description: PropTypes.string.isRequired,
   onTitleChange: PropTypes.func.isRequired,
-  onDescriptionChange: PropTypes.func.isRequired
+  disabled: PropTypes.bool
 }
 
 export default AssessmentBasicInfo

@@ -15,7 +15,8 @@ const MCQForm = ({
   onAddMCQ,
   onRemoveMCQ,
   onSetTotalOptions,
-  onMCQFileChange
+  onMCQFileChange,
+  disabled = false
 }) => {
   console.log('MCQForm render - mcqs:', mcqs?.length, 'mcqOptionCounts:', mcqOptionCounts)
 
@@ -35,11 +36,16 @@ const MCQForm = ({
             onSetTotalOptions={onSetTotalOptions}
             onMCQFileChange={onMCQFileChange}
             onRemoveMCQ={onRemoveMCQ}
+            disabled={disabled}
           />
         )
       })}
       
-      <Button startIcon={<AddIcon />} onClick={onAddMCQ}>
+      <Button 
+        startIcon={<AddIcon />} 
+        onClick={onAddMCQ}
+        disabled={disabled}
+      >
         Add MCQ
       </Button>
     </Box>
@@ -54,7 +60,8 @@ MCQForm.propTypes = {
   onAddMCQ: PropTypes.func.isRequired,
   onRemoveMCQ: PropTypes.func.isRequired,
   onSetTotalOptions: PropTypes.func.isRequired,
-  onMCQFileChange: PropTypes.func.isRequired
+  onMCQFileChange: PropTypes.func.isRequired,
+  disabled: PropTypes.bool
 }
 
 export default MCQForm

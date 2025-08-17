@@ -22,10 +22,10 @@ export const validateForm = (formData, sectionId, remainingPercentage) => {
     errors.push(`Percentage cannot exceed ${remainingPercentage}%`)
   }
 
-  // Time-bound assessment validation
-  if (formData.assessmentType === 'MCQ' && formData.isTimeBound) {
-    if (!formData.timeAllowed || formData.timeAllowed <= 0) {
-      errors.push('Please enter a valid time duration for time-bound assessment')
+  // Time-bound assessment validation - only validate if time-bound is enabled
+  if (formData.isTimeBound) {
+    if (!formData.timeAllowed || Number(formData.timeAllowed) <= 0) {
+      errors.push('Time duration must be a positive number for time-bound assessments')
     }
   }
 

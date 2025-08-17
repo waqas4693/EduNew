@@ -12,6 +12,7 @@ export const useAssessmentAPI = () => {
   const [assessors, setAssessors] = useState([])
   const [moderators, setModerators] = useState([])
   const [verifiers, setVerifiers] = useState([])
+  const [uploadProgress, setUploadProgress] = useState(0)
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -33,6 +34,7 @@ export const useAssessmentAPI = () => {
 
   const submitAssessment = useCallback(async (formData, courseId, unitId, sectionId) => {
     try {
+      setUploadProgress(0)
       const assessmentData = prepareAssessmentData(formData, courseId, unitId, sectionId)
       
       // Create FormData for file uploads
@@ -73,10 +75,14 @@ export const useAssessmentAPI = () => {
         }
       })
       
-      // Submit the assessment with FormData
+      // Submit the assessment with FormData and progress tracking
       const response = await axios.post(`${url}assessments`, submitFormData, {
         headers: {
           'Content-Type': 'multipart/form-data'
+        },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          setUploadProgress(percentCompleted)
         }
       })
       
@@ -90,6 +96,7 @@ export const useAssessmentAPI = () => {
       throw new Error('Unexpected response status')
     } catch (error) {
       console.error('Error creating assessment:', error)
+      setUploadProgress(0)
       return {
         success: false,
         message: error.response?.data?.message || error.message || 'Error creating assessment'
@@ -102,6 +109,7 @@ export const useAssessmentAPI = () => {
     moderators,
     verifiers,
     submitAssessment,
-    fetchUsers
+    fetchUsers,
+    uploadProgress
   }
 }

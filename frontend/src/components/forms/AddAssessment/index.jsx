@@ -1,4 +1,4 @@
-import { Box, Typography } from '@mui/material'
+import { Box, Typography, Backdrop, CircularProgress, LinearProgress } from '@mui/material'
 import PropTypes from 'prop-types'
 import { useEffect } from 'react'
 import { useAssessmentForm } from './hooks/useAssessmentForm'
@@ -68,7 +68,8 @@ const AddAssessment = ({ courseId: propsCourseId, editMode }) => {
     assessors,
     moderators,
     verifiers,
-    submitAssessment
+    submitAssessment,
+    uploadProgress
   } = useAssessmentAPI()
 
   // MCQ management
@@ -149,6 +150,7 @@ const AddAssessment = ({ courseId: propsCourseId, editMode }) => {
             onRemoveMCQ={removeMCQ}
             onSetTotalOptions={setTotalOptions}
             onMCQFileChange={handleMCQFileChange}
+            disabled={isSubmitting}
           />
         )
       case 'QNA':
@@ -174,6 +176,36 @@ const AddAssessment = ({ courseId: propsCourseId, editMode }) => {
 
   return (
     <> 
+      {/* Loading Backdrop */}
+      <Backdrop
+        sx={{ 
+          color: '#fff', 
+          zIndex: (theme) => theme.zIndex.drawer + 1,
+          flexDirection: 'column',
+          gap: 2
+        }}
+        open={isSubmitting}
+      >
+        <CircularProgress color="inherit" size={60} />
+        <Typography variant="h6" sx={{ mt: 2 }}>
+          Uploading Assessment...
+        </Typography>
+        <Typography variant="body2" sx={{ textAlign: 'center', maxWidth: 300 }}>
+          Please wait while we process your files and create the assessment
+        </Typography>
+        <Box sx={{ width: 300, mt: 2 }}>
+          <LinearProgress 
+            variant={uploadProgress > 0 ? "determinate" : "indeterminate"}
+            value={uploadProgress}
+          />
+          {uploadProgress > 0 && (
+            <Typography variant="body2" sx={{ textAlign: 'center', mt: 1 }}>
+              {uploadProgress}% uploaded
+            </Typography>
+          )}
+        </Box>
+      </Backdrop>
+
       <SuccessMessage message={successMessage} />
       <ErrorMessage message={errorMessage} />
       
@@ -185,18 +217,19 @@ const AddAssessment = ({ courseId: propsCourseId, editMode }) => {
               courses={courses}
               value={courseId}
               onChange={setCourseId}
+              disabled={isSubmitting}
             />
             <UnitSelector
               units={units}
               value={unitId}
               onChange={setUnitId}
-              disabled={!courseId}
+              disabled={!courseId || isSubmitting}
             />
             <SectionSelector
               sections={sections}
               value={sectionId}
               onChange={setSectionId}
-              disabled={!unitId}
+              disabled={!unitId || isSubmitting}
             />
           </Box>
         </FormSection>
@@ -206,6 +239,7 @@ const AddAssessment = ({ courseId: propsCourseId, editMode }) => {
           <AssessmentBasicInfo
             title={formData.title}
             onTitleChange={(value) => handleFormChange('title', value)}
+            disabled={isSubmitting}
           />
         </FormSection>
 
@@ -227,6 +261,7 @@ const AddAssessment = ({ courseId: propsCourseId, editMode }) => {
             <AssessmentTypeSelector
               value={formData.assessmentType}
               onChange={(value) => handleFormChange('assessmentType', value)}
+              disabled={isSubmitting}
             />
           </Box>
           <AssessmentMetrics
@@ -237,6 +272,7 @@ const AddAssessment = ({ courseId: propsCourseId, editMode }) => {
             onTotalMarksChange={(value) => handleFormChange('totalMarks', value)}
             onPercentageChange={(value) => handleFormChange('percentage', value)}
             onIntervalChange={(value) => handleFormChange('interval', value)}
+            disabled={isSubmitting}
           />
         </FormSection>
 
@@ -253,6 +289,7 @@ const AddAssessment = ({ courseId: propsCourseId, editMode }) => {
             onTimeBoundChange={(value) => handleFormChange('isTimeBound', value)}
             onTimeAllowedChange={(value) => handleFormChange('timeAllowed', value)}
             showTimeOptions={shouldShowTimeOptions(formData.assessmentType)}
+            disabled={isSubmitting}
           />
         </FormSection>
 

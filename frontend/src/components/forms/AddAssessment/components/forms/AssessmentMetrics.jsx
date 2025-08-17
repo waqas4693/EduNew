@@ -12,7 +12,8 @@ const AssessmentMetrics = ({
   remainingPercentage,
   onTotalMarksChange, 
   onPercentageChange, 
-  onIntervalChange 
+  onIntervalChange,
+  disabled = false
 }) => {
   return (
     <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
@@ -23,6 +24,7 @@ const AssessmentMetrics = ({
         label="Total Marks"
         value={totalMarks}
         onChange={e => onTotalMarksChange(e.target.value)}
+        disabled={disabled}
         required
         sx={FORM_FIELD_STYLES.textField}
       />
@@ -33,6 +35,7 @@ const AssessmentMetrics = ({
         label={`Percentage (Remaining: ${remainingPercentage}%)`}
         value={percentage}
         onChange={e => onPercentageChange(e.target.value)}
+        disabled={disabled}
         required
         sx={FORM_FIELD_STYLES.textField}
       />
@@ -43,6 +46,7 @@ const AssessmentMetrics = ({
         label="Interval (days)"
         value={interval}
         onChange={e => onIntervalChange(e.target.value)}
+        disabled={disabled}
         required
         sx={FORM_FIELD_STYLES.textField}
       />
@@ -57,7 +61,8 @@ AssessmentMetrics.propTypes = {
   remainingPercentage: PropTypes.number.isRequired,
   onTotalMarksChange: PropTypes.func.isRequired,
   onPercentageChange: PropTypes.func.isRequired,
-  onIntervalChange: PropTypes.func.isRequired
+  onIntervalChange: PropTypes.func.isRequired,
+  disabled: PropTypes.bool
 }
 
 export default AssessmentMetrics

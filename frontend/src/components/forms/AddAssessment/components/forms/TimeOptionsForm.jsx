@@ -10,7 +10,8 @@ const TimeOptionsForm = ({
   timeAllowed, 
   onTimeBoundChange, 
   onTimeAllowedChange,
-  showTimeOptions = true
+  showTimeOptions = true,
+  disabled = false
 }) => {
   if (!showTimeOptions) return null
 
@@ -22,6 +23,7 @@ const TimeOptionsForm = ({
             <Switch
               checked={isTimeBound}
               onChange={(e) => onTimeBoundChange(e.target.checked)}
+              disabled={disabled}
             />
           }
           label="Time Bound Assessment"
@@ -36,6 +38,7 @@ const TimeOptionsForm = ({
           label="Time Allowed (minutes)"
           value={timeAllowed}
           onChange={(e) => onTimeAllowedChange(e.target.value)}
+          disabled={disabled}
           sx={FORM_FIELD_STYLES.textField}
         />
       )}
@@ -48,7 +51,8 @@ TimeOptionsForm.propTypes = {
   timeAllowed: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   onTimeBoundChange: PropTypes.func.isRequired,
   onTimeAllowedChange: PropTypes.func.isRequired,
-  showTimeOptions: PropTypes.bool
+  showTimeOptions: PropTypes.bool,
+  disabled: PropTypes.bool
 }
 
 export default TimeOptionsForm
