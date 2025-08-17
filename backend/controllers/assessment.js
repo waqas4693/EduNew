@@ -9,8 +9,9 @@ export const createAssessment = async (req, res) => {
   try {
     const { sectionId, courseId, isTimeBound, timeAllowed } = req.body
 
-    if (req.body.assessmentType === 'MCQ' && isTimeBound) {
-      if (!timeAllowed || timeAllowed <= 0) {
+    // Only validate time for MCQ assessments that are explicitly time-bound
+    if (req.body.assessmentType === 'MCQ' && isTimeBound === 'true') {
+      if (!timeAllowed || Number(timeAllowed) <= 0) {
         return res.status(400).json({
           success: false,
           message: 'Time allowed must be a positive number for time-bound assessments'

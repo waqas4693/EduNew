@@ -5,13 +5,6 @@
 export const validateForm = (formData, sectionId, remainingPercentage) => {
   const errors = []
 
-  // Debug logging - remove after fixing
-  console.log('Validation Debug:', {
-    isTimeBound: formData.isTimeBound,
-    timeAllowed: formData.timeAllowed,
-    type: typeof formData.isTimeBound
-  })
-
   // Required fields validation
   if (!sectionId || !formData.title || !formData.assessmentType || 
       !formData.totalMarks || !formData.percentage || !formData.interval) {
@@ -30,7 +23,8 @@ export const validateForm = (formData, sectionId, remainingPercentage) => {
   }
 
   // Time-bound assessment validation - only validate if time-bound is explicitly enabled
-  // Only validate time for MCQ assessments that are explicitly marked as time-bound
+  // Only validate time for MCQ assessments that are explicitly marked as time-bound\
+  console.log('Assessment TimeBound Checking:', formData.isTimeBound)
   if (formData.assessmentType === 'MCQ' && formData.isTimeBound === true) {
     if (!formData.timeAllowed || Number(formData.timeAllowed) <= 0) {
       errors.push('Time duration must be a positive number for time-bound assessments')
