@@ -61,6 +61,7 @@ export const createAssessment = async (req, res) => {
           const updatedMcq = { ...mcq }
           
           // Handle MCQ image upload
+          console.log('req.files[`mcqImage_${index}`] checking if file exists', req.files[`mcqImage_${index}`])
           if (req.files && req.files[`mcqImage_${index}`]) {
             console.log('req.files[`mcqImage_${index}`][0]', req.files[`mcqImage_${index}`][0])
             const imageFileName = await uploadToS3(
@@ -73,6 +74,7 @@ export const createAssessment = async (req, res) => {
           }
           
           // Handle MCQ audio upload
+          console.log('req.files[`mcqAudio_${index}`] checking if file exists', req.files[`mcqAudio_${index}`])
           if (req.files && req.files[`mcqAudio_${index}`]) {
             console.log('req.files[`mcqAudio_${index}`][0]', req.files[`mcqAudio_${index}`][0])
             const audioFileName = await uploadToS3(
