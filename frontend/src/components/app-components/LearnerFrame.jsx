@@ -326,7 +326,7 @@ const LearnerFrame = () => {
                 width: 'fit-content'
               }}
               onClick={() => {
-                console.log('Navigating back to section')
+
                 navigate(`/units/${courseId}/section/${unitId}`)
               }}
             >

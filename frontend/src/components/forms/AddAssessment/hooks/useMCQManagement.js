@@ -21,7 +21,7 @@ export const useMCQManagement = (mcqs, onMCQsChange) => {
       mcqs.forEach((mcq, index) => {
         counts[index] = mcq.options?.length || MCQ_CONSTRAINTS.MIN_OPTIONS
       })
-      console.log('Initializing MCQ option counts:', counts)
+
       setMcqOptionCounts(counts)
     }
   }, [mcqs])
@@ -30,7 +30,7 @@ export const useMCQManagement = (mcqs, onMCQsChange) => {
     const newMCQ = createNewMCQ()
     const newIndex = mcqs?.length || 0
     
-    console.log('Adding MCQ at index:', newIndex)
+
     
     const updatedMCQs = [...(mcqs || []), newMCQ]
     onMCQsChange(updatedMCQs)
@@ -40,7 +40,7 @@ export const useMCQManagement = (mcqs, onMCQsChange) => {
         ...prev,
         [newIndex]: MCQ_CONSTRAINTS.MIN_OPTIONS
       }
-      console.log('Updated MCQ option counts:', newCounts)
+
       return newCounts
     })
   }, [mcqs, onMCQsChange])
@@ -114,7 +114,7 @@ export const useMCQManagement = (mcqs, onMCQsChange) => {
   }, [mcqs, onMCQsChange])
 
   const addMCQOption = useCallback((mcqIndex) => {
-    console.log('Adding option for MCQ index:', mcqIndex)
+
     const updatedMcqs = [...(mcqs || [])]
     const currentOptions = updatedMcqs[mcqIndex]?.options || []
     
@@ -129,7 +129,7 @@ export const useMCQManagement = (mcqs, onMCQsChange) => {
           ...prevCounts,
           [mcqIndex]: currentOptions.length + 1
         }
-        console.log('Updated option counts after adding:', newCounts)
+
         return newCounts
       })
       
@@ -138,7 +138,7 @@ export const useMCQManagement = (mcqs, onMCQsChange) => {
   }, [mcqs, onMCQsChange])
 
   const removeMCQOption = useCallback((mcqIndex, optionIndex) => {
-    console.log('Removing option for MCQ index:', mcqIndex, 'option index:', optionIndex)
+
     const updatedMcqs = [...(mcqs || [])]
     const currentOptions = updatedMcqs[mcqIndex]?.options || []
     
@@ -154,7 +154,7 @@ export const useMCQManagement = (mcqs, onMCQsChange) => {
           ...prevCounts,
           [mcqIndex]: newOptions.length
         }
-        console.log('Updated option counts after removing:', newCounts)
+
         return newCounts
       })
       
@@ -181,7 +181,7 @@ export const useMCQManagement = (mcqs, onMCQsChange) => {
   }, [mcqs, onMCQsChange])
 
   const setTotalOptions = useCallback((mcqIndex, totalOptions) => {
-    console.log('Setting total options for MCQ index:', mcqIndex, 'to:', totalOptions)
+
     const updatedMcqs = [...(mcqs || [])]
     const currentOptions = updatedMcqs[mcqIndex]?.options || []
     
@@ -209,7 +209,7 @@ export const useMCQManagement = (mcqs, onMCQsChange) => {
         ...prevCounts,
         [mcqIndex]: totalOptions
       }
-      console.log('Updated option counts after setting total:', newCounts)
+
       return newCounts
     })
     

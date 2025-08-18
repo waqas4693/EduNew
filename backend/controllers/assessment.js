@@ -49,107 +49,38 @@ export const createAssessment = async (req, res) => {
     // Parse content if it's a JSON string (from FormData)
     const content = typeof req.body.content === 'string' ? JSON.parse(req.body.content) : req.body.content
 
-    // Debug: Log what backend receives
-    console.log('=== BACKEND ASSESSMENT DEBUG ===')
-    console.log('req.body.assessmentType:', req.body.assessmentType)
-    console.log('content.mcqs:', content?.mcqs?.length || 0, 'MCQs')
-    console.log('req.files length:', req.files?.length || 0)
-    if (req.files) {
-      req.files.forEach(file => {
-        console.log(`File: ${file.fieldname} - ${file.originalname} (${file.size} bytes)`)
-      })
-    }
-    if (content?.mcqs) {
-      content.mcqs.forEach((mcq, index) => {
-        console.log(`MCQ ${index}:`, {
-          hasImageFile: !!mcq.imageFile,
-          hasAudioFile: !!mcq.audioFile,
-          imageFileType: typeof mcq.imageFile,
-          audioFileType: typeof mcq.audioFile
-        })
-      })
-    }
-    console.log('=== END BACKEND DEBUG ===')
-
     // Handle MCQ file uploads if assessment type is MCQ
     let assessmentData = { ...req.body, content }
     if (req.body.assessmentType === 'MCQ' && content && content.mcqs) {
-      console.log('Processing MCQ files...')
       const mcqsWithFiles = await Promise.all(
         content.mcqs.map(async (mcq, index) => {
-          console.log(`Processing MCQ ${index}...`)
           const updatedMcq = { ...mcq }
           
           // Handle MCQ image upload
-          const imageFile = req.files?.find(file => file.fieldname === `mcqImage_${index}`)
-          if (imageFile) {
-            console.log(`Found image file for MCQ ${index}:`, imageFile.originalname)
-            try {
-              const imageFileName = await uploadToS3(
-                imageFile,
-                'MCQ_IMAGES',
-                `${Date.now()}-${imageFile.originalname}`
-              )
-              updatedMcq.imageFile = imageFileName
-              console.log(`Image uploaded successfully for MCQ ${index}:`, imageFileName)
-            } catch (error) {
-              console.error(`Error uploading image for MCQ ${index}:`, error)
-            }
-          } else {
-            console.log(`No image file found for MCQ ${index}`)
+          if (req.files && req.files[`mcqImage_${index}`]) {
+            const imageFileName = await uploadToS3(
+              req.files[`mcqImage_${index}`][0],
+              'MCQ_IMAGES',
+              `${Date.now()}-${req.files[`mcqImage_${index}`][0].originalname}`
+            )
+            updatedMcq.imageFile = imageFileName
           }
           
           // Handle MCQ audio upload
-          const audioFile = req.files?.find(file => file.fieldname === `mcqAudio_${index}`)
-          if (audioFile) {
-            console.log(`Found audio file for MCQ ${index}:`, audioFile.originalname)
-            try {
-              const audioFileName = await uploadToS3(
-                audioFile,
-                'MCQ_AUDIO',
-                `${Date.now()}-${audioFile.originalname}`
-              )
-              updatedMcq.audioFile = audioFileName
-              console.log(`Audio uploaded successfully for MCQ ${index}:`, audioFileName)
-            } catch (error) {
-              console.error(`Error uploading audio for MCQ ${index}:`, error)
-            }
-          } else {
-            console.log(`No audio file found for MCQ ${index}`)
+          if (req.files && req.files[`mcqAudio_${index}`]) {
+            const audioFileName = await uploadToS3(
+              req.files[`mcqAudio_${index}`][0],
+              'MCQ_AUDIO',
+              `${Date.now()}-${req.files[`mcqAudio_${index}`][0].originalname}`
+            )
+            updatedMcq.audioFile = audioFileName
           }
-          
-          console.log(`Final MCQ ${index} data:`, {
-            hasImageFile: !!updatedMcq.imageFile,
-            hasAudioFile: !!updatedMcq.audioFile,
-            imageFile: updatedMcq.imageFile,
-            audioFile: updatedMcq.audioFile
-          })
           
           return updatedMcq
         })
       )
       assessmentData.content.mcqs = mcqsWithFiles
-      console.log('All MCQ files processed. Final assessmentData.content.mcqs:', 
-        assessmentData.content.mcqs.map((mcq, i) => ({
-          index: i,
-          imageFile: mcq.imageFile,
-          audioFile: mcq.audioFile
-        }))
-      )
     }
-
-    console.log('Creating assessment with data:', JSON.stringify({
-      assessmentType: assessmentData.assessmentType,
-      content: {
-        mcqs: assessmentData.content?.mcqs?.map((mcq, i) => ({
-          index: i,
-          hasImageFile: !!mcq.imageFile,
-          hasAudioFile: !!mcq.audioFile,
-          imageFile: mcq.imageFile,
-          audioFile: mcq.audioFile
-        }))
-      }
-    }, null, 2))
 
     const assessment = new Assessment({
       ...assessmentData,
@@ -157,19 +88,6 @@ export const createAssessment = async (req, res) => {
     })
     
     const savedAssessment = await assessment.save()
-    
-    console.log('Saved assessment to database:', JSON.stringify({
-      _id: savedAssessment._id,
-      content: {
-        mcqs: savedAssessment.content?.mcqs?.map((mcq, i) => ({
-          index: i,
-          hasImageFile: !!mcq.imageFile,
-          hasAudioFile: !!mcq.audioFile,
-          imageFile: mcq.imageFile,
-          audioFile: mcq.audioFile
-        }))
-      }
-    }, null, 2))
 
     await Section.findByIdAndUpdate(
       sectionId,

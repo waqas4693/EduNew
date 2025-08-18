@@ -18,7 +18,7 @@ const MCQForm = ({
   onMCQFileChange,
   disabled = false
 }) => {
-  console.log('MCQForm render - mcqs:', mcqs?.length, 'mcqOptionCounts:', mcqOptionCounts)
+
 
   return (
     <Box>
