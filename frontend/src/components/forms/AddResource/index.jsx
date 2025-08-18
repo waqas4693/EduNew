@@ -224,10 +224,15 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         const updatePromises = resources.map(async resource => {
           const cleanContent = {
             ...resource.content,
+            file: undefined,
+            backgroundImage: undefined,
+            audioFile: undefined,
             fileUrl: undefined,
             backgroundImageUrl: undefined,
             mcq: resource.content.mcq ? {
               ...resource.content.mcq,
+              imageFile: undefined,
+              audioFile: undefined,
               imageFileUrl: undefined,
               audioFileUrl: undefined
             } : null
@@ -244,6 +249,9 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
           }
           if (resource.content.backgroundImage instanceof File) {
             formData.append('backgroundImage', resource.content.backgroundImage)
+          }
+          if (resource.content.audioFile instanceof File) {
+            formData.append('audioFile', resource.content.audioFile)
           }
           if (resource.content.mcq?.imageFile instanceof File) {
             formData.append('mcqImage', resource.content.mcq.imageFile)
@@ -267,12 +275,24 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         alert('Resources updated successfully')
       } else {
         const resourcePromises = resources.map(async resource => {
+          const cleanContent = {
+            ...resource.content,
+            file: undefined,
+            backgroundImage: undefined,
+            audioFile: undefined,
+            mcq: resource.content.mcq ? {
+              ...resource.content.mcq,
+              imageFile: undefined,
+              audioFile: undefined
+            } : null
+          }
+
           const formData = new FormData()
           formData.append('name', resource.name)
           formData.append('number', resource.number)
           formData.append('resourceType', resource.resourceType)
           formData.append('sectionId', sectionId)
-          formData.append('content', JSON.stringify(resource.content))
+          formData.append('content', JSON.stringify(cleanContent))
 
           // Handle file uploads
           if (resource.content.file instanceof File) {
@@ -280,6 +300,9 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
           }
           if (resource.content.backgroundImage instanceof File) {
             formData.append('backgroundImage', resource.content.backgroundImage)
+          }
+          if (resource.content.audioFile instanceof File) {
+            formData.append('audioFile', resource.content.audioFile)
           }
           if (resource.content.mcq?.imageFile instanceof File) {
             formData.append('mcqImage', resource.content.mcq.imageFile)
