@@ -95,7 +95,7 @@ app.use('/api/resources', upload.fields([
 ]), resourceRoutes)
 app.use('/api/section-unlock', sectionUnlockStatusRoutes)
 
-app.use('/api/assessments', assessmentRoutes)
+app.use('/api/assessments', upload.any(), assessmentRoutes)
 app.use('/api/assessment-attempts', assessmentAttemptRoutes)
 app.use('/api/assessment-review', assessmentReviewRoutes)
 app.use('/api/resources/files', s3Routes)

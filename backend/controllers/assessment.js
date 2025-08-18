@@ -49,6 +49,28 @@ export const createAssessment = async (req, res) => {
     // Parse content if it's a JSON string (from FormData)
     const content = typeof req.body.content === 'string' ? JSON.parse(req.body.content) : req.body.content
 
+    // Debug: Log what backend receives
+    console.log('=== BACKEND ASSESSMENT DEBUG ===')
+    console.log('req.body.assessmentType:', req.body.assessmentType)
+    console.log('content.mcqs:', content?.mcqs?.length || 0, 'MCQs')
+    console.log('req.files length:', req.files?.length || 0)
+    if (req.files) {
+      req.files.forEach(file => {
+        console.log(`File: ${file.fieldname} - ${file.originalname} (${file.size} bytes)`)
+      })
+    }
+    if (content?.mcqs) {
+      content.mcqs.forEach((mcq, index) => {
+        console.log(`MCQ ${index}:`, {
+          hasImageFile: !!mcq.imageFile,
+          hasAudioFile: !!mcq.audioFile,
+          imageFileType: typeof mcq.imageFile,
+          audioFileType: typeof mcq.audioFile
+        })
+      })
+    }
+    console.log('=== END BACKEND DEBUG ===')
+
     // Handle MCQ file uploads if assessment type is MCQ
     let assessmentData = { ...req.body, content }
     if (req.body.assessmentType === 'MCQ' && content && content.mcqs) {
@@ -57,21 +79,23 @@ export const createAssessment = async (req, res) => {
           const updatedMcq = { ...mcq }
           
           // Handle MCQ image upload
-          if (req.files && req.files[`mcqImage_${index}`]) {
+          const imageFile = req.files?.find(file => file.fieldname === `mcqImage_${index}`)
+          if (imageFile) {
             const imageFileName = await uploadToS3(
-              req.files[`mcqImage_${index}`][0],
+              imageFile,
               'MCQ_IMAGES',
-              `${Date.now()}-${req.files[`mcqImage_${index}`][0].originalname}`
+              `${Date.now()}-${imageFile.originalname}`
             )
             updatedMcq.imageFile = imageFileName
           }
           
           // Handle MCQ audio upload
-          if (req.files && req.files[`mcqAudio_${index}`]) {
+          const audioFile = req.files?.find(file => file.fieldname === `mcqAudio_${index}`)
+          if (audioFile) {
             const audioFileName = await uploadToS3(
-              req.files[`mcqAudio_${index}`][0],
+              audioFile,
               'MCQ_AUDIO',
-              `${Date.now()}-${req.files[`mcqAudio_${index}`][0].originalname}`
+              `${Date.now()}-${audioFile.originalname}`
             )
             updatedMcq.audioFile = audioFileName
           }

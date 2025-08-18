@@ -75,6 +75,19 @@ export const useAssessmentAPI = () => {
         }
       })
       
+      // Debug: Log what's being sent to backend
+      console.log('=== ASSESSMENT SUBMISSION DEBUG ===')
+      console.log('FormData entries:')
+      for (let [key, value] of submitFormData.entries()) {
+        if (value instanceof File) {
+          console.log(`${key}:`, `File - ${value.name} (${value.size} bytes)`)
+        } else {
+          console.log(`${key}:`, value)
+        }
+      }
+      console.log('Original formData:', formData)
+      console.log('=== END DEBUG ===')
+
       // Submit the assessment with FormData and progress tracking
       const response = await axios.post(`${url}assessments`, submitFormData, {
         headers: {
