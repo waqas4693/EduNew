@@ -60,30 +60,26 @@ export const createAssessment = async (req, res) => {
         content.mcqs.map(async (mcq, index) => {
           const updatedMcq = { ...mcq }
           
-          // Handle MCQ image upload
-          console.log('req.files[`mcqImage_${index}`] checking if file exists', req.files[`mcqImage_${index}`])
-          if (req.files && req.files[`mcqImage_${index}`]) {
-            console.log('req.files[`mcqImage_${index}`][0]', req.files[`mcqImage_${index}`][0])
+          // Handle MCQ image upload - find file by fieldname
+          const imageFile = req.files && req.files.find(file => file.fieldname === `mcqImage_${index}`)
+          if (imageFile) {
             const imageFileName = await uploadToS3(
-              req.files[`mcqImage_${index}`][0],
+              imageFile,
               'MCQ_IMAGES',
-              `${Date.now()}-${req.files[`mcqImage_${index}`][0].originalname}`
+              `${Date.now()}-${imageFile.originalname}`
             )
             updatedMcq.imageFile = imageFileName
-            console.log('updatedMcq.imageFile after s3 upload', updatedMcq.imageFile)
           }
           
-          // Handle MCQ audio upload
-          console.log('req.files[`mcqAudio_${index}`] checking if file exists', req.files[`mcqAudio_${index}`])
-          if (req.files && req.files[`mcqAudio_${index}`]) {
-            console.log('req.files[`mcqAudio_${index}`][0]', req.files[`mcqAudio_${index}`][0])
+          // Handle MCQ audio upload - find file by fieldname
+          const audioFile = req.files && req.files.find(file => file.fieldname === `mcqAudio_${index}`)
+          if (audioFile) {
             const audioFileName = await uploadToS3(
-              req.files[`mcqAudio_${index}`][0],
+              audioFile,
               'MCQ_AUDIO',
-              `${Date.now()}-${req.files[`mcqAudio_${index}`][0].originalname}`
+              `${Date.now()}-${audioFile.originalname}`
             )
             updatedMcq.audioFile = audioFileName
-            console.log('updatedMcq.audioFile after s3 upload', updatedMcq.audioFile)
           }
           
           return updatedMcq
@@ -92,7 +88,7 @@ export const createAssessment = async (req, res) => {
       assessmentData.content.mcqs = mcqsWithFiles
     }
 
-    console.log('assessmentData consolidated after s3 upload', assessmentData)
+
 
     const assessment = new Assessment({
       ...assessmentData,
@@ -200,22 +196,24 @@ export const updateAssessment = async (req, res) => {
             updatedMcq.audioFile = existingMcq.audioFile
           }
           
-          // Handle new MCQ image upload
-          if (req.files && req.files[`mcqImage_${index}`]) {
+          // Handle new MCQ image upload - find file by fieldname
+          const imageFile = req.files && req.files.find(file => file.fieldname === `mcqImage_${index}`)
+          if (imageFile) {
             const imageFileName = await uploadToS3(
-              req.files[`mcqImage_${index}`][0],
+              imageFile,
               'MCQ_IMAGES',
-              `${Date.now()}-${req.files[`mcqImage_${index}`][0].originalname}`
+              `${Date.now()}-${imageFile.originalname}`
             )
             updatedMcq.imageFile = imageFileName
           }
           
-          // Handle new MCQ audio upload
-          if (req.files && req.files[`mcqAudio_${index}`]) {
+          // Handle new MCQ audio upload - find file by fieldname
+          const audioFile = req.files && req.files.find(file => file.fieldname === `mcqAudio_${index}`)
+          if (audioFile) {
             const audioFileName = await uploadToS3(
-              req.files[`mcqAudio_${index}`][0],
+              audioFile,
               'MCQ_AUDIO',
-              `${Date.now()}-${req.files[`mcqAudio_${index}`][0].originalname}`
+              `${Date.now()}-${audioFile.originalname}`
             )
             updatedMcq.audioFile = audioFileName
           }
