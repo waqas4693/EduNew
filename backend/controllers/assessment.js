@@ -7,6 +7,10 @@ import { uploadToS3 } from './s3.js'
 
 export const createAssessment = async (req, res) => {
   try {
+
+    console.log('req.body', req.body)
+    console.log('req.files', req.files)
+
     const { sectionId, courseId, isTimeBound, timeAllowed } = req.body
 
     // Only validate time for MCQ assessments that are explicitly time-bound
