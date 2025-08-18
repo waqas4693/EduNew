@@ -62,22 +62,26 @@ export const createAssessment = async (req, res) => {
           
           // Handle MCQ image upload
           if (req.files && req.files[`mcqImage_${index}`]) {
+            console.log('req.files[`mcqImage_${index}`][0]', req.files[`mcqImage_${index}`][0])
             const imageFileName = await uploadToS3(
               req.files[`mcqImage_${index}`][0],
               'MCQ_IMAGES',
               `${Date.now()}-${req.files[`mcqImage_${index}`][0].originalname}`
             )
             updatedMcq.imageFile = imageFileName
+            console.log('updatedMcq.imageFile after s3 upload', updatedMcq.imageFile)
           }
           
           // Handle MCQ audio upload
           if (req.files && req.files[`mcqAudio_${index}`]) {
+            console.log('req.files[`mcqAudio_${index}`][0]', req.files[`mcqAudio_${index}`][0])
             const audioFileName = await uploadToS3(
               req.files[`mcqAudio_${index}`][0],
               'MCQ_AUDIO',
               `${Date.now()}-${req.files[`mcqAudio_${index}`][0].originalname}`
             )
             updatedMcq.audioFile = audioFileName
+            console.log('updatedMcq.audioFile after s3 upload', updatedMcq.audioFile)
           }
           
           return updatedMcq
@@ -86,11 +90,13 @@ export const createAssessment = async (req, res) => {
       assessmentData.content.mcqs = mcqsWithFiles
     }
 
+    console.log('assessmentData consolidated after s3 upload', assessmentData)
+
     const assessment = new Assessment({
       ...assessmentData,
       orderNumber: course.totalAssessments
     })
-    
+    console.log('assessment before saving', assessment)
     const savedAssessment = await assessment.save()
 
     await Section.findByIdAndUpdate(
