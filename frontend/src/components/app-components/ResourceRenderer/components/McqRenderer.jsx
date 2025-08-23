@@ -85,11 +85,11 @@ const McqRenderer = ({
 
           {/* MCQ Image - Right 50% */}
           {resource.content.mcq?.imageFile && signedUrls[resource.content.mcq.imageFile] && (
-            <Box sx={{ flex: '0 0 50%', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
+            <Box sx={{ flex: '0 0 50%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
               <img
                 src={signedUrls[resource.content.mcq.imageFile]}
                 alt="Question"
-                style={{ maxWidth: '100%', height: 'auto' }}
+                style={{ maxWidth: '100%', height: 'auto', objectFit: 'contain' }}
               />
             </Box>
           )}
@@ -165,7 +165,7 @@ const McqRenderer = ({
 
         {/* MCQ Image - Right 50% */}
         {resource.content.mcq?.imageFile && signedUrls[resource.content.mcq.imageFile] && (
-          <Box sx={{ flex: '0 0 50%', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
+          <Box sx={{ flex: '0 0 50%', display: 'flex', justifyContent: 'center', alignItems: 'center', pr: 3 }}>
             <img
               src={signedUrls[resource.content.mcq.imageFile]}
               alt="Question"
