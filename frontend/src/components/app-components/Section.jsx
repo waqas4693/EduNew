@@ -14,13 +14,14 @@ import {
   useTheme,
   useMediaQuery
 } from '@mui/material'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { setCurrentUnit } from '../../redux/slices/courseSlice'
 import { useAuth } from '../../context/AuthContext'
 import { useUnitDetails } from '../../hooks/useUnits'
 import { useSections, useUnlockedSections } from '../../hooks/useSections'
+import { useSectionProgress } from '../../hooks/useSectionProgress'
 
 import Grid from '@mui/material/Grid2'
 import Calendar from '../calendar/Calendar'
@@ -47,13 +48,19 @@ const Section = () => {
   const { data: unitDetails } = useUnitDetails(unitId)
   const { data: sections, isLoading: sectionsLoading, refetch } = useSections(unitId)
   const { data: unlockedSections, refetch: refetchUnlockedSections } = useUnlockedSections(user?.studentId, courseId, unitId)
-
-  // Helper function to determine if a section is completed
-  const isSectionCompleted = (sectionId) => {
-    if (!unlockedSections || unlockedSections.length <= 1) return false
-    const sectionIndex = unlockedSections.indexOf(sectionId)
-    return sectionIndex !== -1 && sectionIndex !== unlockedSections.length - 1
-  }
+  
+  // Get section IDs for progress fetching (memoized to prevent re-renders)
+  const sectionIds = useMemo(() => {
+    return sections?.map(section => section._id) || []
+  }, [sections])
+  
+  // Get progress data for all sections
+  const { isSectionCompleted, isLoading: progressLoading } = useSectionProgress(
+    user?.studentId, 
+    courseId, 
+    unitId, 
+    sectionIds
+  )
 
   // Update unit details in Redux when they change
   useEffect(() => {
@@ -204,7 +211,7 @@ const Section = () => {
             {unitName || 'Unit Name Not Available'}
           </Typography>
 
-          {sectionsLoading ? (
+          {sectionsLoading || progressLoading ? (
             [...Array(3)].map((_, index) => (
               <Box key={index} sx={{ mb: 3 }}>
                 <Skeleton
@@ -475,7 +482,7 @@ const Section = () => {
             {unitName || 'Unit Name Not Available'}
           </Typography>
 
-          {sectionsLoading ? (
+          {sectionsLoading || progressLoading ? (
             [...Array(3)].map((_, index) => (
               <Box key={index} sx={{ mb: 3 }}>
                 <Skeleton
