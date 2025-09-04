@@ -104,9 +104,15 @@ const studentProgressSchema = new mongoose.Schema({
         : 0
 
       // Update MCQ progress percentage based on completed MCQs
-      const completedMcqs = this.mcqProgress.filter(p => p.completed).length
+      // Get unique completed MCQs to prevent counting duplicates
+      const uniqueCompletedMcqs = new Set(
+        this.mcqProgress
+          .filter(p => p.completed)
+          .map(p => p.resourceId.toString())
+      )
+      const completedMcqs = uniqueCompletedMcqs.size
       this.mcqProgressPercentage = sectionStats.totalMcqs > 0
-        ? Math.round((completedMcqs / sectionStats.totalMcqs) * 100)
+        ? Math.min(Math.round((completedMcqs / sectionStats.totalMcqs) * 100), 100)
         : 0
 
       await this.save()

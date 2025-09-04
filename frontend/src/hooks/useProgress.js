@@ -123,6 +123,17 @@ export const useUpdateProgress = () => {
         }
       }
 
+      // For MCQ updates, allow re-attempts but prevent duplicate completed entries
+      if (mcqData && currentProgress?.data?.progress?.mcqProgress) {
+        const existingMcq = currentProgress.data.progress.mcqProgress.find(
+          mcq => mcq.resourceId === resourceId && mcq.completed
+        )
+        if (existingMcq && mcqData.completed) {
+          console.log('MCQ already completed, updating with new attempt data:', resourceId)
+          // Still proceed with the update to refresh the attempt count and timestamp
+        }
+      }
+
       // Prepare request body
       const requestBody = {
         resourceId,

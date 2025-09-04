@@ -158,12 +158,21 @@ export const updateProgress = async (req, res) => {
 
     // Add MCQ progress if provided
     if (mcqData) {
+      // First, remove any existing entry for this resource to prevent duplicates
+      await StudentProgress.updateOne(
+        { studentId, courseId, unitId, sectionId },
+        { $pull: { mcqProgress: { resourceId: resourceObjectId } } }
+      )
+      
+      // Then add the new entry
       updateObj.$push = {
         mcqProgress: {
           resourceId: resourceObjectId,
           resourceNumber,
           completed: mcqData.completed,
-          attempts: mcqData.attempts
+          attempts: mcqData.attempts,
+          completedAt: mcqData.completed ? new Date() : null,
+          lastAttemptAt: new Date()
         }
       }
     }
@@ -197,10 +206,19 @@ export const updateProgress = async (req, res) => {
     let completedMcqs = 0
     
     if (sectionStats.totalMcqs > 0) {
-      completedMcqs = progress.mcqProgress.filter(mcq => mcq.completed).length
+      // Get unique completed MCQs to prevent counting duplicates
+      const uniqueCompletedMcqs = new Set(
+        progress.mcqProgress
+          .filter(mcq => mcq.completed)
+          .map(mcq => mcq.resourceId.toString())
+      )
+      completedMcqs = uniqueCompletedMcqs.size
       mcqProgressPercentage = Math.round(
-      (completedMcqs / sectionStats.totalMcqs) * 100
-    )
+        (completedMcqs / sectionStats.totalMcqs) * 100
+      )
+      
+      // Safety check: ensure percentage never exceeds 100%
+      mcqProgressPercentage = Math.min(mcqProgressPercentage, 100)
     }
 
     console.log('Calculated percentages:', {

@@ -96,12 +96,12 @@ const LearnerFrame = () => {
     if (!user?.studentId || !isCorrect) {
       return
     }
-    // Prevent duplicate MCQ progress submissions
-    const alreadyAttempted = progress.mcqProgress?.some(
-      (entry) => entry.resourceId === resourceId
+    // Only prevent duplicate submissions if MCQ is already completed
+    const alreadyCompleted = progress.mcqProgress?.some(
+      (entry) => entry.resourceId === resourceId && entry.completed
     )
-    if (alreadyAttempted) {
-      // Optionally show a message or just silently return
+    if (alreadyCompleted) {
+      console.log('MCQ already completed, skipping duplicate submission')
       return
     }
     
