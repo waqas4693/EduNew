@@ -6,13 +6,36 @@ const fetchProgress = async ({ studentId, courseId, unitId, sectionId }) => {
   return response.data
 }
 
-export const useProgress = (studentId, courseId, unitId, sectionId) => {
+const updateProgress = async ({ 
+  unitId,
+  courseId,
+  studentId, 
+  sectionId,
+  resourceId, 
+  resourceNumber, 
+  mcqData // Optional parameter for MCQ updates
+}) => {
+
+  const requestBody = {
+    resourceId,
+    resourceNumber,
+    ...(mcqData && { mcqData }) // Only include mcqData if it exists
+  }
+
+  const response = await postData(
+    `student-progress/${studentId}/${courseId}/${unitId}/${sectionId}/progress`,
+    requestBody
+  )
+  return response.data
+}
+
+export const useGetStudentProgress = (studentId, courseId, unitId, sectionId) => {
   const {
     data,
-    isLoading,
-    isError,
     error,
-    refetch
+    isError,
+    refetch,
+    isLoading
   } = useQuery({
     queryKey: ['progress', studentId, courseId, unitId, sectionId],
     queryFn: () => fetchProgress({ studentId, courseId, unitId, sectionId }),
@@ -21,148 +44,72 @@ export const useProgress = (studentId, courseId, unitId, sectionId) => {
     cacheTime: 30 * 60 * 1000,
   })
 
-  // Calculate progress directly from data
-  const progress = {
-    section: data?.data?.resourceProgressPercentage || 0,
-    mcq: data?.data?.mcqProgressPercentage || 0,
-    totalMcqs: data?.data?.totalMcqs || 0,
-    completedMcqs: data?.data?.completedMcqs || 0,
-    studentProgress: data?.data?.progress || null
-  }
-
-  // Get MCQ progress for a specific resource
-  const getMcqProgress = (resourceId) => {
-    if (!progress.studentProgress?.mcqProgress) return null
-    
-    return progress.studentProgress.mcqProgress.find(
-      p => p.resourceId === resourceId
-    )
-  }
-
-  // Check if a resource is completed
-  const isResourceCompleted = (resourceId) => {
-    if (!progress.studentProgress?.mcqProgress) return false
-    
-    const mcqProgress = progress.studentProgress.mcqProgress.find(
-      p => p.resourceId === resourceId
-    )
-    
-    return mcqProgress?.completed || false
-  }
-
-  // Check if a resource has been viewed
-  const isResourceViewed = (resourceId) => {
-    if (!progress.studentProgress?.viewedResources) return false
-    
-    return progress.studentProgress.viewedResources.some(
-      vr => vr.resourceId === resourceId
-    )
-  }
-
   return {
-    progress,
-    isLoading,
-    isError,
+    data,
     error,
-    getMcqProgress,
-    isResourceCompleted,
-    isResourceViewed,
-    refetch
+    isError,
+    isLoading,
+    refetch,
+    progress: data?.progress,
+    mcqProgress: data?.progress?.mcqProgress,
+    viewedResources: data?.progress?.viewedResources,
+    lastAccessedResource: data?.progress?.lastAccessedResource,
+    mcqProgressPercentage: data?.progress?.mcqProgressPercentage,
+    resourceProgressPercentage: data?.progress?.resourceProgressPercentage,
+    completedMcqs: data?.completedMcqs,
+    totalMcqs: data?.totalMcqs,
+    totalResources: data?.totalResources
   }
 }
 
 export const useUpdateProgress = () => {
   const queryClient = useQueryClient()
 
-  return useMutation({
-    mutationFn: async ({ 
-      resourceId, 
-      resourceNumber, 
-      studentId, 
-      courseId, 
-      unitId, 
-      sectionId,
-      mcqData // Optional parameter for MCQ updates
-    }) => {
-      if (!studentId || !courseId || !unitId || !sectionId || !resourceId) {
-        throw new Error('Missing required parameters')
-      }
+  const {
+    data,
+    error,
+    mutate,
+    isError,
+    isSuccess,
+    isLoading,
+    mutateAsync
+  } = useMutation({
+    mutationFn: updateProgress,
+    onSuccess: (data, variables) => {
+        // Use IDs from mutation variables instead of API response
+        const { studentId, courseId, unitId, sectionId } = variables
+        
+        // Commenting this out because the staleTime which is 
+        // for how long the cache data will be used is 0 and for 
+        // every resource loaded in the learner frame the 
+        // getStudentProgress function is called therefore the idea 
+        // of using the updated data from the response of 
+        // updateProgress API is not useful at the moment this 
+        // will be used if the staleTime is set to something other that 0
 
-      // Get current progress from cache
-      const currentProgress = queryClient.getQueryData(['progress', studentId, courseId, unitId, sectionId])
-      
-      // Check if section is already completed (100% resource progress)
-      if (currentProgress?.data?.resourceProgressPercentage === 100) {
-        console.log('Section already completed (100% progress), skipping progress update')
-        return { data: { success: true, message: 'Section already completed' } }
-      }
-
-      // Check if resource is already viewed (only for non-MCQ updates)
-      if (!mcqData && currentProgress?.data?.progress?.viewedResources) {
-        const isAlreadyViewed = currentProgress.data.progress.viewedResources.some(
-          vr => vr.resourceId === resourceId
-        )
-        if (isAlreadyViewed) {
-          console.log('Resource already viewed, skipping view recording:', resourceId)
-          return { 
-            data: { 
-              success: true, 
-              message: 'Resource already viewed',
-              progress: {
-                resourceProgressPercentage: currentProgress.data.resourceProgressPercentage,
-                mcqProgressPercentage: currentProgress.data.mcqProgressPercentage,
-                totalResources: currentProgress.data.totalResources,
-                totalMcqs: currentProgress.data.totalMcqs,
-                completedMcqs: currentProgress.data.completedMcqs,
-                viewedResources: currentProgress.data.progress.viewedResources.length,
-                lastAccessedResource: resourceId,
-                viewRecorded: false
-              }
-            } 
-          }
-        }
-      }
-
-      // For MCQ updates, allow re-attempts but prevent duplicate completed entries
-      if (mcqData && currentProgress?.data?.progress?.mcqProgress) {
-        const existingMcq = currentProgress.data.progress.mcqProgress.find(
-          mcq => mcq.resourceId === resourceId && mcq.completed
-        )
-        if (existingMcq && mcqData.completed) {
-          console.log('MCQ already completed, updating with new attempt data:', resourceId)
-          // Still proceed with the update to refresh the attempt count and timestamp
-        }
-      }
-
-      // Prepare request body
-      const requestBody = {
-        resourceId,
-        resourceNumber,
-        ...(mcqData && { mcqData }) // Only include mcqData if it exists
-      }
-
-      const response = await postData(
-        `student-progress/${studentId}/${courseId}/${unitId}/${sectionId}/progress`,
-        requestBody
-      )
-      return response.data
-    },
-    onSuccess: (data) => {
-      // Only update cache if the section is not already completed
-      if (data.data?.progress) {
-        queryClient.setQueryData(
-          ['progress', data.data.studentId, data.data.courseId, data.data.unitId, data.data.sectionId],
-          (oldData) => ({
-            ...oldData,
-            data: {
-              ...oldData?.data,
-              ...data.data.progress
-            }
-          })
-        )
+        // queryClient.setQueryData(
+        //   ['progress', studentId, courseId, unitId, sectionId],
+        //   (oldData) => ({
+        //     ...oldData,
+        //     data: {
+        //       ...oldData?.data,
+        //       ...data.data.progress
+        //     }
+        //   })
+        // )
+        
         // Then invalidate to ensure we have the latest data
-        queryClient.invalidateQueries(['progress', data.data.studentId, data.data.courseId, data.data.unitId, data.data.sectionId])
+        queryClient.invalidateQueries(['progress', studentId, courseId, unitId, sectionId])
       }
-    }
   })
-} 
+
+  return {
+    mutate,
+    mutateAsync,
+    isLoading,
+    isError,
+    error,
+    isSuccess,
+    data
+  }
+}

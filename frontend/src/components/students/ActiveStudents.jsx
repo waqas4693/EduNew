@@ -367,10 +367,6 @@ const ActiveStudents = () => {
             <EditIcon sx={{ mr: 1, fontSize: 20 }} />
             View Profile
           </MenuItem>
-          <MenuItem onClick={handleEdit} sx={{ color: 'primary.main' }}>
-            <EditIcon sx={{ mr: 1, fontSize: 20 }} />
-            Edit
-          </MenuItem>
           <MenuItem onClick={handleViewCourses} sx={{ color: 'info.main' }}>
             <MenuBookIcon sx={{ mr: 1, fontSize: 20 }} />
             View Courses

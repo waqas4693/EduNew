@@ -17,7 +17,7 @@ import {
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import { setCurrentUnit } from '../../redux/slices/courseSlice'
+import { setCurrentUnit, setLastSectionInfo, clearLastSectionInfo } from '../../redux/slices/courseSlice'
 import { useAuth } from '../../context/AuthContext'
 import { useUnitDetails } from '../../hooks/useUnits'
 import { useSections, useUnlockedSections } from '../../hooks/useSections'
@@ -35,26 +35,27 @@ import CheckCircle from '@mui/icons-material/CheckCircle'
 import IconButton from '@mui/material/IconButton'
 
 const Section = () => {
+  const theme = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
+  const dispatch = useDispatch()
+
   const { user } = useAuth()
   const { courseId, unitId } = useParams()
-  const dispatch = useDispatch()
   const { currentCourse, currentUnit } = useSelector(state => state.course)
-  const [showRestrictionDialog, setShowRestrictionDialog] = useState(false)
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
   const { data: unitDetails } = useUnitDetails(unitId)
   const { data: sections, isLoading: sectionsLoading, refetch } = useSections(unitId)
-  const { data: unlockedSections, refetch: refetchUnlockedSections } = useUnlockedSections(user?.studentId, courseId, unitId)
+  const { data: unlockStatus, refetch: refetchUnlockedSections } = useUnlockedSections(user?.studentId, courseId, unitId)
   
-  // Get section IDs for progress fetching (memoized to prevent re-renders)
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+
+  const [showRestrictionDialog, setShowRestrictionDialog] = useState(false)
+
   const sectionIds = useMemo(() => {
     return sections?.map(section => section._id) || []
   }, [sections])
   
-  // Get progress data for all sections
   const { isSectionCompleted, isLoading: progressLoading } = useSectionProgress(
     user?.studentId, 
     courseId, 
@@ -62,7 +63,6 @@ const Section = () => {
     sectionIds
   )
 
-  // Update unit details in Redux when they change
   useEffect(() => {
     if (unitDetails && (!currentUnit || currentUnit.id !== unitId)) {
       dispatch(setCurrentUnit({
@@ -70,18 +70,16 @@ const Section = () => {
         name: unitDetails.name
       }))
     }
+    // Clear last section info when unit changes
+    dispatch(clearLastSectionInfo())
   }, [unitDetails, unitId, dispatch])
 
-  // Add effect to handle refresh
   useEffect(() => {
     const handleRefresh = async () => {
       if (location.state?.refresh) {
         try {
-          // Refetch sections data
           await refetch()
-          // Also refetch unlocked sections
           await refetchUnlockedSections()
-          // Clear the refresh state
           window.history.replaceState({}, document.title)
         } catch (error) {
           console.error('Error refreshing section data:', error)
@@ -92,7 +90,6 @@ const Section = () => {
     handleRefresh()
   }, [location.state, refetch, refetchUnlockedSections])
 
-  // Add effect to scroll to completed section
   useEffect(() => {
     if (location.state?.completedSectionId) {
       const element = document.getElementById(`section-${location.state.completedSectionId}`)
@@ -112,7 +109,28 @@ const Section = () => {
 
   const isSectionUnlocked = (sectionId) => {
     if (user?.isDemo) return true // Always return true for demo accounts
-    return unlockedSections?.includes(sectionId)
+    
+    // If no unlock status object returned from API, only unlock first section of first unit
+    if (!unlockStatus?.unlockedUnit || !unlockStatus?.unlockedSection) {
+      // Check if this is the first section of the first unit
+      const isFirstUnit = sections?.[0]?.unitId === unitId
+      const isFirstSection = sections?.[0]?._id === sectionId
+      return isFirstUnit && isFirstSection
+    }
+    
+    // Find the section that matches the unlockedSection ID
+    const unlockedSectionIndex = sections?.findIndex(section => section._id === unlockStatus.unlockedSection)
+    
+    // If unlockedSection ID doesn't match any section in current unit, unlock all sections
+    if (unlockedSectionIndex === -1) {
+      return true
+    }
+    
+    // If unlockedSection ID matches a section, unlock sections up to and including that section + one more
+    const currentSectionIndex = sections?.findIndex(section => section._id === sectionId)
+    const maxUnlockedIndex = unlockedSectionIndex + 1 // +1 for one section after
+    
+    return currentSectionIndex !== -1 && currentSectionIndex <= maxUnlockedIndex
   }
 
   const isSectionAccessible = (sectionIndex) => {
@@ -130,6 +148,26 @@ const Section = () => {
       return
     }
     if (isUnlocked) {
+      // Check if this is the last section in the array
+      const isLastSection = sections && sections.length > 0 && 
+                            section._id === sections[sections.length - 1]._id;
+      
+      // Store in Redux for persistence (survives page refresh)
+      if (isLastSection) {
+        dispatch(setLastSectionInfo({
+          unitId: unitId,
+          sectionId: section._id,
+          isLastSection: true
+        }))
+        console.log('✅ Last section detected - Stored in Redux:', {
+          unitId,
+          sectionId: section._id
+        })
+      } else {
+        // Clear Redux if not last section
+        dispatch(clearLastSectionInfo())
+      }
+      
       navigate(
         `/units/${courseId}/section/${unitId}/learn/${section._id}`
       )
@@ -419,7 +457,6 @@ const Section = () => {
     )
   }
 
-  // Tablet and desktop: keep current layout, but restore full-text buttons
   return (
     <Grid container spacing={2}>
       <Grid size={7.5}>

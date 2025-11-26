@@ -104,13 +104,7 @@ const studentProgressSchema = new mongoose.Schema({
         : 0
 
       // Update MCQ progress percentage based on completed MCQs
-      // Get unique completed MCQs to prevent counting duplicates
-      const uniqueCompletedMcqs = new Set(
-        this.mcqProgress
-          .filter(p => p.completed)
-          .map(p => p.resourceId.toString())
-      )
-      const completedMcqs = uniqueCompletedMcqs.size
+      const completedMcqs = this.mcqProgress.length
       this.mcqProgressPercentage = sectionStats.totalMcqs > 0
         ? Math.min(Math.round((completedMcqs / sectionStats.totalMcqs) * 100), 100)
         : 0
@@ -145,13 +139,6 @@ studentProgressSchema.index({
 
 // Index for MCQ progress
 studentProgressSchema.index({ 'mcqProgress.resourceId': 1 })
-
-// Pre-save middleware to ensure percentages are within bounds
-studentProgressSchema.pre('save', function(next) {
-  this.resourceProgressPercentage = Math.min(Math.max(this.resourceProgressPercentage, 0), 100)
-  this.mcqProgressPercentage = Math.min(Math.max(this.mcqProgressPercentage, 0), 100)
-  next()
-})
 
 const StudentProgress = mongoose.model('StudentProgress', studentProgressSchema)
 export default StudentProgress 

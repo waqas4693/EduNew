@@ -1,19 +1,13 @@
 import express from 'express'
 import {
-  getStudentSectionProgress,
-  updateProgress,
-  getCourseMcqProgress
+  getStudentProgress,
+  updateStudentProgress,
 } from '../controllers/studentProgress.js'
 
 const router = express.Router()
 
-// Get progress for a specific section
-router.get('/:studentId/:courseId/:unitId/:sectionId', getStudentSectionProgress)
+router.get('/:studentId/:courseId/:unitId/:sectionId', getStudentProgress)
 
-// Update progress (MCQ and/or resource view)
-router.post('/:studentId/:courseId/:unitId/:sectionId/progress', updateProgress)
-
-// Get overall MCQ progress for a course
-router.get('/:studentId/:courseId/mcq-progress', getCourseMcqProgress)
+router.post('/:studentId/:courseId/:unitId/:sectionId/progress', updateStudentProgress)
 
 export default router 

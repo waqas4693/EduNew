@@ -18,8 +18,8 @@ export const useUnlockedSections = (studentId, courseId, unitId) => {
   return useQuery({
     queryKey: ['unlockedSections', studentId, courseId, unitId],
     queryFn: async () => {
-      const response = await getData(`section-unlock/${studentId}/${courseId}`)
-      return response.data.unlockedSections
+      const response = await getData(`course-unlock/${studentId}/${courseId}`)
+      return response.data
     },
     staleTime: 5 * 60 * 1000,
     cacheTime: 30 * 60 * 1000,

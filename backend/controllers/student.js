@@ -3,7 +3,7 @@ import Unit from '../models/unit.js'
 import Course from '../models/course.js'
 import Student from '../models/student.js'
 import Section from '../models/section.js'
-import SectionUnlockStatus from '../models/sectionUnlockStatus.js'
+import CourseUnlock from '../models/courseUnlock.js'
 import EmailVerification from '../models/emailVerification.js'
 import { generateVerificationToken, sendVerificationEmail } from '../utils/emailService.js'
 
@@ -72,7 +72,7 @@ export const newStudent = async (req, res) => {
     if (firstUnit) {
       const firstSection = await Section.findOne({ unitId: firstUnit._id }).sort({ number: 1 })
       if (firstSection) {
-        await SectionUnlockStatus.create({
+        await CourseUnlock.create({
           studentId: student._id,
           courseId,
           unlockedUnits: [firstUnit._id],
@@ -320,7 +320,7 @@ export const assignCourse = async (req, res) => {
     if (firstUnit) {
       const firstSection = await Section.findOne({ unitId: firstUnit._id }).sort({ number: 1 })
       if (firstSection) {
-        await SectionUnlockStatus.create({
+        await CourseUnlock.create({
           studentId: student._id,
           courseId,
           unlockedUnits: [firstUnit._id],

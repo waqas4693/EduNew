@@ -10,14 +10,12 @@ import {
 } from '@mui/material'
 import {
   ChevronLeft,
-  PlayArrow,
-  AssignmentOutlined,
   ChevronRight,
   LockOutlined,
   CheckCircle
 } from '@mui/icons-material'
 import { getData } from '../../api/api'
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
@@ -39,15 +37,42 @@ const Units = () => {
 
   const { data: units, isLoading } = useUnits(courseId)
   const { data: unlockStatus } = useUnlockStatus(user?.studentId, courseId)
+  console.log('unlockStatus checking before', unlockStatus)
+
 
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
+  // Helper function to determine if a unit is unlocked
+  const isUnitUnlocked = (unitId) => {
+    console.log('unlockStatus checking', unlockStatus)
+
+    // If no unlock status object returned from API, only unlock first unit
+    if (!unlockStatus?.unlockedUnit) {
+      // Check if this is the first unit
+      const isFirstUnit = units?.[0]?._id === unitId
+      return isFirstUnit
+    }
+
+    // Find the unit that matches the unlockedUnit ID
+    const unlockedUnitIndex = units?.findIndex(unit => unit._id === unlockStatus.unlockedUnit)
+    
+    // If unlockedUnit ID doesn't match any unit, unlock all units
+    if (unlockedUnitIndex === -1) {
+      return true
+    }
+    
+    // If unlockedUnit ID matches a unit, unlock units up to and including that unit + one more
+    const currentUnitIndex = units?.findIndex(unit => unit._id === unitId)
+    const maxUnlockedIndex = unlockedUnitIndex + 1 // +1 for one unit after
+    
+    return currentUnitIndex !== -1 && currentUnitIndex <= maxUnlockedIndex
+  }
+
   // Helper function to determine if a unit is completed
   const isUnitCompleted = (unitId) => {
-    if (!unlockStatus?.unlockedUnits || unlockStatus.unlockedUnits.length <= 1) return false
-    const unitIndex = unlockStatus.unlockedUnits.indexOf(unitId)
-    return unitIndex !== -1 && unitIndex !== unlockStatus.unlockedUnits.length - 1
+    // A unit is completed if it's unlocked but not the current unlocked unit
+    return isUnitUnlocked(unitId) && unitId !== unlockStatus?.unlockedUnit
   }
 
   useEffect(() => {
@@ -72,7 +97,7 @@ const Units = () => {
   }, [courseId, dispatch])
 
   const handleUnitClick = (unitId, unitName) => {
-    if (!unlockStatus?.unlockedUnits?.includes(unitId)) {
+    if (!isUnitUnlocked(unitId)) {
       return
     }
 
@@ -154,7 +179,7 @@ const Units = () => {
             ))
           ) : (
             units?.map((unit) => {
-              const isUnlocked = unlockStatus?.unlockedUnits?.includes(unit._id)
+              const isUnlocked = isUnitUnlocked(unit._id)
               const isCompleted = isUnitCompleted(unit._id)
               return (
                 <ListItem
@@ -363,7 +388,7 @@ const Units = () => {
             ))
           ) : (
             units?.map((unit) => {
-              const isUnlocked = unlockStatus?.unlockedUnits?.includes(unit._id)
+              const isUnlocked = isUnitUnlocked(unit._id)
               const isCompleted = isUnitCompleted(unit._id)
               return (
                 <ListItem

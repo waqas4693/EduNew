@@ -16,8 +16,10 @@ const McqRenderer = ({
 
   const getOptionStyle = (option) => {
     if (!hasSubmitted) {
+      const isSelected = selectedAnswers.includes(option)
+      console.log('Option:', option, 'Selected Answers:', selectedAnswers, 'Is Selected:', isSelected)
       return {
-        border: selectedAnswers.includes(option)
+        border: isSelected
           ? '2px solid #3366CC'
           : '1px solid #ddd'
       }
@@ -155,6 +157,7 @@ const McqRenderer = ({
                 }
               }}
               onClick={() => {
+                console.log('Clicked option:', option, 'Index:', index)
                 actions.selectAnswer(option, resource.content.mcq.numberOfCorrectAnswers)
               }}
             >

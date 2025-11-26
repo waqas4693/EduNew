@@ -5,7 +5,7 @@ import Unit from '../models/unit.js'
 import Section from '../models/section.js'
 import Resource from '../models/resource.js'
 import StudentProgress from '../models/studentProgress.js'
-import SectionUnlockStatus from '../models/sectionUnlockStatus.js'
+import CourseUnlock from '../models/courseUnlock.js'
 import { handleError } from '../utils/errorHandler.js'
 
 export const grantPartialAccess = async (req, res) => {
@@ -40,7 +40,7 @@ export const grantPartialAccess = async (req, res) => {
     const sectionIdsToUnlock = sectionsToProcess.map(s => s._id)
 
     // 4. Update SectionUnlockStatus
-    await SectionUnlockStatus.findOneAndUpdate(
+    await CourseUnlock.findOneAndUpdate(
       { studentId, courseId },
       { $addToSet: { unlockedUnits: { $each: unitIdsToUnlock }, unlockedSections: { $each: sectionIdsToUnlock } } },
       { upsert: true, session }

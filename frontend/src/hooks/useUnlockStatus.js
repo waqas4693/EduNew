@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getData } from '../api/api'
 
 const fetchUnlockStatus = async ({ studentId, courseId }) => {
-  const response = await getData(`section-unlock/${studentId}/${courseId}`)
+  const response = await getData(`course-unlock/${studentId}/${courseId}`)
   return response.data
 }
 

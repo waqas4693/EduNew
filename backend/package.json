@@ -8,7 +8,9 @@
     "cleanup": "node scripts/cleanup-orphaned-files.js",
     "cleanup:help": "echo \"Usage: npm run cleanup:dry-run (to preview) or npm run cleanup (to delete)\"",
     "cleanup:mcq": "node scripts/cleanup-duplicate-mcq-progress.js",
-    "cleanup:mcq:help": "echo \"Usage: npm run cleanup:mcq (to clean up duplicate MCQ progress entries)\""
+    "cleanup:mcq:help": "echo \"Usage: npm run cleanup:mcq (to clean up duplicate MCQ progress entries)\"",
+    "create:admin": "node scripts/create-admin.js",
+    "create:admin:help": "echo \"Usage: npm run create:admin (to create admin user with email: admin@edu.com, password: 123456)\""
   },
   "dependencies": {
     "aws-sdk": "^2.1692.0",

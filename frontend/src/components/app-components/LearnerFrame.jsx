@@ -10,25 +10,43 @@ import {
   CircularProgress
 } from '@mui/material'
 import { useState, useEffect } from 'react'
-import { getData, postData } from '../../api/api'
 import { useAuth } from '../../context/AuthContext'
 import { useResources } from '../../hooks/useResources'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useSignedUrls } from '../../hooks/useSignedUrls'
-import { useProgress, useUpdateProgress } from '../../hooks/useProgress'
+import { useSelector, useDispatch } from 'react-redux'
+import { clearLastSectionInfo } from '../../redux/slices/courseSlice'
 import { ChevronLeft, ChevronRight, OpenInNew } from '@mui/icons-material'
+import { useGetStudentProgress, useUpdateProgress } from '../../hooks/useProgress'
+import { postData } from '../../api/api'
 
-const LearnerFrame = () => {  
+const LearnerFrame = () => {
   const navigate = useNavigate()
+  const dispatch = useDispatch()
+  const updateProgressMutation = useUpdateProgress()
 
   const { user } = useAuth()
   const { courseId, unitId, sectionId } = useParams()
+  
+  // Read isLastSection flag from Redux (persists across page refresh)
+  const { lastSectionInfo } = useSelector(state => state.course)
+  const isLastSection = lastSectionInfo?.unitId === unitId && 
+                        lastSectionInfo?.sectionId === sectionId && 
+                        lastSectionInfo?.isLastSection === true
+
+  // Clear Redux state if sectionId doesn't match (user navigated to different section)
+  useEffect(() => {
+    if (lastSectionInfo?.sectionId && lastSectionInfo.sectionId !== sectionId) {
+      dispatch(clearLastSectionInfo())
+    }
+  }, [sectionId, lastSectionInfo?.sectionId, dispatch])
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
   const [isCompleting, setIsCompleting] = useState(false)
+  const [showSectionCompletion, setShowSectionCompletion] = useState(false)
+  const [recordedViews, setRecordedViews] = useState(new Set())
 
-  // Use our new hooks
   const {
     resources,
     isLoading: resourcesLoading,
@@ -46,194 +64,64 @@ const LearnerFrame = () => {
   const {
     progress,
     isLoading: progressLoading,
-    getMcqProgress,
-    isResourceCompleted,
     refetch: refetchProgress
-  } = useProgress(user?.studentId, courseId, unitId, sectionId)
+  } = useGetStudentProgress(user?.studentId, courseId, unitId, sectionId)
 
-  const updateProgressMutation = useUpdateProgress()
+  const isResourceViewed = (resourceId) => {
+    if (!progress?.viewedResources) return false
+    return progress.viewedResources.some(vr => vr.resourceId === resourceId)
+  }
 
-  // Fetch student progress and navigate to last accessed resource
   useEffect(() => {
-    const fetchStudentProgress = async () => {
-      if (!user?.studentId || !resources.length) {
-        return
-      }
+    if (!currentResource || !user?.studentId || progressLoading) return
 
-      try {
-        const response = await getData(`student-progress/${user.studentId}/${courseId}/${unitId}/${sectionId}`)
-        
-        if (response.status === 200) {
-          const progressData = response.data.data.progress
-          
-          if (progressData?.lastAccessedResource) {
-            // Find the index of the last accessed resource
-            const lastAccessedIndex = resources.findIndex(
-              resource => resource._id === progressData.lastAccessedResource
-            )
-            
-            if (lastAccessedIndex !== -1) {
-              // The lastAccessedResource is the one that was recorded as viewed
-              // So we should navigate to the NEXT resource after it
-                const nextIndex = lastAccessedIndex + 1 < resources.length ? lastAccessedIndex + 1 : lastAccessedIndex
-                setCurrentIndex(nextIndex)
-            }
+    const resourceId = currentResource._id
+    const resourceType = currentResource.resourceType
+    const isViewed = isResourceViewed(resourceId)
+    const alreadyRecorded = recordedViews.has(resourceId)
+
+    // Only record view for non-MCQ resources that haven't been viewed and not already recorded
+    if (resourceType !== 'MCQ' && !isViewed && !alreadyRecorded) {
+      setRecordedViews(prev => new Set(prev).add(resourceId))
+
+      updateProgressMutation.mutate({
+        resourceId,
+        resourceNumber: currentResource.number,
+        studentId: user.studentId,
+        courseId,
+        unitId,
+        sectionId
+      }, {
+        onSuccess: () => {
+          refetchProgress()
+          if (currentIndex === resources.length - 1) {
+            setShowSectionCompletion(true)
           }
-        }
-      } catch (error) {
-        console.error('Error fetching student progress:', error)
-      }
-    }
-
-    // Only fetch progress on initial load
-    if (resources.length > 0 && currentIndex === 0) {
-      fetchStudentProgress()
-    }
-  }, [user?.studentId, courseId, unitId, sectionId, resources.length, isResourceCompleted])
-
-  // Handle MCQ completion
-  const handleMcqCompleted = async (resourceId, isCorrect, attempts) => {
-    if (!user?.studentId || !isCorrect) {
-      return
-    }
-    // Only prevent duplicate submissions if MCQ is already completed
-    const alreadyCompleted = progress.mcqProgress?.some(
-      (entry) => entry.resourceId === resourceId && entry.completed
-    )
-    if (alreadyCompleted) {
-      console.log('MCQ already completed, skipping duplicate submission')
-      return
-    }
-    
-    updateProgressMutation.mutate({
-      resourceId,
-      resourceNumber: currentResource.number,
-      studentId: user.studentId,
-      courseId,
-      unitId,
-      sectionId,
-      mcqData: {
-        completed: isCorrect,
-        attempts
-      }
-    }, {
-      onSuccess: () => {
-        refetchProgress()
-      },
-      onError: (error) => {
-        console.error('Error updating MCQ progress:', error)
-      }
-    })
-  }
-
-  // Handle navigation
-  const handleNext = async () => {
-    // Always record view for current resource first
-        if (currentResource) {
-          await updateProgressMutation.mutateAsync({
-            resourceId: currentResource._id,
-            resourceNumber: currentResource.number,
-            studentId: user?.studentId,
-            courseId,
-            unitId,
-            sectionId
+        },
+        onError: (error) => {
+          console.error('Error recording view:', error)
+          // Remove from recordedViews on error so it can be retried
+          setRecordedViews(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(resourceId)
+            return newSet
           })
         }
-
-    if (currentIndex < resources.length - 1) {
-      const nextIndex = currentIndex + 1
-      
-      // Prefetch next page if needed (do this before navigation)
-      if (nextIndex >= resources.length - 5 && hasMore) {
-        try {
-          setCurrentPage(prev => prev + 1)
-          // Add timeout to prevent infinite loading
-          const prefetchPromise = prefetchNextPage()
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Prefetch timeout')), 5000)
-          )
-          
-          await Promise.race([prefetchPromise, timeoutPromise])
-        } catch (error) {
-          console.error('Error prefetching next page:', error)
-          // Continue with navigation even if prefetch fails
-        }
-      }
-      
-      setCurrentIndex(nextIndex)
-      
-      // Refetch progress after recording the view
-      refetchProgress()
-    } else {
-      // We're at the last resource of the section
-      setIsCompleting(true)
-      try {
-        // Then check section completion
-        const response = await postData('section-unlock/check-completion', {
-          studentId: user?.studentId,
-          courseId,
-          unitId,
-          sectionId
-        })
-
-        if (response.status === 200 && response.data.isCompleted) {
-          navigate(`/units/${courseId}/section/${unitId}`, {
-            state: { 
-              refresh: true,
-              completedSectionId: sectionId 
-            }
-          })
-        }
-      } catch (error) {
-        console.error('=== Error completing section ===')
-        console.error('Error details:', error)
-      } finally {
-        setIsCompleting(false)
-      }
+      })
     }
-  }
+  }, [currentResource?._id, progress?.viewedResources, progressLoading])
 
-  const handlePrevious = () => {
-    if (currentIndex > 0) {
-      const prevIndex = currentIndex - 1
-      setCurrentIndex(prevIndex)
-    }
-  }
+  useEffect(() => {
+    if (!progress?.lastAccessedResource || currentIndex !== 0 || !resources.length || progressLoading) return
 
-  // Check if current MCQ is completed
-  const isCurrentMcqCompleted = () => {
-    if (!currentResource || currentResource.resourceType !== 'MCQ') {
-      return true
-    }
-    const completed = isResourceCompleted(currentResource._id)  
-    return completed
-  }
+    const lastAccessedResourceId = progress.lastAccessedResource
+    const resourceIndex = resources.findIndex(resource => resource._id === lastAccessedResourceId)
 
-  // Check if next button should be disabled
-  const isNextButtonDisabled = () => {
-    if (currentIndex === resources.length - 1) {
-      // If section is already completed, disable the button
-      if (progress.section === 100) {
-        return true
-      }
-      return false // Don't disable on last resource unless completed
+    if (resourceIndex !== -1 && resourceIndex !== currentIndex) {
+      setCurrentIndex(resourceIndex)
     }
-    if (currentResource?.resourceType === 'MCQ') {
-      const disabled = !isCurrentMcqCompleted()
-      return disabled
-    }
-    return false
-  }
+  }, [progress?.lastAccessedResource, resources, progressLoading, currentIndex])
 
-  // Get button text based on resource type and position
-  const getNextButtonText = () => {
-    if (currentIndex === resources.length - 1) {
-      return progress.section === 100 ? 'Section Completed' : 'Complete Section'
-    }
-    return <ChevronRight />
-  }
-
-  // Refresh expired URLs periodically
   useEffect(() => {
     const interval = setInterval(() => {
       refreshExpiredUrls()
@@ -244,9 +132,112 @@ const LearnerFrame = () => {
     }
   }, [refreshExpiredUrls])
 
-  // Show loading state if any data is loading or if we don't have resources yet
+  const handleMcqCompleted = async (resourceId, isCorrect, attempts) => {
+    if (!user?.studentId || !isCorrect) return
+
+    const isViewed = isResourceViewed(resourceId)
+
+    if (!isViewed) {
+      updateProgressMutation.mutate({
+        resourceId,
+        resourceNumber: currentResource.number,
+        studentId: user.studentId,
+        courseId,
+        unitId,
+        sectionId,
+        mcqData: {
+          completed: isCorrect,
+          attempts
+        }
+      }, {
+        onSuccess: () => {
+          refetchProgress()
+          if (currentIndex === resources.length - 1) {
+            setShowSectionCompletion(true)
+          }
+        },
+        onError: (error) => {
+          console.error('Error recording MCQ progress:', error)
+        }
+      })
+    } else {
+      if (currentIndex === resources.length - 1) {
+        setShowSectionCompletion(true)
+      }
+    }
+  }
+
+  const handleNext = async () => {
+    if (currentIndex < resources.length - 1) {
+      const nextIndex = currentIndex + 1
+
+      // Prefetch next page if needed (do this before navigation)
+      if (nextIndex >= resources.length - 5 && hasMore) {
+        try {
+          setCurrentPage(prev => prev + 1)
+          // Add timeout to prevent infinite loading
+          const prefetchPromise = prefetchNextPage()
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Prefetch timeout')), 5000)
+          )
+
+          await Promise.race([prefetchPromise, timeoutPromise])
+        } catch (error) {
+          console.error('Error prefetching next page:', error)
+          // Continue with navigation even if prefetch fails
+        }
+      }
+
+      setCurrentIndex(nextIndex)
+    } else {
+      // We're at the last resource - show completion component instead of navigating
+      setShowSectionCompletion(true)
+    }
+  }
+
+  const handlePrevious = () => {
+    if (currentIndex > 0) {
+      const prevIndex = currentIndex - 1
+      setCurrentIndex(prevIndex)
+    }
+  }
+
+  const handleSectionCompletion = async () => {
+    setIsCompleting(true)
+    try {
+      // Call the unlock API to update progress
+      const response = await postData('course-unlock/check-completion', {
+        studentId: user.studentId,
+        courseId,
+        unitId,
+        sectionId,
+        isLastSection: isLastSection  // Pass flag to backend for verification
+      })
+      if (response.status === 200) {
+        console.log('✅ Unlock status updated successfully')
+        if (isLastSection) {
+          console.log('✅ Last section flag sent - Backend will verify and mark unit as completed')
+          // Clear Redux state after successful completion
+          dispatch(clearLastSectionInfo())
+        }
+
+        // Navigate back to section view
+        navigate(`/units/${courseId}/section/${unitId}`, {
+          state: {
+            refresh: true,
+            completedSectionId: sectionId
+          }
+        })
+      }
+    } catch (error) {
+      console.error('Error completing section:', error)
+    } finally {
+      setIsCompleting(false)
+    }
+  }
+
   if (resourcesLoading || urlsLoading || progressLoading || !resources.length) {
-    
+
     return (
       <Paper
         elevation={5}
@@ -289,7 +280,6 @@ const LearnerFrame = () => {
     )
   }
 
-  // Don't render if we don't have a current resource
   if (!currentResource) {
     return (
       <Paper
@@ -309,10 +299,10 @@ const LearnerFrame = () => {
     <Grid container>
       <Grid size={12}>
         <Paper elevation={5} sx={{ borderRadius: '16px', overflow: 'hidden' }}>
-          <Box sx={{ 
-            p: 1, 
-            display: 'flex', 
-            justifyContent: 'space-between', 
+          <Box sx={{
+            p: 1,
+            display: 'flex',
+            justifyContent: 'space-between',
             alignItems: 'center',
             borderBottom: '1px solid #f0f0f0'
           }}>
@@ -326,21 +316,20 @@ const LearnerFrame = () => {
                 width: 'fit-content'
               }}
               onClick={() => {
-
                 navigate(`/units/${courseId}/section/${unitId}`)
               }}
             >
               <ChevronLeft sx={{ color: 'primary.main' }} /> Back To Section
             </Typography>
-            
+
             <Typography variant='body2' sx={{ color: 'text.secondary' }}>
-              Section Viewed: {Math.round(progress.section)}%
+              Section Progress: {Math.round(progress?.resourceProgressPercentage || 0)}%
             </Typography>
           </Box>
 
           <Box
             sx={{
-              bgcolor: progress.section === 100 ? 'success.main' : 'primary.main',
+              bgcolor: progress?.resourceProgressPercentage === 100 ? 'success.main' : 'primary.main',
               color: 'white',
               overflow: 'hidden',
               display: 'flex',
@@ -389,100 +378,149 @@ const LearnerFrame = () => {
                 })}
 
                 {/* Navigation Buttons */}
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                  variant='contained'
-                  color='inherit'
-                  size='small'
-                  disabled={currentIndex === 0 || isCompleting}
-                  onClick={handlePrevious}
-                  sx={{
-                    minWidth: '36px',
-                    bgcolor: 'rgba(255, 255, 255, 0.2)',
-                    color: 'white',
-                    '&:hover': {
-                      bgcolor: 'rgba(255, 255, 255, 0.3)'
-                    },
-                    '&.Mui-disabled': {
-                      bgcolor: 'rgba(255, 255, 255, 0.1)',
-                      color: 'rgba(255, 255, 255, 0.5)'
-                    }
-                  }}
-                >
-                  <ChevronLeft />
-                </Button>
-                <Button
-                  variant='contained'
-                  color='inherit'
-                  size='small'
-                  disabled={isNextButtonDisabled() || isCompleting}
-                  onClick={handleNext}
-                  sx={{
-                    minWidth: currentIndex === resources.length - 1 ? '120px' : '36px',
-                    bgcolor: progress.section === 100 && currentIndex === resources.length - 1 
-                      ? 'rgba(255, 255, 255, 0.3)' 
-                      : 'rgba(255, 255, 255, 0.2)',
-                    color: 'white',
-                    '&:hover': {
-                      bgcolor: progress.section === 100 && currentIndex === resources.length - 1
-                        ? 'rgba(255, 255, 255, 0.4)'
-                        : 'rgba(255, 255, 255, 0.3)'
-                    },
-                    '&.Mui-disabled': {
-                      bgcolor: 'rgba(255, 255, 255, 0.1)',
-                      color: 'rgba(255, 255, 255, 0.5)'
-                    }
-                  }}
-                >
-                  {isCompleting ? (
-                    <CircularProgress size={20} color="inherit" />
-                  ) : (
-                    getNextButtonText()
-                  )}
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant='contained'
+                    color='inherit'
+                    size='small'
+                    disabled={showSectionCompletion}
+                    onClick={handlePrevious}
+                    sx={{
+                      minWidth: '36px',
+                      bgcolor: 'rgba(255, 255, 255, 0.2)',
+                      color: 'white',
+                      '&:hover': {
+                        bgcolor: 'rgba(255, 255, 255, 0.3)'
+                      },
+                      '&.Mui-disabled': {
+                        bgcolor: 'rgba(255, 255, 255, 0.1)',
+                        color: 'rgba(255, 255, 255, 0.5)'
+                      }
+                    }}
+                  >
+                    <ChevronLeft />
+                  </Button>
+                  <Button
+                    variant='contained'
+                    color='inherit'
+                    size='small'
+                    disabled={progress?.resourceProgressPercentage !== 100 &&
+                      currentResource?.resourceType === 'MCQ'}
+                    onClick={handleNext}
+                    sx={{
+                      minWidth: '36px',
+                      bgcolor: 'rgba(255, 255, 255, 0.2)',
+                      color: 'white',
+                      '&:hover': {
+                        bgcolor: 'rgba(255, 255, 255, 0.3)'
+                      },
+                      '&.Mui-disabled': {
+                        bgcolor: 'rgba(255, 255, 255, 0.1)',
+                        color: 'rgba(255, 255, 255, 0.5)'
+                      }
+                    }}
+                  >
+                    <ChevronRight />
+                  </Button>
                 </Box>
               </Box>
             </Box>
           </Box>
 
           <Box sx={{ bgcolor: 'white' }}>
+            {!showSectionCompletion ? (
               <ResourceRenderer
-              key={`resource-${currentResource._id}-${currentIndex}`}
-              resource={currentResource}
-              signedUrl={signedUrls[currentResource.content?.fileName]}
+                key={`resource-${currentResource._id}-${currentIndex}`}
+                resource={currentResource}
+                signedUrl={signedUrls[currentResource.content?.fileName]}
                 signedUrls={signedUrls}
                 onMcqCompleted={handleMcqCompleted}
-              mcqProgress={getMcqProgress(currentResource._id)}
+                mcqProgress={progress?.mcqProgress?.find(mcq => mcq.resourceId === currentResource._id)}
                 onNext={handleNext}
                 isLastResource={currentIndex === resources.length - 1}
-              studentId={user?.studentId}
-              courseId={courseId}
-              unitId={unitId}
-              sectionId={sectionId}
+                studentId={user?.studentId}
+                courseId={courseId}
+                unitId={unitId}
+                sectionId={sectionId}
               />
+            ) : (
+              <Box sx={{
+                p: 4,
+                textAlign: 'center',
+                minHeight: '400px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                bgcolor: 'background.default'
+              }}>
+                <Typography variant="h5" sx={{ mb: 2, color: 'text.primary' }}>
+                  🎉 Congratulations!
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
+                  You have completed all resources in this section.
+                </Typography>
+
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    onClick={handleSectionCompletion}
+                    disabled={isCompleting}
+                    sx={{
+                      minWidth: '200px',
+                      height: '50px',
+                      fontSize: '1.1rem',
+                      fontWeight: 'bold',
+                      borderRadius: '25px',
+                      textTransform: 'none',
+                      bgcolor: 'success.main',
+                      '&:hover': {
+                        bgcolor: 'success.dark',
+                        transform: 'translateY(-2px)',
+                        boxShadow: 4
+                      },
+                      '&.Mui-disabled': {
+                        bgcolor: 'action.disabled',
+                        color: 'action.disabled'
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    {isCompleting ? (
+                      <>
+                        <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
+                        Completing...
+                      </>
+                    ) : (
+                      'Complete Section'
+                    )}
+                  </Button>
+                </Box>
+              </Box>
+            )}
           </Box>
 
           <Box sx={{ px: 2, py: 2, borderTop: '1px solid #f0f0f0' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant='body2' fontWeight="medium">
-                Your Progress (MCQs): {Math.round(progress.mcq)}%
-              </Typography>
-              <Typography variant='body2' color="text.secondary">
-                {progress.completedMcqs} of {progress.totalMcqs} MCQs completed
-              </Typography>
-            </Box>
-            <LinearProgress 
-              variant='determinate' 
-              value={Math.round(progress.mcq)} 
-              sx={{ 
-                height: 8,
-                borderRadius: 4,
-                '& .MuiLinearProgress-bar': { 
-                  backgroundColor: 'success.main',
-                  borderRadius: 4
-                } 
-              }} 
-            />
+            {progress?.mcqProgressPercentage > 0 && (
+              <>
+                <Typography variant='body2' fontWeight="medium">
+                  MCQ Progress: {Math.round(progress?.mcqProgressPercentage || 0)}%
+                </Typography>
+                <LinearProgress
+                  variant='determinate'
+                  value={Math.round(progress?.mcqProgressPercentage || 0)}
+                  sx={{
+                    mt: 1,
+                    height: 8,
+                    borderRadius: 4,
+                    '& .MuiLinearProgress-bar': {
+                      backgroundColor: 'success.main',
+                      borderRadius: 4
+                    }
+                  }}
+                />
+              </>
+            )}
           </Box>
         </Paper>
       </Grid>
