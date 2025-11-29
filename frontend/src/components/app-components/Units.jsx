@@ -40,41 +40,72 @@ const Units = () => {
   const { data: unlockStatus } = useUnlockStatus(user?.studentId, courseId)
   const { data: completedUnits = [] } = useCompletedUnits(user?.studentId, courseId)
 
+  // Debug logging
+  console.log('=== Units Page Debug ===')
+  console.log('Units data:', units)
+  console.log('Unlock Status:', unlockStatus)
+  console.log('Completed Units:', completedUnits)
+  console.log('Student ID:', user?.studentId)
+  console.log('Course ID:', courseId)
 
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
   // Helper function to determine if a unit is unlocked
   const isUnitUnlocked = (unitId) => {
+    console.log(`\n--- Checking if unit ${unitId} is unlocked ---`)
+    
     // If no unlock status object returned from API, only unlock first unit
     if (!unlockStatus?.unlockedUnit) {
+      console.log('No unlockStatus.unlockedUnit found')
       // Check if this is the first unit
       const isFirstUnit = units?.[0]?._id === unitId
+      console.log(`First unit ID: ${units?.[0]?._id}, Current unit ID: ${unitId}, Is first unit: ${isFirstUnit}`)
       return isFirstUnit
     }
 
+    console.log(`Unlocked unit from API: ${unlockStatus.unlockedUnit}`)
+    
     // Find the unit that matches the unlockedUnit ID
     const unlockedUnitIndex = units?.findIndex(unit => String(unit._id) === String(unlockStatus.unlockedUnit))
+    console.log(`Unlocked unit index in units array: ${unlockedUnitIndex}`)
     
     // If unlockedUnit ID doesn't match any unit, unlock all units
     if (unlockedUnitIndex === -1) {
+      console.log('⚠️ WARNING: Unlocked unit ID not found in units array - unlocking ALL units')
       return true
     }
     
     // If unlockedUnit ID matches a unit, unlock units up to and including that unit + one more
     const currentUnitIndex = units?.findIndex(unit => String(unit._id) === String(unitId))
     const maxUnlockedIndex = unlockedUnitIndex + 1 // +1 for one unit after
+    console.log(`Current unit index: ${currentUnitIndex}, Max unlocked index: ${maxUnlockedIndex}`)
     
-    return currentUnitIndex !== -1 && currentUnitIndex <= maxUnlockedIndex
+    const isUnlocked = currentUnitIndex !== -1 && currentUnitIndex <= maxUnlockedIndex
+    console.log(`Result: Unit ${unitId} is ${isUnlocked ? 'UNLOCKED' : 'LOCKED'}`)
+    
+    return isUnlocked
   }
 
   // Helper function to determine if a unit is completed
   const isUnitCompleted = (unitId) => {
+    console.log(`\n--- Checking if unit ${unitId} is completed ---`)
+    console.log('Completed units array:', completedUnits)
+    console.log('Completed units array length:', completedUnits.length)
+    
     // Check if the unit ID is in the completed units array
     // Convert both to strings for comparison since IDs might be ObjectId or string
-    return completedUnits.some(completedUnitId => 
-      String(completedUnitId) === String(unitId)
-    )
+    const isCompleted = completedUnits.some(completedUnitId => {
+      const match = String(completedUnitId) === String(unitId)
+      if (match) {
+        console.log(`✅ Match found: ${String(completedUnitId)} === ${String(unitId)}`)
+      }
+      return match
+    })
+    
+    console.log(`Result: Unit ${unitId} is ${isCompleted ? 'COMPLETED' : 'NOT COMPLETED'}`)
+    
+    return isCompleted
   }
 
   useEffect(() => {
@@ -181,8 +212,10 @@ const Units = () => {
             ))
           ) : (
             units?.map((unit) => {
+              console.log(`\n🔍 Processing Unit: ${unit.name} (ID: ${unit._id})`)
               const isUnlocked = isUnitUnlocked(unit._id)
               const isCompleted = isUnitCompleted(unit._id)
+              console.log(`📊 Final Status for Unit ${unit.name}: Unlocked=${isUnlocked}, Completed=${isCompleted}`)
               return (
                 <ListItem
                   key={unit._id}
@@ -390,8 +423,10 @@ const Units = () => {
             ))
           ) : (
             units?.map((unit) => {
+              console.log(`\n🔍 Processing Unit: ${unit.name} (ID: ${unit._id})`)
               const isUnlocked = isUnitUnlocked(unit._id)
               const isCompleted = isUnitCompleted(unit._id)
+              console.log(`📊 Final Status for Unit ${unit.name}: Unlocked=${isUnlocked}, Completed=${isCompleted}`)
               return (
                 <ListItem
                   key={unit._id}

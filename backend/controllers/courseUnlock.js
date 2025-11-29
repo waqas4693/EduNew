@@ -51,13 +51,25 @@ export const setUnlockedUnitAndSection = async (req, res) => {
         unlockedSection: sectionId,
       });
     } else {
+      const updateData = {
+        unlockedSection: sectionId,
+        lastUpdated: Date.now(),
+      };
+      
+      if (isLastSection && unitId) {
+        const lastSection = await Section.findOne({
+          unitId,
+          status: 1
+        }).sort({ number: -1 }).limit(1);
+
+        if (lastSection && lastSection._id.toString() === sectionId) {
+          updateData.unlockedUnit = unitId;
+        }
+      }
+      
       unlockStatus = await CourseUnlock.findOneAndUpdate(
         { studentId, courseId },
-        {
-          unlockedUnit: unitId,
-          unlockedSection: sectionId,
-          lastUpdated: Date.now(),
-        },
+        updateData,
         { new: true }
       );
     }
@@ -70,29 +82,25 @@ export const setUnlockedUnitAndSection = async (req, res) => {
       }
     }
 
-    // Check if this is the last section and mark unit as completed
     if (isLastSection && unitId) {
-      // Verify on backend that this section is actually the last section
       const lastSection = await Section.findOne({
         unitId,
         status: 1
       }).sort({ number: -1 }).limit(1);
 
       if (lastSection && lastSection._id.toString() === sectionId) {
-        // This is confirmed to be the last section - mark unit as completed
         try {
           await CompletedUnits.findOneAndUpdate(
             { studentId, courseId, unitId },
             { status: 1 },
             { upsert: true, new: true }
           );
-          console.log(`✅ Unit ${unitId} marked as completed (last section completed)`);
+          console.log(`Unit ${unitId} marked as completed (last section completed)`);
         } catch (error) {
           console.error('Error marking unit as completed:', error);
-          // Don't throw - section completion is more important
         }
       } else {
-        console.log(`⚠️ Frontend indicated last section, but backend verification failed`);
+        console.log(`Frontend indicated last section, but backend verification failed`);
       }
     }
 
