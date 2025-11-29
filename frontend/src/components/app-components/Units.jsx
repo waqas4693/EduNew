@@ -22,6 +22,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { setCurrentCourse, setCurrentUnit } from '../../redux/slices/courseSlice'
 import { useUnits } from '../../hooks/useUnits'
 import { useUnlockStatus } from '../../hooks/useUnlockStatus'
+import { useCompletedUnits } from '../../hooks/useCompletedUnits'
 
 import Grid from '@mui/material/Grid2'
 import Calendar from '../calendar/Calendar'
@@ -37,7 +38,7 @@ const Units = () => {
 
   const { data: units, isLoading } = useUnits(courseId)
   const { data: unlockStatus } = useUnlockStatus(user?.studentId, courseId)
-  console.log('unlockStatus checking before', unlockStatus)
+  const { data: completedUnits = [] } = useCompletedUnits(user?.studentId, courseId)
 
 
   const theme = useTheme()
@@ -45,8 +46,6 @@ const Units = () => {
 
   // Helper function to determine if a unit is unlocked
   const isUnitUnlocked = (unitId) => {
-    console.log('unlockStatus checking', unlockStatus)
-
     // If no unlock status object returned from API, only unlock first unit
     if (!unlockStatus?.unlockedUnit) {
       // Check if this is the first unit
@@ -55,7 +54,7 @@ const Units = () => {
     }
 
     // Find the unit that matches the unlockedUnit ID
-    const unlockedUnitIndex = units?.findIndex(unit => unit._id === unlockStatus.unlockedUnit)
+    const unlockedUnitIndex = units?.findIndex(unit => String(unit._id) === String(unlockStatus.unlockedUnit))
     
     // If unlockedUnit ID doesn't match any unit, unlock all units
     if (unlockedUnitIndex === -1) {
@@ -63,7 +62,7 @@ const Units = () => {
     }
     
     // If unlockedUnit ID matches a unit, unlock units up to and including that unit + one more
-    const currentUnitIndex = units?.findIndex(unit => unit._id === unitId)
+    const currentUnitIndex = units?.findIndex(unit => String(unit._id) === String(unitId))
     const maxUnlockedIndex = unlockedUnitIndex + 1 // +1 for one unit after
     
     return currentUnitIndex !== -1 && currentUnitIndex <= maxUnlockedIndex
@@ -71,8 +70,11 @@ const Units = () => {
 
   // Helper function to determine if a unit is completed
   const isUnitCompleted = (unitId) => {
-    // A unit is completed if it's unlocked but not the current unlocked unit
-    return isUnitUnlocked(unitId) && unitId !== unlockStatus?.unlockedUnit
+    // Check if the unit ID is in the completed units array
+    // Convert both to strings for comparison since IDs might be ObjectId or string
+    return completedUnits.some(completedUnitId => 
+      String(completedUnitId) === String(unitId)
+    )
   }
 
   useEffect(() => {

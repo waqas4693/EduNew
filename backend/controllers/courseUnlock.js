@@ -19,8 +19,8 @@ export const getUnlockedUnitAndSection = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      unlockedUnit: unlockStatus.unlockedUnit,
-      unlockedSection: unlockStatus.unlockedSection,
+      unlockedUnit: unlockStatus?.unlockedUnit || null,
+      unlockedSection: unlockStatus?.unlockedSection || null,
     });
   } catch (error) {
     handleError(res, error);
@@ -112,7 +112,7 @@ export const setUnlockedUnitAndSection = async (req, res) => {
 
 export const getCompletedUnits = async (req, res) => {
   try {
-    const { studentId, courseId } = req.body;
+    const { studentId, courseId } = req.params;
 
     const completedUnits = await CompletedUnits.find({
       studentId,
@@ -122,7 +122,7 @@ export const getCompletedUnits = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      completedUnits,
+      completedUnits: completedUnits.map(cu => cu.unitId.toString()),
     });
   } catch (error) {
     handleError(res, error);
