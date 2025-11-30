@@ -44,12 +44,25 @@ export const setUnlockedUnitAndSection = async (req, res) => {
     });
 
     if (!unlockStatus) {
-      unlockStatus = await CourseUnlock.create({
+      const createData = {
         studentId,
         courseId,
-        unlockedUnit: unitId,
         unlockedSection: sectionId,
-      });
+      };
+      
+      // Only set unlockedUnit if this is the last section
+      if (isLastSection && unitId) {
+        const lastSection = await Section.findOne({
+          unitId,
+          status: 1
+        }).sort({ number: -1 }).limit(1);
+
+        if (lastSection && lastSection._id.toString() === sectionId) {
+          createData.unlockedUnit = unitId;
+        }
+      }
+      
+      unlockStatus = await CourseUnlock.create(createData);
     } else {
       const updateData = {
         unlockedSection: sectionId,
