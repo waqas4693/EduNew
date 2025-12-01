@@ -14,25 +14,26 @@ import {
   useTheme,
   useMediaQuery
 } from '@mui/material'
-import { useState, useEffect, useMemo } from 'react'
-import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import { useDispatch, useSelector } from 'react-redux'
-import { setCurrentUnit, setLastSectionInfo, clearLastSectionInfo } from '../../redux/slices/courseSlice'
 import { useAuth } from '../../context/AuthContext'
+import { useState, useEffect, useMemo } from 'react'
 import { useUnitDetails } from '../../hooks/useUnits'
-import { useSections, useUnlockedSections } from '../../hooks/useSections'
+import { useDispatch, useSelector } from 'react-redux'
 import { useSectionProgress } from '../../hooks/useSectionProgress'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import { useSections, useUnlockedSections } from '../../hooks/useSections'
+import { setCurrentUnit, setLastSectionInfo, clearLastSectionInfo } from '../../redux/slices/courseSlice'
 
 import Grid from '@mui/material/Grid2'
 import Calendar from '../calendar/Calendar'
-import MenuBook from '@mui/icons-material/MenuBook'
-import ChevronLeft from '@mui/icons-material/ChevronLeft'
-import AssignmentOutlined from '@mui/icons-material/AssignmentOutlined'
-import SmartToyOutlined from '@mui/icons-material/SmartToyOutlined'
-import LockOutlined from '@mui/icons-material/LockOutlined'
-import LockOpenOutlined from '@mui/icons-material/LockOpenOutlined'
-import CheckCircle from '@mui/icons-material/CheckCircle'
 import IconButton from '@mui/material/IconButton'
+import MenuBook from '@mui/icons-material/MenuBook'
+import CheckCircle from '@mui/icons-material/CheckCircle'
+import ChevronLeft from '@mui/icons-material/ChevronLeft'
+import LockOutlined from '@mui/icons-material/LockOutlined'
+import SmartToyOutlined from '@mui/icons-material/SmartToyOutlined'
+import LockOpenOutlined from '@mui/icons-material/LockOpenOutlined'
+import AssignmentOutlined from '@mui/icons-material/AssignmentOutlined'
+
 
 const Section = () => {
   const theme = useTheme()
@@ -70,7 +71,7 @@ const Section = () => {
         name: unitDetails.name
       }))
     }
-    // Clear last section info when unit changes
+    
     dispatch(clearLastSectionInfo())
   }, [unitDetails, unitId, dispatch])
 
@@ -110,14 +111,15 @@ const Section = () => {
   const isSectionUnlocked = (sectionId) => {
     if (user?.isDemo) return true // Always return true for demo accounts
     
-    // If no unlock status object returned from API, only unlock first section of first unit
-    if (!unlockStatus?.unlockedUnit || !unlockStatus?.unlockedSection) {
+    // If no unlockedSection exists, only unlock first section of first unit
+    if (!unlockStatus?.unlockedSection) {
       // Check if this is the first section of the first unit
       const isFirstUnit = sections?.[0]?.unitId === unitId
       const isFirstSection = sections?.[0]?._id === sectionId
       return isFirstUnit && isFirstSection
     }
     
+    // If unlockedSection exists (even if unlockedUnit is null), use it to determine section unlock status
     // Find the section that matches the unlockedSection ID
     const unlockedSectionIndex = sections?.findIndex(section => section._id === unlockStatus.unlockedSection)
     

@@ -55,9 +55,9 @@ const Units = () => {
   const isUnitUnlocked = (unitId) => {
     console.log(`\n--- Checking if unit ${unitId} is unlocked ---`)
     
-    // If no unlock status object returned from API, only unlock first unit
+    // If no unlockedUnit parameter exists (even if unlockedSection exists), only unlock first unit
     if (!unlockStatus?.unlockedUnit) {
-      console.log('No unlockStatus.unlockedUnit found')
+      console.log('No unlockStatus.unlockedUnit found (unlockedSection may exist, but we only unlock first unit)')
       // Check if this is the first unit
       const isFirstUnit = units?.[0]?._id === unitId
       console.log(`First unit ID: ${units?.[0]?._id}, Current unit ID: ${unitId}, Is first unit: ${isFirstUnit}`)
