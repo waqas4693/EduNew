@@ -8,8 +8,9 @@ export const requestPasswordReset = async (req, res) => {
   try {
     const { email } = req.body
 
-    console.log('Email: ');
-    console.log(email);
+    console.log("Raw email from client:", email);
+console.log("Type of email:", typeof email);
+
 
     if (!email) {
       return res.status(400).json({
