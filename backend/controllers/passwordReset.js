@@ -20,6 +20,10 @@ export const requestPasswordReset = async (req, res) => {
 
     // Find user by email
     const user = await User.findOne({ email })
+
+    console.log('User For Password Reset: ');
+    console.log(user);
+
     if (!user) {
       // Don't reveal if email exists or not for security
       return res.status(200).json({
