@@ -54,7 +54,7 @@ const Units = () => {
   // Helper function to determine if a unit is unlocked
   const isUnitUnlocked = (unitId) => {
     console.log(`\n--- Checking if unit ${unitId} is unlocked ---`)
-    
+
     // If no unlockedUnit parameter exists (even if unlockedSection exists), only unlock first unit
     if (!unlockStatus?.unlockedUnit) {
       console.log('No unlockStatus.unlockedUnit found (unlockedSection may exist, but we only unlock first unit)')
@@ -65,7 +65,7 @@ const Units = () => {
     }
 
     console.log(`Unlocked unit from API: ${unlockStatus.unlockedUnit}`)
-    
+
     // Find the unit that matches the unlockedUnit ID
     const unlockedUnitIndex = units?.findIndex(unit => String(unit._id) === String(unlockStatus.unlockedUnit))
     console.log(`Unlocked unit index in units array: ${unlockedUnitIndex}`)

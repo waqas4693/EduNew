@@ -1,12 +1,13 @@
+import Section from "../models/section.js";
 import UnitStats from "../models/unitStats.js";
 import CourseStats from "../models/courseStats.js";
 import CourseUnlock from "../models/courseUnlock.js";
 import ProgressStats from "../models/progressStats.js";
 import CompletedUnits from "../models/completedUnits.js";
 import CompletedSections from "../models/completedSections.js";
-import Section from "../models/section.js";
 
 import { handleError } from "../utils/errorHandler.js";
+import { calculateAndUpdateUnitProgress, recalculateAllUnitProgress } from "../utils/unitProgressCalculator.js";
 
 export const getUnlockedUnitAndSection = async (req, res) => {
   try {
@@ -89,6 +90,14 @@ export const setUnlockedUnitAndSection = async (req, res) => {
 
     try {
       await CompletedSections.create({ studentId, courseId, unitId, sectionId });
+      
+      // Update unit progress percentage after section completion
+      try {
+        await calculateAndUpdateUnitProgress(studentId, courseId, unitId);
+      } catch (error) {
+        console.error('Error updating unit progress after section completion:', error);
+        // Don't throw - section completion is more important
+      }
     } catch (error) {
       if (error.code !== 11000) {
         throw error;
@@ -109,6 +118,15 @@ export const setUnlockedUnitAndSection = async (req, res) => {
             { upsert: true, new: true }
           );
           console.log(`Unit ${unitId} marked as completed (last section completed)`);
+          
+          // Update unit progress percentage after unit completion
+          // Note: This will be 100% since all sections are completed
+          try {
+            await calculateAndUpdateUnitProgress(studentId, courseId, unitId);
+          } catch (error) {
+            console.error('Error updating unit progress after unit completion:', error);
+            // Don't throw - unit completion is more important
+          }
         } catch (error) {
           console.error('Error marking unit as completed:', error);
         }
@@ -153,6 +171,12 @@ export const getCompletedUnits = async (req, res) => {
 export const recalculateProgress = async (req, res) => {
   try {
     const { studentId, courseId } = req.body;
+
+    try {
+      await recalculateAllUnitProgress(studentId, courseId);
+    } catch (error) {
+      console.error('Error recalculating unit progress:', error);
+    }
 
     const inactiveCompletedUnits = await CompletedUnits.find({
       studentId,

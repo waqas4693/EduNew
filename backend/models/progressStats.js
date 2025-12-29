@@ -33,4 +33,3 @@ progressStatsSchema.index({ studentId: 1, courseId: 1 })
 
 const ProgressStats = mongoose.model('ProgressStats', progressStatsSchema)
 export default ProgressStats
-

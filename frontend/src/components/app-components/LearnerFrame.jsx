@@ -72,6 +72,11 @@ const LearnerFrame = () => {
     return progress.viewedResources.some(vr => vr.resourceId === resourceId)
   }
 
+  const isMcqCompleted = (resourceId) => {
+    if (!progress?.mcqProgress) return false
+    return progress.mcqProgress.some(mcq => mcq.resourceId === resourceId)
+  }
+
   useEffect(() => {
     if (!currentResource || !user?.studentId || progressLoading) return
 
@@ -404,8 +409,8 @@ const LearnerFrame = () => {
                     variant='contained'
                     color='inherit'
                     size='small'
-                    disabled={progress?.resourceProgressPercentage !== 100 &&
-                      currentResource?.resourceType === 'MCQ'}
+                    disabled={currentResource?.resourceType === 'MCQ' &&
+                      !isMcqCompleted(currentResource._id)}
                     onClick={handleNext}
                     sx={{
                       minWidth: '36px',

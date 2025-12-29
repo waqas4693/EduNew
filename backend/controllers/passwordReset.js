@@ -3,14 +3,12 @@ import Student from '../models/student.js'
 import PasswordReset from '../models/passwordReset.js'
 import { generateVerificationToken, sendPasswordResetEmail, sendPasswordResetSuccessEmail } from '../utils/emailService.js'
 
-// Request password reset
 export const requestPasswordReset = async (req, res) => {
   try {
     const { email } = req.body
 
     console.log("Raw email from client:", email);
-console.log("Type of email:", typeof email);
-
+    console.log("Type of email:", typeof email);
 
     if (!email) {
       return res.status(400).json({
@@ -96,7 +94,6 @@ console.log("Type of email:", typeof email);
   }
 }
 
-// Reset password with token
 export const resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body
@@ -184,7 +181,6 @@ export const resetPassword = async (req, res) => {
   }
 }
 
-// Validate reset token (optional endpoint for frontend validation)
 export const validateResetToken = async (req, res) => {
   try {
     const { token } = req.params
@@ -223,4 +219,4 @@ export const validateResetToken = async (req, res) => {
       error: error.message
     })
   }
-} 
+}
