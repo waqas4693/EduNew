@@ -5,6 +5,10 @@ import Student from '../models/student.js'
 import Section from '../models/section.js'
 import CourseUnlock from '../models/courseUnlock.js'
 import EmailVerification from '../models/emailVerification.js'
+import ProgressStats from '../models/progressStats.js'
+import UnitProgress from '../models/unitProgress.js'
+import CourseStats from '../models/courseStats.js'
+import CompletedUnits from '../models/completedUnits.js'
 import { generateVerificationToken, sendVerificationEmail } from '../utils/emailService.js'
 
 export const newStudent = async (req, res) => {
@@ -410,59 +414,61 @@ export const getCourseStudents = async (req, res) => {
 }
 
 export const getUnitProgress = async (req, res) => {
-  // try {
-  //   const { studentId, courseId } = req.params
+  try {
+    const { studentId, courseId } = req.params
 
-  //   // Get all units for the course
-  //   const units = await Unit.find({ courseId, status: 1 }).lean()
+    // Get course progress percentage from ProgressStats
+    const progressStats = await ProgressStats.findOne({ studentId, courseId })
+    const courseProgressPercentage = progressStats?.courseprogress || 0
 
-  //   // Calculate progress for each unit
-  //   const unitsProgress = await Promise.all(units.map(async unit => {
-  //     // Get all sections for this unit
-  //     const sections = await Section.find({ unitId: unit._id, status: 1 }).lean()
-      
-  //     // Get all resources from these sections
-  //     const sectionIds = sections.map(section => section._id)
-  //     const resources = await Resource.find({ 
-  //       sectionId: { $in: sectionIds }, 
-  //       status: 1 
-  //     }).lean()
-      
-  //     // Get viewed resources count from ResourceView collection
-  //     const viewedResourcesCount = await ResourceView.countDocuments({
-  //       studentId,
-  //       courseId,
-  //       unitId: unit._id,
-  //       resourceId: { $in: resources.map(r => r._id) }
-  //     })
+    // Get all units for the course
+    const units = await Unit.find({ courseId, status: 1 }).sort({ number: 1 }).lean()
 
-  //     const totalResources = resources.length
-  //     const progress = totalResources > 0 
-  //       ? Math.round((viewedResourcesCount / totalResources) * 100) 
-  //       : 0
+    // Get unit progress for each unit
+    const unitsProgress = await Promise.all(units.map(async unit => {
+      const unitProgress = await UnitProgress.findOne({
+        studentId,
+        courseId,
+        unitId: unit._id
+      })
 
-  //     return {
-  //       _id: unit._id,
-  //       name: unit.name,
-  //       totalResources,
-  //       viewedResources: viewedResourcesCount,
-  //       progress
-  //     }
-  //   }))
+      return {
+        _id: unit._id,
+        name: unit.name,
+        number: unit.number,
+        progress: unitProgress?.percentage || 0
+      }
+    }))
 
-  //   res.status(200).json({
-  //     success: true,
-  //     data: unitsProgress
-  //   })
+    // Get course stats for total units
+    const courseStats = await CourseStats.findOne({ courseId })
+    const totalUnits = courseStats?.totalUnits || units.length
 
-  // } catch (error) {
-  //   console.error('Error fetching unit progress:', error)
-  //   res.status(500).json({
-  //     success: false,
-  //     message: 'Internal server error',
-  //     error: error.message
-  //   })
-  // }
+    // Get completed units count
+    const completedUnitsCount = await CompletedUnits.countDocuments({
+      studentId,
+      courseId,
+      status: 1
+    })
+
+    res.status(200).json({
+      success: true,
+      data: {
+        progressPercentage: courseProgressPercentage,
+        completedUnits: completedUnitsCount,
+        totalUnits: totalUnits,
+        units: unitsProgress
+      }
+    })
+
+  } catch (error) {
+    console.error('Error fetching course progress:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    })
+  }
 }
 
 export const getStudentById = async (req, res) => {

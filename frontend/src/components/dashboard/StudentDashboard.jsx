@@ -15,19 +15,18 @@ import {
   Alert
 } from '@mui/material'
 import { getData } from '../../api/api'
-import { useState, useEffect, memo } from 'react'
+import { useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, memo } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { setCurrentCourse } from '../../redux/slices/courseSlice'
+import { useEnrolledCourses, useAssessmentDueDates, useCourseProgress } from '../../hooks/useCourses'
+
 import Grid from '@mui/material/Grid2'
 import url from '../config/server-url'
 import Calendar from '../calendar/Calendar'
-import { useDispatch } from 'react-redux'
-import { setCurrentCourse } from '../../redux/slices/courseSlice'
-import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import SpeedIcon from '@mui/icons-material/Speed'
 import EmailIcon from '@mui/icons-material/Email'
-import { useEnrolledCourses, useAssessmentDueDates } from '../../hooks/useCourses'
-import { useCourseProgress } from '../../hooks/useCourseProgress'
 
 const getThumbnailUrl = fileName => {
   if (!fileName) return ''
