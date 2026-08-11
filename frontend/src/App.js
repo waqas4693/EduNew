@@ -210,6 +210,14 @@ function App() {
                                 } 
                               />
                               <Route 
+                                path="/student-unlock-status" 
+                                element={
+                                  <PrivateRoute requiredRole={[1]}>
+                                    <StudentProgress />
+                                  </PrivateRoute>
+                                } 
+                              />
+                              <Route 
                                 path="/students/:studentId/assessments" 
                                 element={
                                   <PrivateRoute requiredRole={[1]}>

@@ -22,6 +22,7 @@ import { useSectionProgress } from '../../hooks/useSectionProgress'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useSections, useUnlockedSections } from '../../hooks/useSections'
 import { setCurrentUnit } from '../../redux/slices/courseSlice'
+import { useCompletedSections, useSyncCourseUnlock } from '../../hooks/useUnlockSync'
 
 import Grid from '@mui/material/Grid2'
 import Calendar from '../calendar/Calendar'
@@ -48,21 +49,42 @@ const Section = () => {
   const { data: unitDetails } = useUnitDetails(unitId)
   const { data: sections, isLoading: sectionsLoading, refetch } = useSections(unitId)
   const { data: unlockStatus, refetch: refetchUnlockedSections } = useUnlockedSections(user?.studentId, courseId, unitId)
+  const { data: completedSections = [], refetch: refetchCompletedSections } = useCompletedSections(
+    user?.studentId,
+    courseId
+  )
+  const syncUnlock = useSyncCourseUnlock()
   
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
   const [showRestrictionDialog, setShowRestrictionDialog] = useState(false)
+  const [hasSynced, setHasSynced] = useState(false)
 
   const sectionIds = useMemo(() => {
     return sections?.map(section => section._id) || []
   }, [sections])
+
+  const completedSectionIdSet = useMemo(() => {
+    return new Set(
+      (completedSections || [])
+        .filter((row) => String(row.unitId) === String(unitId))
+        .map((row) => String(row.sectionId))
+    )
+  }, [completedSections, unitId])
   
-  const { isSectionCompleted, isLoading: progressLoading } = useSectionProgress(
+  const { isSectionCompleted: isSectionProgressComplete, isLoading: progressLoading } = useSectionProgress(
     user?.studentId, 
     courseId, 
     unitId, 
     sectionIds
   )
+
+  const isSectionCompleted = (sectionId) => {
+    return (
+      completedSectionIdSet.has(String(sectionId)) ||
+      isSectionProgressComplete(sectionId)
+    )
+  }
 
   useEffect(() => {
     if (unitDetails && (!currentUnit || currentUnit.id !== unitId)) {
@@ -73,12 +95,40 @@ const Section = () => {
     }
   }, [unitDetails, unitId, dispatch])
 
+  // Keep unlock watermark aligned with material progress in the database
+  useEffect(() => {
+    const runSync = async () => {
+      if (!user?.studentId || !courseId || user?.isDemo || hasSynced) return
+      try {
+        await syncUnlock.mutateAsync({
+          studentId: user.studentId,
+          courseId
+        })
+        await Promise.all([
+          refetchUnlockedSections(),
+          refetchCompletedSections()
+        ])
+      } catch (error) {
+        console.error('Error syncing section unlock status:', error)
+      } finally {
+        setHasSynced(true)
+      }
+    }
+
+    runSync()
+  }, [user?.studentId, courseId, user?.isDemo, hasSynced])
+
   useEffect(() => {
     const handleRefresh = async () => {
       if (location.state?.refresh) {
         try {
+          await syncUnlock.mutateAsync({
+            studentId: user.studentId,
+            courseId
+          })
           await refetch()
           await refetchUnlockedSections()
+          await refetchCompletedSections()
           window.history.replaceState({}, document.title)
         } catch (error) {
           console.error('Error refreshing section data:', error)
@@ -109,7 +159,6 @@ const Section = () => {
   const isSectionUnlocked = (sectionId) => {
     if (user?.isDemo) return true
 
-    // No watermark yet: only the first section of this unit (unit access is gated separately)
     if (!unlockStatus?.unlockedSection) {
       return sections?.[0] && String(sections[0]._id) === String(sectionId)
     }
@@ -118,8 +167,7 @@ const Section = () => {
       (section) => String(section._id) === String(unlockStatus.unlockedSection)
     )
 
-    // Watermark is from another unit (e.g. just finished previous unit):
-    // only unlock the first section of this newly available unit
+    // Watermark from another unit: only first section of this unit
     if (unlockedSectionIndex === -1) {
       return sections?.[0] && String(sections[0]._id) === String(sectionId)
     }
@@ -282,7 +330,7 @@ const Section = () => {
                       mr: 2,
                       color: 'white',
                       minWidth: '70px',
-                      bgcolor: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
+                      bgcolor: (isCompleted && isUnlocked) ? 'success.main' : (isUnlocked ? '#4169e1' : (isCompleted ? '#ed6c02' : '#9e9e9e')),
                       textAlign: 'center',
                       borderTopLeftRadius: '6px',
                       borderBottomLeftRadius: '6px',
@@ -319,10 +367,17 @@ const Section = () => {
                       {section.name}
                     </Typography>
                     
-                    {isCompleted ? (
+                    {isCompleted && isUnlocked ? (
                       <CheckCircle 
                         sx={{ ml: 1, color: 'success.main', fontSize: '18px' }} 
                       />
+                    ) : isCompleted && !isUnlocked ? (
+                      <Tooltip title="Progress is complete, but an earlier section is still incomplete">
+                        <Box sx={{ ml: 1, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                          <CheckCircle sx={{ color: 'warning.main', fontSize: '18px' }} />
+                          <LockOutlined sx={{ color: 'text.secondary', fontSize: '16px' }} />
+                        </Box>
+                      </Tooltip>
                     ) : isUnlocked ? (
                       <LockOpenOutlined 
                         sx={{ ml: 1, color: 'primary.main', fontSize: '18px' }} 
@@ -345,7 +400,7 @@ const Section = () => {
                             onClick={() => handleSectionClick(section, isUnlocked)}
                             disabled={!isUnlocked}
                             sx={{
-                              bgcolor: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
+                              bgcolor: (isCompleted && isUnlocked) ? 'success.main' : (isUnlocked ? '#4169e1' : (isCompleted ? '#ed6c02' : '#9e9e9e')),
                               color: 'white',
                               borderRadius: '8px',
                               '&:hover': {
@@ -552,7 +607,7 @@ const Section = () => {
                       mr: 2,
                       color: 'white',
                       minWidth: '70px',
-                      bgcolor: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
+                      bgcolor: (isCompleted && isUnlocked) ? 'success.main' : (isUnlocked ? '#4169e1' : (isCompleted ? '#ed6c02' : '#9e9e9e')),
                       textAlign: 'center',
                       borderTopLeftRadius: '6px',
                       borderBottomLeftRadius: '6px',
@@ -588,10 +643,17 @@ const Section = () => {
                     >
                       {section.name}
                     </Typography>
-                    {isCompleted ? (
+                    {isCompleted && isUnlocked ? (
                       <CheckCircle 
                         sx={{ ml: 1, color: 'success.main', fontSize: '18px' }} 
                       />
+                    ) : isCompleted && !isUnlocked ? (
+                      <Tooltip title="Progress is complete, but an earlier section is still incomplete">
+                        <Box sx={{ ml: 1, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                          <CheckCircle sx={{ color: 'warning.main', fontSize: '18px' }} />
+                          <LockOutlined sx={{ color: 'text.secondary', fontSize: '16px' }} />
+                        </Box>
+                      </Tooltip>
                     ) : isUnlocked ? (
                       <LockOpenOutlined 
                         sx={{ ml: 1, color: 'primary.main', fontSize: '18px' }} 
@@ -616,7 +678,7 @@ const Section = () => {
                             onClick={() => handleSectionClick(section, isUnlocked)}
                             disabled={!isUnlocked}
                             sx={{
-                              bgcolor: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
+                              bgcolor: (isCompleted && isUnlocked) ? 'success.main' : (isUnlocked ? '#4169e1' : (isCompleted ? '#ed6c02' : '#9e9e9e')),
                               color: 'white',
                               borderRadius: '8px',
                               textTransform: 'none',

@@ -339,7 +339,8 @@ const Sidebar = ({ open, onClose }) => {
       subItems: [
         { text: 'Active Students', path: '/admin/active-students' },
         { text: 'Inactive Students', path: '/admin/inactive-students' },
-        { text: 'Invite Student', path: '/admin/invite-student' }
+        { text: 'Invite Student', path: '/admin/invite-student' },
+        { text: 'Unlock Status', path: '/admin/student-unlock-status' }
       ]
     },
     {

@@ -14,6 +14,10 @@ import {
   isAtOrBeyond,
   isSectionFullyCompleted,
 } from "../utils/sectionCompletion.js";
+import {
+  buildStudentCourseStatus,
+  syncStudentCourseUnlock,
+} from "../utils/unlockSync.js";
 
 export const getUnlockedUnitAndSection = async (req, res) => {
   try {
@@ -199,6 +203,66 @@ export const getCompletedUnits = async (req, res) => {
     res.status(200).json({
       success: true,
       completedUnits: completedUnits.map((cu) => cu.unitId.toString()),
+    });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
+export const getCompletedSections = async (req, res) => {
+  try {
+    const { studentId, courseId } = req.params;
+
+    const completedSections = await CompletedSections.find({
+      studentId,
+      courseId,
+      status: 1,
+    });
+
+    res.status(200).json({
+      success: true,
+      completedSections: completedSections.map((row) => ({
+        sectionId: row.sectionId.toString(),
+        unitId: row.unitId.toString(),
+      })),
+    });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
+export const getStudentCourseUnlockStatus = async (req, res) => {
+  try {
+    const { studentId, courseId } = req.params;
+    const status = await buildStudentCourseStatus(studentId, courseId);
+
+    res.status(200).json({
+      success: true,
+      status,
+    });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
+export const syncCourseUnlockFromProgress = async (req, res) => {
+  try {
+    const { studentId, courseId } = req.body;
+
+    if (!studentId || !courseId) {
+      return res.status(400).json({
+        success: false,
+        message: "studentId and courseId are required",
+      });
+    }
+
+    const syncResult = await syncStudentCourseUnlock(studentId, courseId);
+    const status = await buildStudentCourseStatus(studentId, courseId);
+
+    res.status(200).json({
+      success: true,
+      syncResult,
+      status,
     });
   } catch (error) {
     handleError(res, error);

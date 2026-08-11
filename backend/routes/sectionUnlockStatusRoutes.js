@@ -1,19 +1,21 @@
 import express from 'express'
-import { 
-  getUnlockedUnitAndSection, 
+import {
+  getUnlockedUnitAndSection,
   setUnlockedUnitAndSection,
-  getCompletedUnits
+  getCompletedUnits,
+  getCompletedSections,
+  getStudentCourseUnlockStatus,
+  syncCourseUnlockFromProgress
 } from '../controllers/courseUnlock.js'
 
 const router = express.Router()
 
-// Get unlocked sections and units for a student in a course
+// Specific paths must be registered before /:studentId/:courseId
+router.get('/completed/:studentId/:courseId', getCompletedUnits)
+router.get('/completed-sections/:studentId/:courseId', getCompletedSections)
+router.get('/status/:studentId/:courseId', getStudentCourseUnlockStatus)
+router.post('/sync', syncCourseUnlockFromProgress)
+router.post('/check-completion', setUnlockedUnitAndSection)
 router.get('/:studentId/:courseId', getUnlockedUnitAndSection)
 
-// Get completed units for a student in a course
-router.get('/completed/:studentId/:courseId', getCompletedUnits)
-
-// Check section completion and unlock next section/unit if needed
-router.post('/check-completion', setUnlockedUnitAndSection)
-
-export default router 
+export default router

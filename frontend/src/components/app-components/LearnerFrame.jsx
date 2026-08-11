@@ -81,8 +81,6 @@ const LearnerFrame = () => {
       if (resource.resourceType === 'MCQ') {
         return (progressSnapshot.mcqProgress || []).some(
           (mcq) => String(mcq.resourceId) === String(resourceId) && mcq.completed === true
-        ) || (progressSnapshot.viewedResources || []).some(
-          (vr) => String(vr.resourceId) === String(resourceId)
         )
       }
 

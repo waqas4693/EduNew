@@ -6,7 +6,7 @@ import Unit from '../models/unit.js'
 /**
  * Returns true when every active resource in the section has been completed:
  * - Non-MCQ: present in viewedResources
- * - MCQ: has a mcqProgress entry with completed:true (or viewed after correct answer)
+ * - MCQ: must have mcqProgress.completed === true (view alone is not enough)
  */
 export const isSectionFullyCompleted = async ({
   studentId,
@@ -45,8 +45,7 @@ export const isSectionFullyCompleted = async ({
     const resourceId = String(resource._id)
 
     if (resource.resourceType === 'MCQ') {
-      // Successful MCQ completion writes completed:true and also adds to viewedResources
-      if (!completedMcqIds.has(resourceId) && !viewedIds.has(resourceId)) {
+      if (!completedMcqIds.has(resourceId)) {
         return false
       }
       continue

@@ -1,382 +1,335 @@
-import Grid from '@mui/material/Grid2'
-import CancelIcon from '@mui/icons-material/Cancel'
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import CustomDataGrid from '../reusable-components/CustomDataGrid'
-import { Tooltip } from '@mui/material'
+import { Fragment, useMemo, useState } from 'react'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Collapse,
+  Divider,
+  MenuItem,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography
+} from '@mui/material'
 import ChevronLeft from '@mui/icons-material/ChevronLeft'
-
+import ExpandMore from '@mui/icons-material/ExpandMore'
+import ExpandLess from '@mui/icons-material/ExpandLess'
+import SyncIcon from '@mui/icons-material/Sync'
+import { useQuery } from '@tanstack/react-query'
 import { getData } from '../../api/api'
-import { useState, useEffect } from 'react'
-import { useParams, useLocation, useNavigate } from 'react-router-dom'
-import { Box, Chip, Paper, Typography, CircularProgress } from '@mui/material'
+import {
+  useStudentCourseUnlockStatus,
+  useSyncCourseUnlock
+} from '../../hooks/useUnlockSync'
 
-const formatDate = (dateString) => {
-  if (!dateString) return '-'
-  const date = new Date(dateString)
-  return date.toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  })
-}
+const StatusChip = ({ ok, labelOk = 'Yes', labelNo = 'No' }) => (
+  <Chip
+    size="small"
+    color={ok ? 'success' : 'default'}
+    label={ok ? labelOk : labelNo}
+  />
+)
 
 const StudentProgress = () => {
-  const { id: studentId, courseId } = useParams()
-  const location = useLocation()
   const navigate = useNavigate()
+  const location = useLocation()
+  const { id: routeStudentId, courseId: routeCourseId } = useParams()
 
-  const [loading, setLoading] = useState({
-    units: false,
-    sections: false,
-    resources: false
+  const [studentId, setStudentId] = useState(routeStudentId || '')
+  const [courseId, setCourseId] = useState(routeCourseId || '')
+  const [selectedStudentId, setSelectedStudentId] = useState(routeStudentId || '')
+  const [selectedCourseId, setSelectedCourseId] = useState(routeCourseId || '')
+  const [expandedSection, setExpandedSection] = useState(null)
+  const [studentName, setStudentName] = useState(location.state?.studentName || '')
+  const [courseName, setCourseName] = useState(location.state?.courseName || '')
+
+  // When opened from a student course link, status loads automatically via selected* ids
+
+  const { data: students = [] } = useQuery({
+    queryKey: ['adminStudentsList'],
+    queryFn: async () => {
+      const response = await getData('student')
+      return response.data?.data?.students || []
+    }
   })
 
-  const [units, setUnits] = useState([])
-  const [sections, setSections] = useState([])
-  const [resources, setResources] = useState([])
-  const [courseName, setCourseName] = useState(location.state?.courseName || '')
-  const [studentName, setStudentName] = useState(location.state?.studentName || '')
-  const [selectedUnit, setSelectedUnit] = useState(null)
-  const [selectedSection, setSelectedSection] = useState(null)
+  const selectedStudent = useMemo(
+    () => students.find((s) => String(s._id) === String(selectedStudentId)),
+    [students, selectedStudentId]
+  )
 
-  // Fetch student and course details
-  useEffect(() => {
-    const fetchDetails = async () => {
-      try {
-        if (!studentName || !courseName) {
-          const [studentResponse, courseResponse] = await Promise.all([
-            getData(`student/${studentId}`),
-            getData(`courses/${courseId}`)
-          ])
-          setStudentName(studentResponse.data.name)
-          setCourseName(courseResponse.data.name)
-        }
-      } catch (error) {
-        console.error('Error fetching details:', error)
-      }
-    }
-    fetchDetails()
-  }, [studentId, courseId, studentName, courseName])
+  const courses = selectedStudent?.courses || []
 
-  // Fetch units when component mounts
-  useEffect(() => {
-    const fetchUnits = async () => {
-      setLoading(prev => ({ ...prev, units: true }))
-      try {
-        const response = await getData(`units/${courseId}`)
-        const unitsData = response.data.units || []
-        setUnits(unitsData)
-        
-        // Select first unit by default if available
-        if (unitsData.length > 0) {
-          setSelectedUnit(unitsData[0])
-          fetchSections(unitsData[0]._id)
-        }
-      } catch (error) {
-        console.error('Error fetching units:', error)
-      } finally {
-        setLoading(prev => ({ ...prev, units: false }))
-      }
-    }
-    fetchUnits()
-  }, [courseId])
+  const {
+    data: status,
+    isLoading,
+    isFetching,
+    error,
+    refetch
+  } = useStudentCourseUnlockStatus(selectedStudentId, selectedCourseId, {
+    enabled: !!selectedStudentId && !!selectedCourseId
+  })
 
-  // Fetch sections for a unit
-  const fetchSections = async (unitId) => {
-    setLoading(prev => ({ ...prev, sections: true }))
-    try {
-      const response = await getData(`sections/${unitId}`)
-      const sectionsData = response.data.sections || []
-      setSections(sectionsData)
-      
-      // Select first section by default if available
-      if (sectionsData.length > 0) {
-        setSelectedSection(sectionsData[0])
-        handleSectionClick(sectionsData[0])
-      }
-    } catch (error) {
-      console.error('Error fetching sections:', error)
-      setSections([])
-    } finally {
-      setLoading(prev => ({ ...prev, sections: false }))
-    }
+  const syncMutation = useSyncCourseUnlock()
+
+  const handleLoad = () => {
+    setSelectedStudentId(studentId)
+    setSelectedCourseId(courseId)
+    const student = students.find((s) => String(s._id) === String(studentId))
+    const courseEntry = student?.courses?.find(
+      (c) => String(c.courseId?._id || c.courseId) === String(courseId)
+    )
+    setStudentName(student?.name || '')
+    setCourseName(courseEntry?.name || courseEntry?.courseId?.name || courseName || '')
   }
 
-  // Modified unit click handler
-  const handleUnitClick = async unit => {
-    setSelectedUnit(unit)
-    setSelectedSection(null)
-    setResources([])
-    await fetchSections(unit._id)
-  }
-
-  // Fetch resources when section is selected
-  const handleSectionClick = async section => {
-    setSelectedSection(section)
-    setLoading(prev => ({ ...prev, resources: true }))
-    try {
-      const response = await getData(
-        `student-progress/${studentId}/${courseId}/${selectedUnit._id}/${section._id}`
-      )
-      setResources(response.data.data || [])
-    } catch (error) {
-      console.error('Error fetching resources:', error)
-      setResources([])
-    } finally {
-      setLoading(prev => ({ ...prev, resources: false }))
-    }
-  }
-
-  const columns = [
-    {
-      field: 'name',
-      headerName: 'Resource Name',
-      flex: 1,
-      minWidth: 200,
-      renderCell: params => params.row.name || '-'
-    },
-    {
-      field: 'resourceType',
-      headerName: 'Type',
-      flex: 0.5,
-      renderCell: params => params.row.resourceType || '-'
-    },
-    {
-      field: 'isViewed',
-      headerName: 'Status',
-      flex: 0.5,
-      minWidth: 100,
-      renderCell: params => (
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 1
-          }}
-        >
-          {params.row.isViewed ? (
-            <CheckCircleIcon sx={{ color: 'success.main' }} />
-          ) : (
-            <CancelIcon sx={{ color: 'error.main' }} />
-          )}
-        </Box>
-      )
-    },
-    {
-      field: 'viewedAt',
-      headerName: 'Viewed At',
-      flex: 0.7,
-      minWidth: 150,
-      renderCell: params => formatDate(params.row.viewedAt)
-    }
-  ]
-
-  const handleBackToDashboard = () => {
-    navigate('/dashboard')
+  const handleSync = async () => {
+    if (!selectedStudentId || !selectedCourseId) return
+    await syncMutation.mutateAsync({
+      studentId: selectedStudentId,
+      courseId: selectedCourseId
+    })
+    await refetch()
   }
 
   return (
-    <>
-      <Paper
-        elevation={5}
-        sx={{
-          p: 3,
-          borderRadius: '16px',
-          backgroundColor: 'white'
-        }}
+    <Box sx={{ p: 2 }}>
+      <Button
+        startIcon={<ChevronLeft />}
+        onClick={() => navigate(-1)}
+        sx={{ mb: 2 }}
       >
-        <Box sx={{ mb: 1 }}>
-          <Typography
-            variant='body2'
-            sx={{
-              cursor: 'pointer',
-              color: 'primary.main',
-              display: 'inline-flex',
-              alignItems: 'center',
-              width: 'fit-content',
-              gap: 0
-            }}
-            onClick={handleBackToDashboard}
-          >
-            <ChevronLeft sx={{ ml: -1 }} /> Back To Dashboard
-          </Typography>
-        </Box>
+        Back
+      </Button>
 
-        <Box sx={{ mb: 3 }}>
-          <Typography
-            variant="h5"
-            sx={{
-              fontWeight: 'bold',
-              color: 'primary.main',
-              mb: 1
-            }}
-          >
-            Course Progress
-          </Typography>
-          <Typography
-            variant="subtitle1"
-            sx={{
-              color: 'text.secondary',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.5
-            }}
-          >
-            Student: <span style={{ fontWeight: 'bold', color: 'text.primary' }}>{studentName}</span>
-            <span style={{ mx: 1 }}>•</span>
-            Course: <span style={{ fontWeight: 'bold', color: 'text.primary' }}>{courseName}</span>
-          </Typography>
-        </Box>
+      <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+        <Typography variant="h5" fontWeight="bold" gutterBottom>
+          Student Unlock / Progress Inspector
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          This page reads the database directly: material progress, completed markers,
+          and the unlock watermark. Use Sync to rebuild unlock from progress so the
+          student UI matches what is actually completed.
+        </Typography>
 
-        <Grid container spacing={2}>
-          <Grid size={1.5}>
-            {selectedUnit && (
-              <Box sx={{ pt: '40px' }}>
-                {loading.sections ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                    <CircularProgress size={24} />
-                  </Box>
-                ) : sections.length > 0 && (
-                  <Box 
-                    sx={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      gap: 1,
-                      maxHeight: 'calc(100vh - 300px)',
-                      overflowY: 'auto',
-                      pr: 1
-                    }}
-                  >
-                    {sections.map(section => (
-                      <Tooltip 
-                        key={section._id} 
-                        title={section.name}
-                        placement="right"
-                      >
-                        <Chip
-                          label={
-                            <Typography
-                              sx={{
-                                maxWidth: '120px',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis'
-                              }}
-                            >
-                              {section.name}
-                            </Typography>
-                          }
-                          onClick={() => handleSectionClick(section)}
-                          color={selectedSection?._id === section._id ? 'primary' : 'default'}
-                          sx={{
-                            width: '100%',
-                            '&:hover': { color: 'white', bgcolor: 'primary.main' }
-                          }}
-                        />
-                      </Tooltip>
-                    ))}
-                  </Box>
-                )}
-              </Box>
-            )}
-          </Grid>
-          <Grid size={9.5}>
-            <Box 
-              sx={{ 
-                display: 'flex',
-                gap: 1,
-                overflowX: 'auto',
-                pb: 1,
-                '&::-webkit-scrollbar': {
-                  height: '8px',
-                },
-                '&::-webkit-scrollbar-track': {
-                  backgroundColor: '#f1f1f1',
-                  borderRadius: '4px',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  backgroundColor: '#888',
-                  borderRadius: '4px',
-                  '&:hover': {
-                    backgroundColor: '#555'
-                  }
-                }
-              }}
-            >
-              {loading.units ? (
-                <CircularProgress size={24} />
-              ) : units.length > 0 ? (
-                units.map(unit => (
-                  <Tooltip 
-                    key={unit._id} 
-                    title={unit.name}
-                    placement="top"
-                  >
-                    <Chip
-                      label={
-                        <Typography
-                          sx={{
-                            maxWidth: '150px',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                          }}
-                        >
-                          {unit.name}
-                        </Typography>
-                      }
-                      onClick={() => handleUnitClick(unit)}
-                      color={selectedUnit?._id === unit._id ? 'primary' : 'default'}
-                      sx={{
-                        minWidth: 'fit-content',
-                        '&:hover': { bgcolor: 'primary.light' }
-                      }}
-                    />
-                  </Tooltip>
-                ))
-              ) : (
-                <Box sx={{ width: '100%', textAlign: 'center', mt: 4 }}>
-                  <Typography color="text.secondary" variant="h6">
-                    No units found in this course
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-            {selectedSection ? (
-              <Box sx={{ pt: '20px', pl: '20px' }}>
-                {loading.resources ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                    <CircularProgress size={24} />
-                  </Box>
-                ) : (
-                  <CustomDataGrid
-                    rows={resources}
-                    columns={columns}
-                    hideFooter={false}
-                    disableRowSelectionOnClick
-                  />
-                )}
-              </Box>
-            ) : selectedUnit && (
-              <Box 
-                sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'center', 
-                  alignItems: 'center', 
-                  height: '300px',
-                  width: '100%'
-                }}
-              >
-                <Typography color="text.secondary" variant="h6">
-                  There are no sections for the selected unit
-                </Typography>
-              </Box>
-            )}
-          </Grid>
-        </Grid>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+          <TextField
+            select
+            label="Student"
+            size="small"
+            sx={{ minWidth: 260 }}
+            value={studentId}
+            onChange={(e) => {
+              setStudentId(e.target.value)
+              setCourseId('')
+            }}
+          >
+            {students.map((student) => (
+              <MenuItem key={student._id} value={student._id}>
+                {student.name} ({student.email || student._id})
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <TextField
+            select
+            label="Course"
+            size="small"
+            sx={{ minWidth: 260 }}
+            value={courseId}
+            onChange={(e) => setCourseId(e.target.value)}
+            disabled={!studentId}
+          >
+            {(students.find((s) => String(s._id) === String(studentId))?.courses || []).map((entry) => {
+              const id = entry.courseId?._id || entry.courseId
+              const name = entry.name || entry.courseId?.name || String(id)
+              return (
+                <MenuItem key={String(id)} value={id}>
+                  {name}
+                </MenuItem>
+              )
+            })}
+          </TextField>
+
+          <Button variant="contained" onClick={handleLoad} disabled={!studentId || !courseId}>
+            Load Status
+          </Button>
+
+          <Button
+            variant="outlined"
+            startIcon={<SyncIcon />}
+            onClick={handleSync}
+            disabled={!selectedStudentId || !selectedCourseId || syncMutation.isLoading}
+          >
+            {syncMutation.isLoading ? 'Syncing...' : 'Sync Unlock From Progress'}
+          </Button>
+        </Box>
       </Paper>
-    </>
+
+      {(studentName || courseName) && (
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          {studentName || 'Student'} — {courseName || 'Course'}
+        </Typography>
+      )}
+
+      {syncMutation.isSuccess && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          Sync complete. Unlock watermark and completed markers were rebuilt from material progress.
+        </Alert>
+      )}
+
+      {syncMutation.isError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          Sync failed. {syncMutation.error?.data?.message || syncMutation.error?.message || ''}
+        </Alert>
+      )}
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          Failed to load status.
+        </Alert>
+      )}
+
+      {(isLoading || isFetching) && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+          <CircularProgress />
+        </Box>
+      )}
+
+      {status && !isLoading && (
+        <>
+          <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }}>
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+              Unlock Watermark (CourseUnlock)
+            </Typography>
+            <Typography variant="body2">Unlocked Unit ID: {status.unlockWatermark.unlockedUnit || 'null'}</Typography>
+            <Typography variant="body2">Unlocked Section ID: {status.unlockWatermark.unlockedSection || 'null'}</Typography>
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              Next incomplete (contiguous):{' '}
+              {status.expectedNextIncomplete
+                ? `Unit ${status.expectedNextIncomplete.unitNumber} / Section ${status.expectedNextIncomplete.sectionNumber} — ${status.expectedNextIncomplete.sectionName}`
+                : 'None (all contiguous materials complete)'}
+            </Typography>
+          </Paper>
+
+          {status.units.map((unit) => (
+            <Paper key={unit.unitId} sx={{ p: 2, mb: 2, borderRadius: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
+                <Typography variant="h6">
+                  Unit {unit.number}: {unit.name}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <StatusChip ok={unit.materialsComplete} labelOk="Materials complete" labelNo="Materials incomplete" />
+                  <StatusChip ok={unit.markedComplete} labelOk="Marked complete" labelNo="Not marked complete" />
+                  {unit.mismatch && <Chip size="small" color="warning" label="Mismatch" />}
+                </Box>
+              </Box>
+
+              <Divider sx={{ my: 2 }} />
+
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Section</TableCell>
+                    <TableCell>Progress %</TableCell>
+                    <TableCell>Materials</TableCell>
+                    <TableCell>Marked</TableCell>
+                    <TableCell>Mismatch</TableCell>
+                    <TableCell />
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {unit.sections.map((section) => {
+                    const open = expandedSection === section.sectionId
+                    return (
+                      <Fragment key={section.sectionId}>
+                        <TableRow hover>
+                          <TableCell>
+                            {section.number}. {section.name}
+                          </TableCell>
+                          <TableCell>
+                            {section.resourceProgressPercentage}%
+                            {section.mcqProgressPercentage > 0 ? ` / MCQ ${section.mcqProgressPercentage}%` : ''}
+                            <Typography variant="caption" display="block" color="text.secondary">
+                              {section.viewedCount}/{section.totalResources} resources
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <StatusChip ok={section.materialsComplete} />
+                          </TableCell>
+                          <TableCell>
+                            <StatusChip ok={section.markedComplete} />
+                          </TableCell>
+                          <TableCell>
+                            {section.mismatch ? <Chip size="small" color="warning" label="Yes" /> : '—'}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="small"
+                              endIcon={open ? <ExpandLess /> : <ExpandMore />}
+                              onClick={() =>
+                                setExpandedSection(open ? null : section.sectionId)
+                              }
+                            >
+                              Resources
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell colSpan={6} sx={{ py: 0, border: 0 }}>
+                            <Collapse in={open}>
+                              <Box sx={{ py: 1, px: 1 }}>
+                                <Table size="small">
+                                  <TableHead>
+                                    <TableRow>
+                                      <TableCell>#</TableCell>
+                                      <TableCell>Resource</TableCell>
+                                      <TableCell>Type</TableCell>
+                                      <TableCell>Viewed</TableCell>
+                                      <TableCell>MCQ Done</TableCell>
+                                      <TableCell>Done</TableCell>
+                                    </TableRow>
+                                  </TableHead>
+                                  <TableBody>
+                                    {section.resources.map((resource) => (
+                                      <TableRow key={resource.resourceId}>
+                                        <TableCell>{resource.number}</TableCell>
+                                        <TableCell>{resource.name}</TableCell>
+                                        <TableCell>{resource.resourceType}</TableCell>
+                                        <TableCell>{resource.viewed ? 'Yes' : 'No'}</TableCell>
+                                        <TableCell>
+                                          {resource.resourceType === 'MCQ'
+                                            ? resource.mcqCompleted
+                                              ? 'Yes'
+                                              : 'No'
+                                            : '—'}
+                                        </TableCell>
+                                        <TableCell>{resource.done ? 'Yes' : 'No'}</TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </Box>
+                            </Collapse>
+                          </TableCell>
+                        </TableRow>
+                      </Fragment>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </Paper>
+          ))}
+        </>
+      )}
+    </Box>
   )
 }
 

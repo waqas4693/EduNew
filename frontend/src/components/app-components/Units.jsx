@@ -15,7 +15,7 @@ import {
   CheckCircle
 } from '@mui/icons-material'
 import { getData } from '../../api/api'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
@@ -23,6 +23,7 @@ import { setCurrentCourse, setCurrentUnit } from '../../redux/slices/courseSlice
 import { useUnits } from '../../hooks/useUnits'
 import { useUnlockStatus } from '../../hooks/useUnlockStatus'
 import { useCompletedUnits } from '../../hooks/useCompletedUnits'
+import { useSyncCourseUnlock } from '../../hooks/useUnlockSync'
 
 import Grid from '@mui/material/Grid2'
 import Calendar from '../calendar/Calendar'
@@ -37,75 +38,56 @@ const Units = () => {
   const { courseId } = useParams()
 
   const { data: units, isLoading } = useUnits(courseId)
-  const { data: unlockStatus } = useUnlockStatus(user?.studentId, courseId)
-  const { data: completedUnits = [] } = useCompletedUnits(user?.studentId, courseId)
-
-  // Debug logging
-  console.log('=== Units Page Debug ===')
-  console.log('Units data:', units)
-  console.log('Unlock Status:', unlockStatus)
-  console.log('Completed Units:', completedUnits)
-  console.log('Student ID:', user?.studentId)
-  console.log('Course ID:', courseId)
+  const { data: unlockStatus, refetch: refetchUnlockStatus } = useUnlockStatus(user?.studentId, courseId)
+  const { data: completedUnits = [], refetch: refetchCompletedUnits } = useCompletedUnits(user?.studentId, courseId)
+  const syncUnlock = useSyncCourseUnlock()
+  const [hasSynced, setHasSynced] = useState(false)
 
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
-  // Helper function to determine if a unit is unlocked
+  useEffect(() => {
+    const runSync = async () => {
+      if (!user?.studentId || !courseId || user?.isDemo || hasSynced) return
+      try {
+        await syncUnlock.mutateAsync({
+          studentId: user.studentId,
+          courseId
+        })
+        await Promise.all([refetchUnlockStatus(), refetchCompletedUnits()])
+      } catch (error) {
+        console.error('Error syncing unit unlock status:', error)
+      } finally {
+        setHasSynced(true)
+      }
+    }
+
+    runSync()
+  }, [user?.studentId, courseId, user?.isDemo, hasSynced])
+
   const isUnitUnlocked = (unitId) => {
-    console.log(`\n--- Checking if unit ${unitId} is unlocked ---`)
-
-    // If no unlockedUnit parameter exists (even if unlockedSection exists), only unlock first unit
     if (!unlockStatus?.unlockedUnit) {
-      console.log('No unlockStatus.unlockedUnit found (unlockedSection may exist, but we only unlock first unit)')
-      // Check if this is the first unit
-      const isFirstUnit = units?.[0]?._id === unitId
-      console.log(`First unit ID: ${units?.[0]?._id}, Current unit ID: ${unitId}, Is first unit: ${isFirstUnit}`)
-      return isFirstUnit
+      return String(units?.[0]?._id) === String(unitId)
     }
 
-    console.log(`Unlocked unit from API: ${unlockStatus.unlockedUnit}`)
+    const unlockedUnitIndex = units?.findIndex(
+      (unit) => String(unit._id) === String(unlockStatus.unlockedUnit)
+    )
 
-    // Find the unit that matches the unlockedUnit ID
-    const unlockedUnitIndex = units?.findIndex(unit => String(unit._id) === String(unlockStatus.unlockedUnit))
-    console.log(`Unlocked unit index in units array: ${unlockedUnitIndex}`)
-    
-    // If unlockedUnit ID doesn't match any unit, unlock all units
     if (unlockedUnitIndex === -1) {
-      console.log('⚠️ WARNING: Unlocked unit ID not found in units array - unlocking ALL units')
-      return true
+      return String(units?.[0]?._id) === String(unitId)
     }
-    
-    // If unlockedUnit ID matches a unit, unlock units up to and including that unit + one more
-    const currentUnitIndex = units?.findIndex(unit => String(unit._id) === String(unitId))
-    const maxUnlockedIndex = unlockedUnitIndex + 1 // +1 for one unit after
-    console.log(`Current unit index: ${currentUnitIndex}, Max unlocked index: ${maxUnlockedIndex}`)
-    
-    const isUnlocked = currentUnitIndex !== -1 && currentUnitIndex <= maxUnlockedIndex
-    console.log(`Result: Unit ${unitId} is ${isUnlocked ? 'UNLOCKED' : 'LOCKED'}`)
-    
-    return isUnlocked
+
+    const currentUnitIndex = units?.findIndex((unit) => String(unit._id) === String(unitId))
+    const maxUnlockedIndex = unlockedUnitIndex + 1
+
+    return currentUnitIndex !== -1 && currentUnitIndex <= maxUnlockedIndex
   }
 
-  // Helper function to determine if a unit is completed
   const isUnitCompleted = (unitId) => {
-    console.log(`\n--- Checking if unit ${unitId} is completed ---`)
-    console.log('Completed units array:', completedUnits)
-    console.log('Completed units array length:', completedUnits.length)
-    
-    // Check if the unit ID is in the completed units array
-    // Convert both to strings for comparison since IDs might be ObjectId or string
-    const isCompleted = completedUnits.some(completedUnitId => {
-      const match = String(completedUnitId) === String(unitId)
-      if (match) {
-        console.log(`✅ Match found: ${String(completedUnitId)} === ${String(unitId)}`)
-      }
-      return match
-    })
-    
-    console.log(`Result: Unit ${unitId} is ${isCompleted ? 'COMPLETED' : 'NOT COMPLETED'}`)
-    
-    return isCompleted
+    return completedUnits.some(
+      (completedUnitId) => String(completedUnitId) === String(unitId)
+    )
   }
 
   useEffect(() => {
@@ -212,10 +194,8 @@ const Units = () => {
             ))
           ) : (
             units?.map((unit) => {
-              console.log(`\n🔍 Processing Unit: ${unit.name} (ID: ${unit._id})`)
               const isUnlocked = isUnitUnlocked(unit._id)
               const isCompleted = isUnitCompleted(unit._id)
-              console.log(`📊 Final Status for Unit ${unit.name}: Unlocked=${isUnlocked}, Completed=${isCompleted}`)
               return (
                 <ListItem
                   key={unit._id}
@@ -423,10 +403,8 @@ const Units = () => {
             ))
           ) : (
             units?.map((unit) => {
-              console.log(`\n🔍 Processing Unit: ${unit.name} (ID: ${unit._id})`)
               const isUnlocked = isUnitUnlocked(unit._id)
               const isCompleted = isUnitCompleted(unit._id)
-              console.log(`📊 Final Status for Unit ${unit.name}: Unlocked=${isUnlocked}, Completed=${isCompleted}`)
               return (
                 <ListItem
                   key={unit._id}
