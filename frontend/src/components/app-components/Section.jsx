@@ -21,7 +21,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useSectionProgress } from '../../hooks/useSectionProgress'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useSections, useUnlockedSections } from '../../hooks/useSections'
-import { setCurrentUnit, setLastSectionInfo, clearLastSectionInfo } from '../../redux/slices/courseSlice'
+import { setCurrentUnit } from '../../redux/slices/courseSlice'
 
 import Grid from '@mui/material/Grid2'
 import Calendar from '../calendar/Calendar'
@@ -71,8 +71,6 @@ const Section = () => {
         name: unitDetails.name
       }))
     }
-    
-    dispatch(clearLastSectionInfo())
   }, [unitDetails, unitId, dispatch])
 
   useEffect(() => {
@@ -109,29 +107,28 @@ const Section = () => {
   }
 
   const isSectionUnlocked = (sectionId) => {
-    if (user?.isDemo) return true // Always return true for demo accounts
-    
-    // If no unlockedSection exists, only unlock first section of first unit
+    if (user?.isDemo) return true
+
+    // No watermark yet: only the first section of this unit (unit access is gated separately)
     if (!unlockStatus?.unlockedSection) {
-      // Check if this is the first section of the first unit
-      const isFirstUnit = sections?.[0]?.unitId === unitId
-      const isFirstSection = sections?.[0]?._id === sectionId
-      return isFirstUnit && isFirstSection
+      return sections?.[0] && String(sections[0]._id) === String(sectionId)
     }
-    
-    // If unlockedSection exists (even if unlockedUnit is null), use it to determine section unlock status
-    // Find the section that matches the unlockedSection ID
-    const unlockedSectionIndex = sections?.findIndex(section => section._id === unlockStatus.unlockedSection)
-    
-    // If unlockedSection ID doesn't match any section in current unit, unlock all sections
+
+    const unlockedSectionIndex = sections?.findIndex(
+      (section) => String(section._id) === String(unlockStatus.unlockedSection)
+    )
+
+    // Watermark is from another unit (e.g. just finished previous unit):
+    // only unlock the first section of this newly available unit
     if (unlockedSectionIndex === -1) {
-      return true
+      return sections?.[0] && String(sections[0]._id) === String(sectionId)
     }
-    
-    // If unlockedSection ID matches a section, unlock sections up to and including that section + one more
-    const currentSectionIndex = sections?.findIndex(section => section._id === sectionId)
-    const maxUnlockedIndex = unlockedSectionIndex + 1 // +1 for one section after
-    
+
+    const currentSectionIndex = sections?.findIndex(
+      (section) => String(section._id) === String(sectionId)
+    )
+    const maxUnlockedIndex = unlockedSectionIndex + 1
+
     return currentSectionIndex !== -1 && currentSectionIndex <= maxUnlockedIndex
   }
 
@@ -150,26 +147,6 @@ const Section = () => {
       return
     }
     if (isUnlocked) {
-      // Check if this is the last section in the array
-      const isLastSection = sections && sections.length > 0 && 
-                            section._id === sections[sections.length - 1]._id;
-      
-      // Store in Redux for persistence (survives page refresh)
-      if (isLastSection) {
-        dispatch(setLastSectionInfo({
-          unitId: unitId,
-          sectionId: section._id,
-          isLastSection: true
-        }))
-        console.log('✅ Last section detected - Stored in Redux:', {
-          unitId,
-          sectionId: section._id
-        })
-      } else {
-        // Clear Redux if not last section
-        dispatch(clearLastSectionInfo())
-      }
-      
       navigate(
         `/units/${courseId}/section/${unitId}/learn/${section._id}`
       )

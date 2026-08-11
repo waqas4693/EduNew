@@ -9,43 +9,33 @@ import {
   LinearProgress,
   CircularProgress
 } from '@mui/material'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useResources } from '../../hooks/useResources'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useSignedUrls } from '../../hooks/useSignedUrls'
-import { useSelector, useDispatch } from 'react-redux'
-import { clearLastSectionInfo } from '../../redux/slices/courseSlice'
 import { ChevronLeft, ChevronRight, OpenInNew } from '@mui/icons-material'
 import { useGetStudentProgress, useUpdateProgress } from '../../hooks/useProgress'
 import { postData } from '../../api/api'
+import { useQueryClient } from '@tanstack/react-query'
 
 const LearnerFrame = () => {
   const navigate = useNavigate()
-  const dispatch = useDispatch()
+  const queryClient = useQueryClient()
   const updateProgressMutation = useUpdateProgress()
 
   const { user } = useAuth()
   const { courseId, unitId, sectionId } = useParams()
-  
-  // Read isLastSection flag from Redux (persists across page refresh)
-  const { lastSectionInfo } = useSelector(state => state.course)
-  const isLastSection = lastSectionInfo?.unitId === unitId && 
-                        lastSectionInfo?.sectionId === sectionId && 
-                        lastSectionInfo?.isLastSection === true
-
-  // Clear Redux state if sectionId doesn't match (user navigated to different section)
-  useEffect(() => {
-    if (lastSectionInfo?.sectionId && lastSectionInfo.sectionId !== sectionId) {
-      dispatch(clearLastSectionInfo())
-    }
-  }, [sectionId, lastSectionInfo?.sectionId, dispatch])
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
   const [isCompleting, setIsCompleting] = useState(false)
   const [showSectionCompletion, setShowSectionCompletion] = useState(false)
   const [recordedViews, setRecordedViews] = useState(new Set())
+  const [unlockError, setUnlockError] = useState(null)
+  const [unlockSucceeded, setUnlockSucceeded] = useState(false)
+
+  const unlockInFlightRef = useRef(false)
 
   const {
     resources,
@@ -55,7 +45,6 @@ const LearnerFrame = () => {
     hasMore
   } = useResources(sectionId, currentPage)
 
-  // Only use useSignedUrls when we have a current resource
   const currentResource = resources[currentIndex]
   const { signedUrls, isLoading: urlsLoading, refreshExpiredUrls } = useSignedUrls(
     currentResource || { content: {} }
@@ -67,15 +56,122 @@ const LearnerFrame = () => {
     refetch: refetchProgress
   } = useGetStudentProgress(user?.studentId, courseId, unitId, sectionId)
 
+  const isAtLastLoadedResource =
+    resources.length > 0 && currentIndex === resources.length - 1 && !hasMore
+
   const isResourceViewed = (resourceId) => {
     if (!progress?.viewedResources) return false
-    return progress.viewedResources.some(vr => vr.resourceId === resourceId)
+    return progress.viewedResources.some(
+      (vr) => String(vr.resourceId) === String(resourceId)
+    )
   }
 
   const isMcqCompleted = (resourceId) => {
     if (!progress?.mcqProgress) return false
-    return progress.mcqProgress.some(mcq => mcq.resourceId === resourceId)
+    return progress.mcqProgress.some(
+      (mcq) => String(mcq.resourceId) === String(resourceId) && mcq.completed === true
+    )
   }
+
+  const areAllLoadedResourcesComplete = useCallback((progressSnapshot = progress) => {
+    if (!resources.length || hasMore || !progressSnapshot) return false
+
+    return resources.every((resource) => {
+      const resourceId = resource._id
+      if (resource.resourceType === 'MCQ') {
+        return (progressSnapshot.mcqProgress || []).some(
+          (mcq) => String(mcq.resourceId) === String(resourceId) && mcq.completed === true
+        ) || (progressSnapshot.viewedResources || []).some(
+          (vr) => String(vr.resourceId) === String(resourceId)
+        )
+      }
+
+      return (progressSnapshot.viewedResources || []).some(
+        (vr) => String(vr.resourceId) === String(resourceId)
+      )
+    })
+  }, [resources, hasMore, progress])
+
+  const invalidateUnlockQueries = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['unlockStatus', user?.studentId, courseId] }),
+      queryClient.invalidateQueries({
+        queryKey: ['unlockedSections', user?.studentId, courseId]
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ['completedUnits', user?.studentId, courseId]
+      })
+    ])
+  }, [queryClient, user?.studentId, courseId])
+
+  const unlockSection = useCallback(async ({ navigateAfter = false } = {}) => {
+    if (!user?.studentId || unlockSucceeded) {
+      if (navigateAfter) {
+        navigate(`/units/${courseId}/section/${unitId}`, {
+          state: { refresh: true, completedSectionId: sectionId }
+        })
+      }
+      return true
+    }
+
+    if (unlockInFlightRef.current) {
+      return false
+    }
+
+    unlockInFlightRef.current = true
+    setUnlockError(null)
+
+    try {
+      const response = await postData('course-unlock/check-completion', {
+        studentId: user.studentId,
+        courseId,
+        unitId,
+        sectionId
+      })
+
+      if (response.status === 200 && response.data?.success) {
+        setUnlockSucceeded(true)
+        await invalidateUnlockQueries()
+
+        if (navigateAfter) {
+          navigate(`/units/${courseId}/section/${unitId}`, {
+            state: { refresh: true, completedSectionId: sectionId }
+          })
+        }
+        return true
+      }
+
+      setUnlockError(response.data?.message || 'Unable to unlock the next section')
+      return false
+    } catch (error) {
+      const message =
+        error?.data?.message ||
+        error?.response?.data?.message ||
+        error?.message ||
+        'Unable to unlock the next section'
+      setUnlockError(message)
+      console.error('Error completing section:', error)
+      return false
+    } finally {
+      unlockInFlightRef.current = false
+    }
+  }, [
+    user?.studentId,
+    courseId,
+    unitId,
+    sectionId,
+    navigate,
+    invalidateUnlockQueries,
+    unlockSucceeded
+  ])
+
+  const maybeShowCompletionAndUnlock = useCallback(async (progressSnapshot) => {
+    if (!isAtLastLoadedResource) return
+    if (!areAllLoadedResourcesComplete(progressSnapshot)) return
+
+    setShowSectionCompletion(true)
+    await unlockSection({ navigateAfter: false })
+  }, [isAtLastLoadedResource, areAllLoadedResourcesComplete, unlockSection])
 
   useEffect(() => {
     if (!currentResource || !user?.studentId || progressLoading) return
@@ -85,42 +181,58 @@ const LearnerFrame = () => {
     const isViewed = isResourceViewed(resourceId)
     const alreadyRecorded = recordedViews.has(resourceId)
 
-    // Only record view for non-MCQ resources that haven't been viewed and not already recorded
     if (resourceType !== 'MCQ' && !isViewed && !alreadyRecorded) {
-      setRecordedViews(prev => new Set(prev).add(resourceId))
+      setRecordedViews((prev) => new Set(prev).add(resourceId))
 
-      updateProgressMutation.mutate({
-        resourceId,
-        resourceNumber: currentResource.number,
-        studentId: user.studentId,
-        courseId,
-        unitId,
-        sectionId
-      }, {
-        onSuccess: () => {
-          refetchProgress()
-          if (currentIndex === resources.length - 1) {
-            setShowSectionCompletion(true)
-          }
+      updateProgressMutation.mutate(
+        {
+          resourceId,
+          resourceNumber: currentResource.number,
+          studentId: user.studentId,
+          courseId,
+          unitId,
+          sectionId
         },
-        onError: (error) => {
-          console.error('Error recording view:', error)
-          // Remove from recordedViews on error so it can be retried
-          setRecordedViews(prev => {
-            const newSet = new Set(prev)
-            newSet.delete(resourceId)
-            return newSet
-          })
+        {
+          onSuccess: async (data) => {
+            await refetchProgress()
+            await maybeShowCompletionAndUnlock(data?.progress)
+          },
+          onError: (error) => {
+            console.error('Error recording view:', error)
+            setRecordedViews((prev) => {
+              const next = new Set(prev)
+              next.delete(resourceId)
+              return next
+            })
+          }
         }
-      })
+      )
+    } else if (
+      resourceType !== 'MCQ' &&
+      isViewed &&
+      isAtLastLoadedResource &&
+      !showSectionCompletion
+    ) {
+      maybeShowCompletionAndUnlock(progress)
     }
-  }, [currentResource?._id, progress?.viewedResources, progressLoading])
+  }, [
+    currentResource?._id,
+    progress?.viewedResources,
+    progressLoading,
+    isAtLastLoadedResource,
+    showSectionCompletion
+  ])
 
   useEffect(() => {
-    if (!progress?.lastAccessedResource || currentIndex !== 0 || !resources.length || progressLoading) return
+    if (!progress?.lastAccessedResource || currentIndex !== 0 || !resources.length || progressLoading) {
+      return
+    }
 
     const lastAccessedResourceId = progress.lastAccessedResource
-    const resourceIndex = resources.findIndex(resource => resource._id === lastAccessedResourceId)
+    const resourceIndex = resources.findIndex(
+      (resource) => String(resource._id) === String(lastAccessedResourceId)
+    )
 
     if (resourceIndex !== -1 && resourceIndex !== currentIndex) {
       setCurrentIndex(resourceIndex)
@@ -130,45 +242,55 @@ const LearnerFrame = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       refreshExpiredUrls()
-    }, 45 * 60 * 1000) // 45 minutes
+    }, 45 * 60 * 1000)
 
     return () => {
       clearInterval(interval)
     }
   }, [refreshExpiredUrls])
 
+  // Reset unlock flags when switching sections
+  useEffect(() => {
+    unlockInFlightRef.current = false
+    setUnlockSucceeded(false)
+    setShowSectionCompletion(false)
+    setUnlockError(null)
+    setRecordedViews(new Set())
+    setCurrentIndex(0)
+    setCurrentPage(1)
+  }, [sectionId])
+
   const handleMcqCompleted = async (resourceId, isCorrect, attempts) => {
     if (!user?.studentId || !isCorrect) return
 
-    const isViewed = isResourceViewed(resourceId)
+    const alreadyCompleted = isMcqCompleted(resourceId)
 
-    if (!isViewed) {
-      updateProgressMutation.mutate({
-        resourceId,
-        resourceNumber: currentResource.number,
-        studentId: user.studentId,
-        courseId,
-        unitId,
-        sectionId,
-        mcqData: {
-          completed: isCorrect,
-          attempts
-        }
-      }, {
-        onSuccess: () => {
-          refetchProgress()
-          if (currentIndex === resources.length - 1) {
-            setShowSectionCompletion(true)
+    if (!alreadyCompleted) {
+      updateProgressMutation.mutate(
+        {
+          resourceId,
+          resourceNumber: currentResource.number,
+          studentId: user.studentId,
+          courseId,
+          unitId,
+          sectionId,
+          mcqData: {
+            completed: isCorrect,
+            attempts
           }
         },
-        onError: (error) => {
-          console.error('Error recording MCQ progress:', error)
+        {
+          onSuccess: async (data) => {
+            await refetchProgress()
+            await maybeShowCompletionAndUnlock(data?.progress)
+          },
+          onError: (error) => {
+            console.error('Error recording MCQ progress:', error)
+          }
         }
-      })
-    } else {
-      if (currentIndex === resources.length - 1) {
-        setShowSectionCompletion(true)
-      }
+      )
+    } else if (isAtLastLoadedResource) {
+      await maybeShowCompletionAndUnlock(progress)
     }
   }
 
@@ -176,73 +298,68 @@ const LearnerFrame = () => {
     if (currentIndex < resources.length - 1) {
       const nextIndex = currentIndex + 1
 
-      // Prefetch next page if needed (do this before navigation)
       if (nextIndex >= resources.length - 5 && hasMore) {
         try {
-          setCurrentPage(prev => prev + 1)
-          // Add timeout to prevent infinite loading
+          setCurrentPage((prev) => prev + 1)
           const prefetchPromise = prefetchNextPage()
           const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Prefetch timeout')), 5000)
           )
-
           await Promise.race([prefetchPromise, timeoutPromise])
         } catch (error) {
           console.error('Error prefetching next page:', error)
-          // Continue with navigation even if prefetch fails
         }
       }
 
       setCurrentIndex(nextIndex)
-    } else {
-      // We're at the last resource - show completion component instead of navigating
-      setShowSectionCompletion(true)
+      return
     }
+
+    if (hasMore) {
+      try {
+        setCurrentPage((prev) => prev + 1)
+        await prefetchNextPage()
+        setCurrentIndex((prev) => prev + 1)
+      } catch (error) {
+        console.error('Error loading next page of resources:', error)
+      }
+      return
+    }
+
+    await maybeShowCompletionAndUnlock(progress)
   }
 
   const handlePrevious = () => {
     if (currentIndex > 0) {
-      const prevIndex = currentIndex - 1
-      setCurrentIndex(prevIndex)
+      setCurrentIndex((prev) => prev - 1)
     }
   }
 
   const handleSectionCompletion = async () => {
     setIsCompleting(true)
     try {
-      // Call the unlock API to update progress
-      const response = await postData('course-unlock/check-completion', {
-        studentId: user.studentId,
-        courseId,
-        unitId,
-        sectionId,
-        isLastSection: isLastSection  // Pass flag to backend for verification
-      })
-      if (response.status === 200) {
-        console.log('✅ Unlock status updated successfully')
-        if (isLastSection) {
-          console.log('✅ Last section flag sent - Backend will verify and mark unit as completed')
-          // Clear Redux state after successful completion
-          dispatch(clearLastSectionInfo())
-        }
-
-        // Navigate back to section view
-        navigate(`/units/${courseId}/section/${unitId}`, {
-          state: {
-            refresh: true,
-            completedSectionId: sectionId
-          }
-        })
-      }
-    } catch (error) {
-      console.error('Error completing section:', error)
+      await unlockSection({ navigateAfter: true })
     } finally {
       setIsCompleting(false)
     }
   }
 
-  if (resourcesLoading || urlsLoading || progressLoading || !resources.length) {
+  const handleBackToSection = async () => {
+    // If materials look complete, unlock before leaving so the next section opens
+    if (showSectionCompletion || unlockSucceeded || areAllLoadedResourcesComplete()) {
+      setIsCompleting(true)
+      try {
+        const unlocked = await unlockSection({ navigateAfter: true })
+        if (unlocked) return
+      } finally {
+        setIsCompleting(false)
+      }
+    }
 
+    navigate(`/units/${courseId}/section/${unitId}`)
+  }
+
+  if (resourcesLoading || urlsLoading || progressLoading || !resources.length) {
     return (
       <Paper
         elevation={5}
@@ -315,13 +432,14 @@ const LearnerFrame = () => {
               variant='body2'
               sx={{
                 color: 'primary.main',
-                cursor: 'pointer',
+                cursor: isCompleting ? 'default' : 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
-                width: 'fit-content'
+                width: 'fit-content',
+                opacity: isCompleting ? 0.6 : 1
               }}
               onClick={() => {
-                navigate(`/units/${courseId}/section/${unitId}`)
+                if (!isCompleting) handleBackToSection()
               }}
             >
               <ChevronLeft sx={{ color: 'primary.main' }} /> Back To Section
@@ -356,7 +474,6 @@ const LearnerFrame = () => {
               </Box>
 
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                {/* External Links */}
                 {currentResource.content?.externalLinks?.filter(link => link.name && link.url).map((link, index) => {
                   return (
                     <Link
@@ -382,7 +499,6 @@ const LearnerFrame = () => {
                   )
                 })}
 
-                {/* Navigation Buttons */}
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Button
                     variant='contained'
@@ -440,9 +556,11 @@ const LearnerFrame = () => {
                 signedUrl={signedUrls[currentResource.content?.fileName]}
                 signedUrls={signedUrls}
                 onMcqCompleted={handleMcqCompleted}
-                mcqProgress={progress?.mcqProgress?.find(mcq => mcq.resourceId === currentResource._id)}
+                mcqProgress={progress?.mcqProgress?.find(
+                  (mcq) => String(mcq.resourceId) === String(currentResource._id)
+                )}
                 onNext={handleNext}
-                isLastResource={currentIndex === resources.length - 1}
+                isLastResource={isAtLastLoadedResource}
                 studentId={user?.studentId}
                 courseId={courseId}
                 unitId={unitId}
@@ -461,9 +579,15 @@ const LearnerFrame = () => {
                 <Typography variant="h5" sx={{ mb: 2, color: 'text.primary' }}>
                   🎉 Congratulations!
                 </Typography>
-                <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
+                <Typography variant="body1" sx={{ mb: 2, color: 'text.secondary' }}>
                   You have completed all resources in this section.
                 </Typography>
+
+                {unlockError && (
+                  <Typography variant="body2" color="error" sx={{ mb: 2 }}>
+                    {unlockError}. Please try again.
+                  </Typography>
+                )}
 
                 <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
                   <Button
@@ -496,6 +620,8 @@ const LearnerFrame = () => {
                         <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
                         Completing...
                       </>
+                    ) : unlockSucceeded ? (
+                      'Continue'
                     ) : (
                       'Complete Section'
                     )}

@@ -1,4 +1,5 @@
 import Section from "../models/section.js";
+import Unit from "../models/unit.js";
 import UnitStats from "../models/unitStats.js";
 import CourseStats from "../models/courseStats.js";
 import CourseUnlock from "../models/courseUnlock.js";
@@ -8,6 +9,11 @@ import CompletedSections from "../models/completedSections.js";
 
 import { handleError } from "../utils/errorHandler.js";
 import { calculateAndUpdateUnitProgress, recalculateAllUnitProgress } from "../utils/unitProgressCalculator.js";
+import {
+  getSectionPosition,
+  isAtOrBeyond,
+  isSectionFullyCompleted,
+} from "../utils/sectionCompletion.js";
 
 export const getUnlockedUnitAndSection = async (req, res) => {
   try {
@@ -30,57 +36,137 @@ export const getUnlockedUnitAndSection = async (req, res) => {
 
 export const setUnlockedUnitAndSection = async (req, res) => {
   try {
-    const { studentId, courseId, unitId, sectionId, isLastSection } = req.body;
+    const { studentId, courseId, unitId, sectionId } = req.body;
 
-    console.log("Request Landing");
-    console.log("studentId", studentId);
-    console.log("courseId", courseId);
-    console.log("unitId", unitId);
-    console.log("sectionId", sectionId);
-    console.log("isLastSection", isLastSection);
+    if (!studentId || !courseId || !unitId || !sectionId) {
+      return res.status(400).json({
+        success: false,
+        message: "studentId, courseId, unitId, and sectionId are required",
+      });
+    }
 
-    let unlockStatus = await CourseUnlock.findOne({
+    const completedPosition = await getSectionPosition(sectionId);
+    if (!completedPosition) {
+      return res.status(404).json({
+        success: false,
+        message: "Section not found or inactive",
+      });
+    }
+
+    if (String(completedPosition.unitId) !== String(unitId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Section does not belong to the provided unit",
+      });
+    }
+
+    if (String(completedPosition.courseId) !== String(courseId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Section does not belong to the provided course",
+      });
+    }
+
+    const sectionComplete = await isSectionFullyCompleted({
       studentId,
       courseId,
+      unitId,
+      sectionId,
     });
 
+    if (!sectionComplete) {
+      return res.status(400).json({
+        success: false,
+        message: "Section is not fully completed yet",
+      });
+    }
+
+    // Always record section completion (idempotent)
+    try {
+      await CompletedSections.create({ studentId, courseId, unitId, sectionId });
+    } catch (error) {
+      if (error.code !== 11000) {
+        throw error;
+      }
+    }
+
+    try {
+      await calculateAndUpdateUnitProgress(studentId, courseId, unitId);
+    } catch (error) {
+      console.error("Error updating unit progress after section completion:", error);
+    }
+
+    // Server-side last-section check (do not trust the client)
+    const lastSection = await Section.findOne({
+      unitId,
+      status: 1,
+    })
+      .sort({ number: -1 })
+      .limit(1);
+
+    const isLastSection =
+      lastSection && String(lastSection._id) === String(sectionId);
+
+    if (isLastSection) {
+      try {
+        await CompletedUnits.findOneAndUpdate(
+          { studentId, courseId, unitId },
+          { status: 1 },
+          { upsert: true, new: true }
+        );
+
+        try {
+          await calculateAndUpdateUnitProgress(studentId, courseId, unitId);
+        } catch (error) {
+          console.error("Error updating unit progress after unit completion:", error);
+        }
+      } catch (error) {
+        console.error("Error marking unit as completed:", error);
+      }
+    }
+
+    let unlockStatus = await CourseUnlock.findOne({ studentId, courseId });
+    const currentPosition = unlockStatus?.unlockedSection
+      ? await getSectionPosition(unlockStatus.unlockedSection)
+      : null;
+
+    // Monotonic watermark: never move unlock pointer backward
+    const shouldAdvanceSection = isAtOrBeyond(completedPosition, currentPosition);
+
+    const updateData = {
+      lastUpdated: Date.now(),
+    };
+
+    if (shouldAdvanceSection) {
+      updateData.unlockedSection = sectionId;
+    }
+
+    if (isLastSection) {
+      const currentUnit = await Unit.findById(unitId).select("number");
+      let currentUnlockedUnitNumber = null;
+
+      if (unlockStatus?.unlockedUnit) {
+        const unlockedUnitDoc = await Unit.findById(unlockStatus.unlockedUnit).select("number");
+        currentUnlockedUnitNumber = unlockedUnitDoc?.number ?? null;
+      }
+
+      if (
+        currentUnlockedUnitNumber === null ||
+        (currentUnit && currentUnit.number >= currentUnlockedUnitNumber)
+      ) {
+        updateData.unlockedUnit = unitId;
+      }
+    }
+
     if (!unlockStatus) {
-      const createData = {
+      unlockStatus = await CourseUnlock.create({
         studentId,
         courseId,
-        unlockedSection: sectionId,
-      };
-      
-      // Only set unlockedUnit if this is the last section
-      if (isLastSection && unitId) {
-        const lastSection = await Section.findOne({
-          unitId,
-          status: 1
-        }).sort({ number: -1 }).limit(1);
-
-        if (lastSection && lastSection._id.toString() === sectionId) {
-          createData.unlockedUnit = unitId;
-        }
-      }
-      
-      unlockStatus = await CourseUnlock.create(createData);
-    } else {
-      const updateData = {
-        unlockedSection: sectionId,
-        lastUpdated: Date.now(),
-      };
-      
-      if (isLastSection && unitId) {
-        const lastSection = await Section.findOne({
-          unitId,
-          status: 1
-        }).sort({ number: -1 }).limit(1);
-
-        if (lastSection && lastSection._id.toString() === sectionId) {
-          updateData.unlockedUnit = unitId;
-        }
-      }
-      
+        unlockedSection: updateData.unlockedSection || sectionId,
+        ...(updateData.unlockedUnit ? { unlockedUnit: updateData.unlockedUnit } : {}),
+        lastUpdated: updateData.lastUpdated,
+      });
+    } else if (Object.keys(updateData).length > 1 || shouldAdvanceSection || isLastSection) {
       unlockStatus = await CourseUnlock.findOneAndUpdate(
         { studentId, courseId },
         updateData,
@@ -88,61 +174,12 @@ export const setUnlockedUnitAndSection = async (req, res) => {
       );
     }
 
-    try {
-      await CompletedSections.create({ studentId, courseId, unitId, sectionId });
-      
-      // Update unit progress percentage after section completion
-      try {
-        await calculateAndUpdateUnitProgress(studentId, courseId, unitId);
-      } catch (error) {
-        console.error('Error updating unit progress after section completion:', error);
-        // Don't throw - section completion is more important
-      }
-    } catch (error) {
-      if (error.code !== 11000) {
-        throw error;
-      }
-    }
-
-    if (isLastSection && unitId) {
-      const lastSection = await Section.findOne({
-        unitId,
-        status: 1
-      }).sort({ number: -1 }).limit(1);
-
-      if (lastSection && lastSection._id.toString() === sectionId) {
-        try {
-          await CompletedUnits.findOneAndUpdate(
-            { studentId, courseId, unitId },
-            { status: 1 },
-            { upsert: true, new: true }
-          );
-          console.log(`Unit ${unitId} marked as completed (last section completed)`);
-          
-          // Update unit progress percentage after unit completion
-          // Note: This will be 100% since all sections are completed
-          try {
-            await calculateAndUpdateUnitProgress(studentId, courseId, unitId);
-          } catch (error) {
-            console.error('Error updating unit progress after unit completion:', error);
-            // Don't throw - unit completion is more important
-          }
-        } catch (error) {
-          console.error('Error marking unit as completed:', error);
-        }
-      } else {
-        console.log(`Frontend indicated last section, but backend verification failed`);
-      }
-    }
-
-    console.log("Response Landing");
-    console.log("unlockedUnit", unlockStatus.unlockedUnit);
-    console.log("unlockedSection", unlockStatus.unlockedSection);
-
     res.status(200).json({
       success: true,
       unlockedUnit: unlockStatus.unlockedUnit,
       unlockedSection: unlockStatus.unlockedSection,
+      advanced: shouldAdvanceSection,
+      isLastSection: Boolean(isLastSection),
     });
   } catch (error) {
     handleError(res, error);
@@ -161,7 +198,7 @@ export const getCompletedUnits = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      completedUnits: completedUnits.map(cu => cu.unitId.toString()),
+      completedUnits: completedUnits.map((cu) => cu.unitId.toString()),
     });
   } catch (error) {
     handleError(res, error);
@@ -175,7 +212,7 @@ export const recalculateProgress = async (req, res) => {
     try {
       await recalculateAllUnitProgress(studentId, courseId);
     } catch (error) {
-      console.error('Error recalculating unit progress:', error);
+      console.error("Error recalculating unit progress:", error);
     }
 
     const inactiveCompletedUnits = await CompletedUnits.find({
@@ -188,7 +225,7 @@ export const recalculateProgress = async (req, res) => {
       const { unitId } = completedUnit;
 
       const unitStats = await UnitStats.findOne({ unitId });
-      
+
       const totalSections = unitStats.totalSections;
 
       const completedSectionsCount = await CompletedSections.countDocuments({
@@ -232,7 +269,7 @@ export const recalculateProgress = async (req, res) => {
     );
 
     res.status(200).json({
-      success: true
+      success: true,
     });
   } catch (error) {
     handleError(res, error);

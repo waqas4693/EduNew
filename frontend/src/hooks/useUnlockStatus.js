@@ -11,7 +11,7 @@ export const useUnlockStatus = (studentId, courseId) => {
     queryKey: ['unlockStatus', studentId, courseId],
     queryFn: () => fetchUnlockStatus({ studentId, courseId }),
     enabled: !!studentId && !!courseId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 30 * 60 * 1000 // 30 minutes
+    staleTime: 0,
+    cacheTime: 30 * 60 * 1000
   })
 } 

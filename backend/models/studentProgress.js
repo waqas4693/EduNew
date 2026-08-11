@@ -91,22 +91,36 @@ const studentProgressSchema = new mongoose.Schema({
   methods: {
     // Method to update progress percentages
     async updateProgressPercentages() {
-      const SectionStats = mongoose.model('SectionStats')
-      
-      // Get section stats
-      const sectionStats = await SectionStats.findOne({ sectionId: this.sectionId })
-      if (!sectionStats) return
+      const Resource = mongoose.model('Resource')
 
-      // Update resource progress percentage based on viewed resources count
-      const viewedResourcesCount = this.viewedResources.length
-      this.resourceProgressPercentage = sectionStats.totalResources > 0
-        ? Math.round((viewedResourcesCount / sectionStats.totalResources) * 100)
+      // Prefer live active resources over SectionStats so deletes cannot freeze progress below 100%
+      const activeResources = await Resource.find({
+        sectionId: this.sectionId,
+        status: 1
+      }).select('_id resourceType')
+
+      const totalResources = activeResources.length
+      const totalMcqs = activeResources.filter((r) => r.resourceType === 'MCQ').length
+      const activeIds = new Set(activeResources.map((r) => String(r._id)))
+
+      const uniqueViewedCount = new Set(
+        (this.viewedResources || [])
+          .map((item) => String(item.resourceId))
+          .filter((id) => activeIds.has(id))
+      ).size
+
+      this.resourceProgressPercentage = totalResources > 0
+        ? Math.min(Math.round((uniqueViewedCount / totalResources) * 100), 100)
         : 0
 
-      // Update MCQ progress percentage based on completed MCQs
-      const completedMcqs = this.mcqProgress.length
-      this.mcqProgressPercentage = sectionStats.totalMcqs > 0
-        ? Math.min(Math.round((completedMcqs / sectionStats.totalMcqs) * 100), 100)
+      const uniqueCompletedMcqs = new Set(
+        (this.mcqProgress || [])
+          .filter((item) => item.completed === true && activeIds.has(String(item.resourceId)))
+          .map((item) => String(item.resourceId))
+      ).size
+
+      this.mcqProgressPercentage = totalMcqs > 0
+        ? Math.min(Math.round((uniqueCompletedMcqs / totalMcqs) * 100), 100)
         : 0
 
       await this.save()

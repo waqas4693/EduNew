@@ -21,7 +21,7 @@ export const useUnlockedSections = (studentId, courseId, unitId) => {
       const response = await getData(`course-unlock/${studentId}/${courseId}`)
       return response.data
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
     cacheTime: 30 * 60 * 1000,
     enabled: !!studentId && !!courseId && !!unitId
   })

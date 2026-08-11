@@ -816,6 +816,16 @@ export const deleteResource = async (req, res) => {
     )
     console.log('Resource reference removed from section')
 
+    // Keep SectionStats in sync so progress percentages stay accurate
+    const statsDecrement = { totalResources: -1 }
+    if (resource.resourceType === 'MCQ') {
+      statsDecrement.totalMcqs = -1
+    }
+    await SectionStats.findOneAndUpdate(
+      { sectionId: resource.sectionId },
+      { $inc: statsDecrement }
+    )
+
     console.log('=== Delete Resource Completed Successfully ===')
     res.status(200).json({
       success: true,

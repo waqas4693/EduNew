@@ -2,7 +2,6 @@ import User from '../models/user.js'
 import Unit from '../models/unit.js'
 import Course from '../models/course.js'
 import Student from '../models/student.js'
-import Section from '../models/section.js'
 import CourseUnlock from '../models/courseUnlock.js'
 import EmailVerification from '../models/emailVerification.js'
 import ProgressStats from '../models/progressStats.js'
@@ -71,21 +70,18 @@ export const newStudent = async (req, res) => {
     // Send verification email
     const emailSent = await sendVerificationEmail(email, name, verificationToken, password)
 
-    // Create initial unlock status for the first unit and section
-    const firstUnit = await Unit.findOne({ courseId }).sort({ number: 1 })
-    if (firstUnit) {
-      const firstSection = await Section.findOne({ unitId: firstUnit._id }).sort({ number: 1 })
-      if (firstSection) {
-        await CourseUnlock.create({
+    // Create initial unlock record (watermark starts empty → first section unlocks in UI)
+    await CourseUnlock.findOneAndUpdate(
+      { studentId: student._id, courseId },
+      {
+        $setOnInsert: {
           studentId: student._id,
           courseId,
-          unlockedUnits: [firstUnit._id],
-          unlockedSections: [firstSection._id]
-        })
-      }
-    }
-
-    console.log('First Unit:', firstUnit)
+          lastUpdated: Date.now()
+        }
+      },
+      { upsert: true, new: true }
+    )
 
     res.status(201).json({
       success: true,
@@ -319,19 +315,18 @@ export const assignCourse = async (req, res) => {
 
     await student.save()
 
-    // Create initial unlock status for the first unit and section
-    const firstUnit = await Unit.findOne({ courseId }).sort({ number: 1 })
-    if (firstUnit) {
-      const firstSection = await Section.findOne({ unitId: firstUnit._id }).sort({ number: 1 })
-      if (firstSection) {
-        await CourseUnlock.create({
+    // Create initial unlock record (watermark starts empty → first section unlocks in UI)
+    await CourseUnlock.findOneAndUpdate(
+      { studentId: student._id, courseId },
+      {
+        $setOnInsert: {
           studentId: student._id,
           courseId,
-          unlockedUnits: [firstUnit._id],
-          unlockedSections: [firstSection._id]
-        })
-      }
-    }
+          lastUpdated: Date.now()
+        }
+      },
+      { upsert: true, new: true }
+    )
 
     res.status(200).json({
       message: 'Course assigned successfully',

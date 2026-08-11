@@ -29,7 +29,7 @@ export const useSectionProgress = (studentId, courseId, unitId, sectionIds) => {
             const response = await getData(`student-progress/${studentId}/${courseId}/${unitId}/${sectionId}`)
             return {
               sectionId,
-              progress: response.data?.data || null,
+              progress: response.data?.progress || null,
               error: null
             }
           } catch (err) {

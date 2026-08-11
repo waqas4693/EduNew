@@ -11,8 +11,8 @@ export const useCompletedUnits = (studentId, courseId) => {
     queryKey: ['completedUnits', studentId, courseId],
     queryFn: () => fetchCompletedUnits({ studentId, courseId }),
     enabled: !!studentId && !!courseId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 30 * 60 * 1000 // 30 minutes
+    staleTime: 0,
+    cacheTime: 30 * 60 * 1000
   })
 }
 
