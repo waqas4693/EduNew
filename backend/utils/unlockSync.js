@@ -5,8 +5,79 @@ import Unit from '../models/unit.js'
 import CourseUnlock from '../models/courseUnlock.js'
 import CompletedSections from '../models/completedSections.js'
 import CompletedUnits from '../models/completedUnits.js'
+import Student from '../models/student.js'
 import { calculateAndUpdateUnitProgress } from './unitProgressCalculator.js'
 import { isSectionFullyCompleted } from './sectionCompletion.js'
+
+/**
+ * Legacy heal: if an MCQ was recorded as viewed, treat it as completed.
+ * Older clients often wrote viewedResources without mcqProgress.completed=true.
+ */
+export const healLegacyProgressForCourse = async (studentId, courseId) => {
+  const progresses = await StudentProgress.find({ studentId, courseId })
+  let healedProgressDocs = 0
+  let healedMcqFlags = 0
+
+  for (const progress of progresses) {
+    let changed = false
+    const viewedIds = new Set(
+      (progress.viewedResources || []).map((item) => String(item.resourceId))
+    )
+
+    for (let i = 0; i < (progress.mcqProgress || []).length; i++) {
+      const mcq = progress.mcqProgress[i]
+      if (!mcq.completed && viewedIds.has(String(mcq.resourceId))) {
+        progress.mcqProgress[i].completed = true
+        progress.mcqProgress[i].completedAt = mcq.completedAt || new Date()
+        changed = true
+        healedMcqFlags += 1
+      }
+    }
+
+    const mcqResources = await Resource.find({
+      sectionId: progress.sectionId,
+      status: 1,
+      resourceType: 'MCQ'
+    }).select('_id')
+
+    for (const resource of mcqResources) {
+      const resourceId = String(resource._id)
+      if (!viewedIds.has(resourceId)) continue
+
+      const existingIndex = (progress.mcqProgress || []).findIndex(
+        (item) => String(item.resourceId) === resourceId
+      )
+
+      if (existingIndex === -1) {
+        progress.mcqProgress.push({
+          resourceId: resource._id,
+          completed: true,
+          completedAt: new Date(),
+          attempts: 1,
+          lastAttemptAt: new Date()
+        })
+        changed = true
+        healedMcqFlags += 1
+      } else if (!progress.mcqProgress[existingIndex].completed) {
+        progress.mcqProgress[existingIndex].completed = true
+        progress.mcqProgress[existingIndex].completedAt =
+          progress.mcqProgress[existingIndex].completedAt || new Date()
+        changed = true
+        healedMcqFlags += 1
+      }
+    }
+
+    if (changed) {
+      await progress.save()
+      await progress.updateProgressPercentages()
+      healedProgressDocs += 1
+    } else if (progress) {
+      await progress.updateProgressPercentages()
+    }
+  }
+
+  return { healedProgressDocs, healedMcqFlags }
+}
 
 /**
  * Build ordered course structure with live progress / unlock diagnostics.
@@ -216,7 +287,6 @@ export const syncStudentCourseUnlock = async (studentId, courseId) => {
       )
       syncedUnits.push(String(unit._id))
 
-      // Unit watermark advances only when contiguous completion reaches the last section
       const lastSection = sections[sections.length - 1]
       if (
         lastSection &&
@@ -254,7 +324,6 @@ export const syncStudentCourseUnlock = async (studentId, courseId) => {
     unlockUpdate.unlockedUnit = null
   }
 
-  // If nothing contiguous completed, clear section watermark too
   if (!lastContiguousCompletedSectionId) {
     unlockUpdate.unlockedSection = null
   }
@@ -269,8 +338,67 @@ export const syncStudentCourseUnlock = async (studentId, courseId) => {
     unlockedUnit: unlockStatus.unlockedUnit,
     unlockedSection: unlockStatus.unlockedSection,
     syncedSectionCount: syncedSections.length,
-    syncedUnitCount: syncedUnits.filter((id, index, arr) => arr.indexOf(id) === index).length,
+    syncedUnitCount: [...new Set(syncedUnits)].length,
     syncedSections,
     syncedUnits: [...new Set(syncedUnits)]
+  }
+}
+
+/**
+ * Heal legacy progress then sync unlock for one student+course.
+ */
+export const repairStudentCourseUnlock = async (studentId, courseId) => {
+  const healResult = await healLegacyProgressForCourse(studentId, courseId)
+  const syncResult = await syncStudentCourseUnlock(studentId, courseId)
+  return { healResult, syncResult }
+}
+
+/**
+ * One-time style repair across all active students and their active course enrollments.
+ */
+export const repairAllStudentCourseUnlocks = async () => {
+  const students = await Student.find({ status: 1 })
+    .select('_id name courses')
+    .lean()
+
+  const results = []
+  let processed = 0
+  let failed = 0
+
+  for (const student of students) {
+    const activeCourses = (student.courses || []).filter(
+      (course) => course.courseStatus === 1 && course.courseId
+    )
+
+    for (const enrollment of activeCourses) {
+      const courseId = enrollment.courseId
+      try {
+        const repair = await repairStudentCourseUnlock(student._id, courseId)
+        processed += 1
+        results.push({
+          studentId: String(student._id),
+          studentName: student.name,
+          courseId: String(courseId),
+          success: true,
+          ...repair
+        })
+      } catch (error) {
+        failed += 1
+        results.push({
+          studentId: String(student._id),
+          studentName: student.name,
+          courseId: String(courseId),
+          success: false,
+          error: error.message
+        })
+      }
+    }
+  }
+
+  return {
+    studentCount: students.length,
+    processed,
+    failed,
+    results
   }
 }

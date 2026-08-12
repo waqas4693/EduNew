@@ -159,21 +159,56 @@ const Section = () => {
   const isSectionUnlocked = (sectionId) => {
     if (user?.isDemo) return true
 
-    if (!unlockStatus?.unlockedSection) {
+    const section = sections?.find((item) => String(item._id) === String(sectionId))
+    if (!section) return false
+
+    const currentUnitNumber = unitDetails?.number
+    const watermark = unlockStatus?.watermark
+
+    // No watermark yet: only first section (unit access is gated on Units page)
+    if (!watermark?.unitNumber || !watermark?.sectionNumber) {
       return sections?.[0] && String(sections[0]._id) === String(sectionId)
     }
 
+    // Prefer course-order comparison so earlier units stay fully open
+    // when the watermark has moved into a later unit (fixes orange-after-sync).
+    if (currentUnitNumber != null) {
+      if (currentUnitNumber < watermark.unitNumber) {
+        return true
+      }
+
+      if (currentUnitNumber === watermark.unitNumber) {
+        return section.number <= watermark.sectionNumber + 1
+      }
+
+      // Next unit after watermark: only its first section
+      if (currentUnitNumber === watermark.unitNumber + 1) {
+        return sections?.[0] && String(sections[0]._id) === String(sectionId)
+      }
+
+      // Further units only if unlockedUnit watermark allows them
+      const unlockedUnitNumber = unlockStatus?.unlockedUnitNumber
+      if (unlockedUnitNumber != null && currentUnitNumber <= unlockedUnitNumber) {
+        return true
+      }
+      if (unlockedUnitNumber != null && currentUnitNumber === unlockedUnitNumber + 1) {
+        return sections?.[0] && String(sections[0]._id) === String(sectionId)
+      }
+
+      return false
+    }
+
+    // Fallback if unit number is unavailable
     const unlockedSectionIndex = sections?.findIndex(
-      (section) => String(section._id) === String(unlockStatus.unlockedSection)
+      (item) => String(item._id) === String(unlockStatus.unlockedSection)
     )
 
-    // Watermark from another unit: only first section of this unit
     if (unlockedSectionIndex === -1) {
       return sections?.[0] && String(sections[0]._id) === String(sectionId)
     }
 
     const currentSectionIndex = sections?.findIndex(
-      (section) => String(section._id) === String(sectionId)
+      (item) => String(item._id) === String(sectionId)
     )
     const maxUnlockedIndex = unlockedSectionIndex + 1
 
@@ -372,7 +407,7 @@ const Section = () => {
                         sx={{ ml: 1, color: 'success.main', fontSize: '18px' }} 
                       />
                     ) : isCompleted && !isUnlocked ? (
-                      <Tooltip title="Progress is complete, but an earlier section is still incomplete">
+                      <Tooltip title="Progress looks complete, but unlock has not reached this section yet. Ask admin to run Repair, or finish the previous unlocked section.">
                         <Box sx={{ ml: 1, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
                           <CheckCircle sx={{ color: 'warning.main', fontSize: '18px' }} />
                           <LockOutlined sx={{ color: 'text.secondary', fontSize: '16px' }} />
@@ -648,7 +683,7 @@ const Section = () => {
                         sx={{ ml: 1, color: 'success.main', fontSize: '18px' }} 
                       />
                     ) : isCompleted && !isUnlocked ? (
-                      <Tooltip title="Progress is complete, but an earlier section is still incomplete">
+                      <Tooltip title="Progress looks complete, but unlock has not reached this section yet. Ask admin to run Repair, or finish the previous unlocked section.">
                         <Box sx={{ ml: 1, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
                           <CheckCircle sx={{ color: 'warning.main', fontSize: '18px' }} />
                           <LockOutlined sx={{ color: 'text.secondary', fontSize: '16px' }} />

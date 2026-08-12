@@ -25,21 +25,43 @@ export const useCompletedSections = (studentId, courseId) => {
   })
 }
 
+const invalidateUnlockCaches = (queryClient, studentId, courseId) => {
+  queryClient.invalidateQueries({ queryKey: ['studentCourseUnlockStatus', studentId, courseId] })
+  queryClient.invalidateQueries({ queryKey: ['unlockStatus', studentId, courseId] })
+  queryClient.invalidateQueries({ queryKey: ['unlockedSections', studentId, courseId] })
+  queryClient.invalidateQueries({ queryKey: ['completedUnits', studentId, courseId] })
+  queryClient.invalidateQueries({ queryKey: ['completedSections', studentId, courseId] })
+}
+
 export const useSyncCourseUnlock = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async ({ studentId, courseId }) => {
-      const response = await postData('course-unlock/sync', { studentId, courseId })
+      // Repair = heal legacy MCQ flags + sync unlock watermark
+      const response = await postData('course-unlock/repair', { studentId, courseId })
       return response.data
     },
     onSuccess: (_data, variables) => {
-      const { studentId, courseId } = variables
-      queryClient.invalidateQueries({ queryKey: ['studentCourseUnlockStatus', studentId, courseId] })
-      queryClient.invalidateQueries({ queryKey: ['unlockStatus', studentId, courseId] })
-      queryClient.invalidateQueries({ queryKey: ['unlockedSections', studentId, courseId] })
-      queryClient.invalidateQueries({ queryKey: ['completedUnits', studentId, courseId] })
-      queryClient.invalidateQueries({ queryKey: ['completedSections', studentId, courseId] })
+      invalidateUnlockCaches(queryClient, variables.studentId, variables.courseId)
+    }
+  })
+}
+
+export const useRepairAllCourseUnlocks = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await postData('course-unlock/repair-all', {})
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['studentCourseUnlockStatus'] })
+      queryClient.invalidateQueries({ queryKey: ['unlockStatus'] })
+      queryClient.invalidateQueries({ queryKey: ['unlockedSections'] })
+      queryClient.invalidateQueries({ queryKey: ['completedUnits'] })
+      queryClient.invalidateQueries({ queryKey: ['completedSections'] })
     }
   })
 }

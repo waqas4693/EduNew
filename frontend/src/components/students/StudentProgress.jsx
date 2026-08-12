@@ -26,7 +26,8 @@ import { useQuery } from '@tanstack/react-query'
 import { getData } from '../../api/api'
 import {
   useStudentCourseUnlockStatus,
-  useSyncCourseUnlock
+  useSyncCourseUnlock,
+  useRepairAllCourseUnlocks
 } from '../../hooks/useUnlockSync'
 
 const StatusChip = ({ ok, labelOk = 'Yes', labelNo = 'No' }) => (
@@ -78,6 +79,8 @@ const StudentProgress = () => {
   })
 
   const syncMutation = useSyncCourseUnlock()
+  const repairAllMutation = useRepairAllCourseUnlocks()
+  const [repairAllSummary, setRepairAllSummary] = useState(null)
 
   const handleLoad = () => {
     setSelectedStudentId(studentId)
@@ -99,6 +102,20 @@ const StudentProgress = () => {
     await refetch()
   }
 
+  const handleRepairAll = async () => {
+    const confirmed = window.confirm(
+      'Run one-time repair for ALL active students and courses?\n\n' +
+      'This will heal legacy MCQ progress flags and rebuild unlock watermarks from material progress.'
+    )
+    if (!confirmed) return
+
+    const data = await repairAllMutation.mutateAsync()
+    setRepairAllSummary(data.summary)
+    if (selectedStudentId && selectedCourseId) {
+      await refetch()
+    }
+  }
+
   return (
     <Box sx={{ p: 2 }}>
       <Button
@@ -115,8 +132,9 @@ const StudentProgress = () => {
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           This page reads the database directly: material progress, completed markers,
-          and the unlock watermark. Use Sync to rebuild unlock from progress so the
-          student UI matches what is actually completed.
+          and the unlock watermark. Use Repair to heal older MCQ/progress data and rebuild
+          unlock so the student UI matches the database. Use Repair All once to fix every
+          active student after a legacy data mess.
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -168,7 +186,17 @@ const StudentProgress = () => {
             onClick={handleSync}
             disabled={!selectedStudentId || !selectedCourseId || syncMutation.isLoading}
           >
-            {syncMutation.isLoading ? 'Syncing...' : 'Sync Unlock From Progress'}
+            {syncMutation.isLoading ? 'Repairing...' : 'Repair This Student'}
+          </Button>
+
+          <Button
+            variant="contained"
+            color="warning"
+            startIcon={<SyncIcon />}
+            onClick={handleRepairAll}
+            disabled={repairAllMutation.isLoading}
+          >
+            {repairAllMutation.isLoading ? 'Repairing All...' : 'One-Time Repair All Students'}
           </Button>
         </Box>
       </Paper>
@@ -181,13 +209,26 @@ const StudentProgress = () => {
 
       {syncMutation.isSuccess && (
         <Alert severity="success" sx={{ mb: 2 }}>
-          Sync complete. Unlock watermark and completed markers were rebuilt from material progress.
+          Student repair complete (legacy MCQ heal + unlock rebuild).
+        </Alert>
+      )}
+
+      {repairAllSummary && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          One-time repair finished. Processed {repairAllSummary.processed} course enrollments
+          ({repairAllSummary.failed} failed) across {repairAllSummary.studentCount} students.
         </Alert>
       )}
 
       {syncMutation.isError && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          Sync failed. {syncMutation.error?.data?.message || syncMutation.error?.message || ''}
+          Repair failed. {syncMutation.error?.data?.message || syncMutation.error?.message || ''}
+        </Alert>
+      )}
+
+      {repairAllMutation.isError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          Repair all failed. {repairAllMutation.error?.data?.message || repairAllMutation.error?.message || ''}
         </Alert>
       )}
 

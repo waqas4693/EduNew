@@ -17,6 +17,8 @@ import {
 import {
   buildStudentCourseStatus,
   syncStudentCourseUnlock,
+  repairStudentCourseUnlock,
+  repairAllStudentCourseUnlocks,
 } from "../utils/unlockSync.js";
 
 export const getUnlockedUnitAndSection = async (req, res) => {
@@ -28,10 +30,31 @@ export const getUnlockedUnitAndSection = async (req, res) => {
       courseId,
     });
 
+    let watermark = null;
+    if (unlockStatus?.unlockedSection) {
+      const position = await getSectionPosition(unlockStatus.unlockedSection);
+      if (position) {
+        watermark = {
+          unitId: position.unitId,
+          unitNumber: position.unitNumber,
+          sectionId: position.sectionId,
+          sectionNumber: position.sectionNumber,
+        };
+      }
+    }
+
+    let unlockedUnitNumber = null;
+    if (unlockStatus?.unlockedUnit) {
+      const unitDoc = await Unit.findById(unlockStatus.unlockedUnit).select("number");
+      unlockedUnitNumber = unitDoc?.number ?? null;
+    }
+
     res.status(200).json({
       success: true,
       unlockedUnit: unlockStatus?.unlockedUnit || null,
       unlockedSection: unlockStatus?.unlockedSection || null,
+      unlockedUnitNumber,
+      watermark,
     });
   } catch (error) {
     handleError(res, error);
@@ -263,6 +286,58 @@ export const syncCourseUnlockFromProgress = async (req, res) => {
       success: true,
       syncResult,
       status,
+    });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
+export const repairCourseUnlockFromProgress = async (req, res) => {
+  try {
+    const { studentId, courseId } = req.body;
+
+    if (!studentId || !courseId) {
+      return res.status(400).json({
+        success: false,
+        message: "studentId and courseId are required",
+      });
+    }
+
+    const repairResult = await repairStudentCourseUnlock(studentId, courseId);
+    const status = await buildStudentCourseStatus(studentId, courseId);
+
+    res.status(200).json({
+      success: true,
+      repairResult,
+      status,
+    });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
+export const repairAllCourseUnlocks = async (req, res) => {
+  try {
+    const summary = await repairAllStudentCourseUnlocks();
+
+    res.status(200).json({
+      success: true,
+      summary: {
+        studentCount: summary.studentCount,
+        processed: summary.processed,
+        failed: summary.failed,
+      },
+      // Keep payload smaller in UI; full details still useful for logs
+      results: summary.results.map((row) => ({
+        studentId: row.studentId,
+        studentName: row.studentName,
+        courseId: row.courseId,
+        success: row.success,
+        error: row.error || null,
+        unlockedSection: row.syncResult?.unlockedSection || null,
+        unlockedUnit: row.syncResult?.unlockedUnit || null,
+        healedMcqFlags: row.healResult?.healedMcqFlags || 0,
+      })),
     });
   } catch (error) {
     handleError(res, error);

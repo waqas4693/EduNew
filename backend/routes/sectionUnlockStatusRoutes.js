@@ -5,7 +5,9 @@ import {
   getCompletedUnits,
   getCompletedSections,
   getStudentCourseUnlockStatus,
-  syncCourseUnlockFromProgress
+  syncCourseUnlockFromProgress,
+  repairCourseUnlockFromProgress,
+  repairAllCourseUnlocks
 } from '../controllers/courseUnlock.js'
 
 const router = express.Router()
@@ -15,6 +17,8 @@ router.get('/completed/:studentId/:courseId', getCompletedUnits)
 router.get('/completed-sections/:studentId/:courseId', getCompletedSections)
 router.get('/status/:studentId/:courseId', getStudentCourseUnlockStatus)
 router.post('/sync', syncCourseUnlockFromProgress)
+router.post('/repair', repairCourseUnlockFromProgress)
+router.post('/repair-all', repairAllCourseUnlocks)
 router.post('/check-completion', setUnlockedUnitAndSection)
 router.get('/:studentId/:courseId', getUnlockedUnitAndSection)
 
