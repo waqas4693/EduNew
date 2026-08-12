@@ -162,57 +162,54 @@ const Section = () => {
     const section = sections?.find((item) => String(item._id) === String(sectionId))
     if (!section) return false
 
-    const currentUnitNumber = unitDetails?.number
-    const watermark = unlockStatus?.watermark
-
-    // No watermark yet: only first section (unit access is gated on Units page)
-    if (!watermark?.unitNumber || !watermark?.sectionNumber) {
+    // No unlock pointer yet → only the first section of this unit
+    if (!unlockStatus?.unlockedSection) {
       return sections?.[0] && String(sections[0]._id) === String(sectionId)
     }
 
-    // Prefer course-order comparison so earlier units stay fully open
-    // when the watermark has moved into a later unit (fixes orange-after-sync).
-    if (currentUnitNumber != null) {
-      if (currentUnitNumber < watermark.unitNumber) {
-        return true
-      }
-
-      if (currentUnitNumber === watermark.unitNumber) {
-        return section.number <= watermark.sectionNumber + 1
-      }
-
-      // Next unit after watermark: only its first section
-      if (currentUnitNumber === watermark.unitNumber + 1) {
-        return sections?.[0] && String(sections[0]._id) === String(sectionId)
-      }
-
-      // Further units only if unlockedUnit watermark allows them
-      const unlockedUnitNumber = unlockStatus?.unlockedUnitNumber
-      if (unlockedUnitNumber != null && currentUnitNumber <= unlockedUnitNumber) {
-        return true
-      }
-      if (unlockedUnitNumber != null && currentUnitNumber === unlockedUnitNumber + 1) {
-        return sections?.[0] && String(sections[0]._id) === String(sectionId)
-      }
-
-      return false
-    }
-
-    // Fallback if unit number is unavailable
-    const unlockedSectionIndex = sections?.findIndex(
+    const unlockedSectionIndex = sections.findIndex(
       (item) => String(item._id) === String(unlockStatus.unlockedSection)
     )
 
+    // Watermark is in another unit (usually a later one after repair/sync).
+    // This unit is already behind that pointer → open all of its sections.
+    // (Reverts the bad "only first section" rule that caused orange locks.)
     if (unlockedSectionIndex === -1) {
-      return sections?.[0] && String(sections[0]._id) === String(sectionId)
+      const watermark = unlockStatus?.watermark
+      const currentUnitNumber = unitDetails?.number
+
+      if (watermark?.unitNumber != null && currentUnitNumber != null) {
+        if (currentUnitNumber < watermark.unitNumber) return true
+        if (currentUnitNumber === watermark.unitNumber + 1) {
+          return sections?.[0] && String(sections[0]._id) === String(sectionId)
+        }
+        if (currentUnitNumber > watermark.unitNumber + 1) {
+          const unlockedUnitNumber = unlockStatus?.unlockedUnitNumber
+          if (unlockedUnitNumber != null && currentUnitNumber <= unlockedUnitNumber) {
+            return true
+          }
+          if (unlockedUnitNumber != null && currentUnitNumber === unlockedUnitNumber + 1) {
+            return sections?.[0] && String(sections[0]._id) === String(sectionId)
+          }
+          return false
+        }
+      }
+
+      // Safe default when watermark metadata is missing from API:
+      // pointer is not in this unit, so this unit has been passed.
+      return true
     }
 
-    const currentSectionIndex = sections?.findIndex(
+    // Watermark is inside this unit → unlock through completed section + next
+    const currentSectionIndex = sections.findIndex(
       (item) => String(item._id) === String(sectionId)
     )
-    const maxUnlockedIndex = unlockedSectionIndex + 1
+    return currentSectionIndex !== -1 && currentSectionIndex <= unlockedSectionIndex + 1
+  }
 
-    return currentSectionIndex !== -1 && currentSectionIndex <= maxUnlockedIndex
+  // Student can open a section if unlocked by watermark OR already completed in DB
+  const canOpenSection = (sectionId) => {
+    return isSectionUnlocked(sectionId) || isSectionCompleted(sectionId)
   }
 
   const isSectionAccessible = (sectionIndex) => {
@@ -338,6 +335,7 @@ const Section = () => {
               const isUnlocked = isSectionUnlocked(section._id)
               const isAccessible = isSectionAccessible(index)
               const isCompleted = isSectionCompleted(section._id)
+              const canOpen = canOpenSection(section._id)
 
               return (
                 <ListItem
@@ -365,7 +363,7 @@ const Section = () => {
                       mr: 2,
                       color: 'white',
                       minWidth: '70px',
-                      bgcolor: (isCompleted && isUnlocked) ? 'success.main' : (isUnlocked ? '#4169e1' : (isCompleted ? '#ed6c02' : '#9e9e9e')),
+                      bgcolor: isCompleted ? 'success.main' : (canOpen ? '#4169e1' : '#9e9e9e'),
                       textAlign: 'center',
                       borderTopLeftRadius: '6px',
                       borderBottomLeftRadius: '6px',
@@ -402,18 +400,11 @@ const Section = () => {
                       {section.name}
                     </Typography>
                     
-                    {isCompleted && isUnlocked ? (
+                    {isCompleted ? (
                       <CheckCircle 
                         sx={{ ml: 1, color: 'success.main', fontSize: '18px' }} 
                       />
-                    ) : isCompleted && !isUnlocked ? (
-                      <Tooltip title="Progress looks complete, but unlock has not reached this section yet. Ask admin to run Repair, or finish the previous unlocked section.">
-                        <Box sx={{ ml: 1, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                          <CheckCircle sx={{ color: 'warning.main', fontSize: '18px' }} />
-                          <LockOutlined sx={{ color: 'text.secondary', fontSize: '16px' }} />
-                        </Box>
-                      </Tooltip>
-                    ) : isUnlocked ? (
+                    ) : canOpen ? (
                       <LockOpenOutlined 
                         sx={{ ml: 1, color: 'primary.main', fontSize: '18px' }} 
                       />
@@ -431,65 +422,46 @@ const Section = () => {
                       <Tooltip title="Learning" placement="top" enterTouchDelay={0} leaveTouchDelay={1500}>
                         <span>
                           <IconButton
-                            color={isCompleted ? 'success' : (isUnlocked ? 'primary' : 'default')}
-                            onClick={() => handleSectionClick(section, isUnlocked)}
-                            disabled={!isUnlocked}
+                            color={isCompleted ? 'success' : (canOpen ? 'primary' : 'default')}
+                            onClick={() => handleSectionClick(section, canOpen)}
+                            disabled={!canOpen}
                             sx={{
-                              bgcolor: (isCompleted && isUnlocked) ? 'success.main' : (isUnlocked ? '#4169e1' : (isCompleted ? '#ed6c02' : '#9e9e9e')),
+                              bgcolor: isCompleted ? 'success.main' : (canOpen ? '#4169e1' : '#9e9e9e'),
                               color: 'white',
-                              borderRadius: '8px',
                               '&:hover': {
-                                bgcolor: isCompleted ? 'success.dark' : (isUnlocked ? '#3557c5' : '#9e9e9e')
+                                bgcolor: isCompleted ? 'success.dark' : (canOpen ? '#3154b3' : '#9e9e9e')
+                              },
+                              '&.Mui-disabled': {
+                                bgcolor: '#9e9e9e',
+                                color: 'white'
                               }
                             }}
                           >
-                            {isUnlocked ? <MenuBook /> : <LockOutlined />}
+                            {canOpen ? <MenuBook /> : <LockOutlined />}
                           </IconButton>
                         </span>
                       </Tooltip>
                     )}
-
-                    <Tooltip title="AI Practice" placement="top" enterTouchDelay={0} leaveTouchDelay={1500}>
-                      <span>
-                        <IconButton
-                          color={isCompleted ? 'success' : (isUnlocked ? 'primary' : 'default')}
-                          disabled={!isUnlocked}
-                          onClick={() => {
-                            if (!isAccessible) {
-                              handleRestrictedClick()
-                            }
-                          }}
-                          sx={{
-                            color: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
-                            border: `1.5px solid ${isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e')}`,
-                            borderRadius: '8px',
-                            '&:hover': {
-                              bgcolor: isCompleted ? 'rgba(76, 175, 80, 0.08)' : (isUnlocked ? 'rgba(65, 105, 225, 0.08)' : 'transparent')
-                            }
-                          }}
-                        >
-                          <SmartToyOutlined />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-
-                    {section.assessments && section.assessments.length > 0 && (
+                    {section.assessments?.length > 0 && (
                       <Tooltip title="Assessment" placement="top" enterTouchDelay={0} leaveTouchDelay={1500}>
                         <span>
                           <IconButton
-                            color={isCompleted ? 'success' : (isUnlocked ? 'primary' : 'default')}
-                            onClick={() => handleAssessmentClick(section, isUnlocked)}
-                            disabled={!isUnlocked}
+                            color={canOpen ? 'primary' : 'default'}
+                            onClick={() => handleAssessmentClick(section, canOpen)}
+                            disabled={!canOpen}
                             sx={{
-                              color: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
-                              border: `1.5px solid ${isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e')}`,
-                              borderRadius: '8px',
+                              bgcolor: canOpen ? '#4169e1' : '#9e9e9e',
+                              color: 'white',
                               '&:hover': {
-                                bgcolor: isCompleted ? 'rgba(76, 175, 80, 0.08)' : (isUnlocked ? 'rgba(65, 105, 225, 0.08)' : 'transparent')
+                                bgcolor: canOpen ? '#3154b3' : '#9e9e9e'
+                              },
+                              '&.Mui-disabled': {
+                                bgcolor: '#9e9e9e',
+                                color: 'white'
                               }
                             }}
                           >
-                            <AssignmentOutlined />
+                            {canOpen ? <AssignmentOutlined /> : <LockOutlined />}
                           </IconButton>
                         </span>
                       </Tooltip>
@@ -615,6 +587,7 @@ const Section = () => {
               const isUnlocked = isSectionUnlocked(section._id)
               const isAccessible = isSectionAccessible(index)
               const isCompleted = isSectionCompleted(section._id)
+              const canOpen = canOpenSection(section._id)
 
               return (
                 <ListItem
@@ -642,7 +615,7 @@ const Section = () => {
                       mr: 2,
                       color: 'white',
                       minWidth: '70px',
-                      bgcolor: (isCompleted && isUnlocked) ? 'success.main' : (isUnlocked ? '#4169e1' : (isCompleted ? '#ed6c02' : '#9e9e9e')),
+                      bgcolor: isCompleted ? 'success.main' : (canOpen ? '#4169e1' : '#9e9e9e'),
                       textAlign: 'center',
                       borderTopLeftRadius: '6px',
                       borderBottomLeftRadius: '6px',
@@ -678,18 +651,11 @@ const Section = () => {
                     >
                       {section.name}
                     </Typography>
-                    {isCompleted && isUnlocked ? (
+                    {isCompleted ? (
                       <CheckCircle 
                         sx={{ ml: 1, color: 'success.main', fontSize: '18px' }} 
                       />
-                    ) : isCompleted && !isUnlocked ? (
-                      <Tooltip title="Progress looks complete, but unlock has not reached this section yet. Ask admin to run Repair, or finish the previous unlocked section.">
-                        <Box sx={{ ml: 1, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                          <CheckCircle sx={{ color: 'warning.main', fontSize: '18px' }} />
-                          <LockOutlined sx={{ color: 'text.secondary', fontSize: '16px' }} />
-                        </Box>
-                      </Tooltip>
-                    ) : isUnlocked ? (
+                    ) : canOpen ? (
                       <LockOpenOutlined 
                         sx={{ ml: 1, color: 'primary.main', fontSize: '18px' }} 
                       />
@@ -702,23 +668,22 @@ const Section = () => {
                     )}
                   </Box>
 
-                  {/* Full-text buttons for tablet/desktop */}
                   <Box sx={{ display: 'flex', gap: 2, alignSelf: 'flex-end' }}>
                     {section.resources.length > 0 && (
                       <Tooltip title={!isAccessible ? "Contact admin@example.com for full access" : ""} placement="top">
                         <span>
                           <Button
                             variant='contained'
-                            startIcon={isUnlocked ? <MenuBook /> : <LockOutlined />}
-                            onClick={() => handleSectionClick(section, isUnlocked)}
-                            disabled={!isUnlocked}
+                            startIcon={canOpen ? <MenuBook /> : <LockOutlined />}
+                            onClick={() => handleSectionClick(section, canOpen)}
+                            disabled={!canOpen}
                             sx={{
-                              bgcolor: (isCompleted && isUnlocked) ? 'success.main' : (isUnlocked ? '#4169e1' : (isCompleted ? '#ed6c02' : '#9e9e9e')),
+                              bgcolor: isCompleted ? 'success.main' : (canOpen ? '#4169e1' : '#9e9e9e'),
                               color: 'white',
                               borderRadius: '8px',
                               textTransform: 'none',
                               '&:hover': {
-                                bgcolor: isCompleted ? 'success.dark' : (isUnlocked ? '#3557c5' : '#9e9e9e')
+                                bgcolor: isCompleted ? 'success.dark' : (canOpen ? '#3557c5' : '#9e9e9e')
                               }
                             }}
                           >
@@ -733,20 +698,20 @@ const Section = () => {
                         <Button
                           variant='outlined'
                           startIcon={<SmartToyOutlined />}
-                          disabled={!isUnlocked}
+                          disabled={!canOpen}
                           onClick={() => {
                             if (!isAccessible) {
                               handleRestrictedClick()
                             }
                           }}
                           sx={{
-                            color: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
-                            borderColor: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
+                            color: isCompleted ? 'success.main' : (canOpen ? '#4169e1' : '#9e9e9e'),
+                            borderColor: isCompleted ? 'success.main' : (canOpen ? '#4169e1' : '#9e9e9e'),
                             borderRadius: '8px',
                             textTransform: 'none',
                             '&:hover': {
-                              borderColor: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
-                              backgroundColor: isCompleted ? 'rgba(76, 175, 80, 0.04)' : (isUnlocked ? 'rgba(65, 105, 225, 0.04)' : 'transparent')
+                              borderColor: isCompleted ? 'success.main' : (canOpen ? '#4169e1' : '#9e9e9e'),
+                              backgroundColor: isCompleted ? 'rgba(76, 175, 80, 0.04)' : (canOpen ? 'rgba(65, 105, 225, 0.04)' : 'transparent')
                             }
                           }}
                         >
@@ -761,16 +726,16 @@ const Section = () => {
                           <Button
                             variant='outlined'
                             startIcon={<AssignmentOutlined />}
-                            onClick={() => handleAssessmentClick(section, isUnlocked)}
-                            disabled={!isUnlocked}
+                            onClick={() => handleAssessmentClick(section, canOpen)}
+                            disabled={!canOpen}
                             sx={{
-                              color: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
-                              borderColor: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
+                              color: isCompleted ? 'success.main' : (canOpen ? '#4169e1' : '#9e9e9e'),
+                              borderColor: isCompleted ? 'success.main' : (canOpen ? '#4169e1' : '#9e9e9e'),
                               borderRadius: '8px',
                               textTransform: 'none',
                               '&:hover': {
-                                borderColor: isCompleted ? 'success.main' : (isUnlocked ? '#4169e1' : '#9e9e9e'),
-                                backgroundColor: isCompleted ? 'rgba(76, 175, 80, 0.04)' : (isUnlocked ? 'rgba(65, 105, 225, 0.04)' : 'transparent')
+                                borderColor: isCompleted ? 'success.main' : (canOpen ? '#4169e1' : '#9e9e9e'),
+                                backgroundColor: isCompleted ? 'rgba(76, 175, 80, 0.04)' : (canOpen ? 'rgba(65, 105, 225, 0.04)' : 'transparent')
                               }
                             }}
                           >
