@@ -321,34 +321,33 @@ const SplashScreen = () => {
         >
           {[
             {
-              index: '01',
+              icon: '/splash_video.png',
               title: 'Purpose-built lessons',
               text: 'Video and media designed for each topic, with language support so every learner can follow along.'
             },
             {
-              index: '02',
+              icon: '/splash_ai_tutor.png',
               title: 'Practice with guidance',
               text: 'Interactive Q&A and confidence-building practice that keeps learning active, not passive.'
             },
             {
-              index: '03',
+              icon: '/splash_support.png',
               title: 'Support when you need it',
               text: 'Help is available around the clock for course questions and technical issues.'
             }
           ].map((item) => (
             <Box key={item.title} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-              <Typography
+              <Box
+                component="img"
+                src={item.icon}
+                alt=""
                 sx={{
-                  fontFamily: '"Source Sans 3", sans-serif',
-                  fontWeight: 700,
-                  fontSize: '0.85rem',
-                  letterSpacing: '0.12em',
-                  color: COLORS.blue,
+                  width: { xs: 64, md: 75 },
+                  height: { xs: 64, md: 75 },
+                  objectFit: 'contain',
                   mb: 0.5
                 }}
-              >
-                {item.index}
-              </Typography>
+              />
               <Typography
                 sx={{
                   fontFamily: '"Fraunces", serif',
