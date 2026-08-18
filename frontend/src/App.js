@@ -41,6 +41,8 @@ import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/st
 import SplashScreen from './components/splash/SplashScreen'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import DeploymentCacheGuard from './components/system/DeploymentCacheGuard'
+import StudentSessionRefresh from './components/system/StudentSessionRefresh'
 
 // Create Redux store
 const store = configureStore({
@@ -49,13 +51,14 @@ const store = configureStore({
   }
 })
 
-// Create React Query client
+// Create React Query client — prefer fresh server data over long-lived cache
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,
+      refetchOnMount: 'always',
       retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 0,
     },
   },
 })
@@ -78,6 +81,8 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <AuthProvider>
+            <DeploymentCacheGuard />
+            <StudentSessionRefresh />
             <ThemeProvider>
               <MuiThemeProvider theme={theme}>
                 <LocalizationProvider dateAdapter={AdapterDayjs}>

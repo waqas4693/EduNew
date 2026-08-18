@@ -8,8 +8,10 @@ export const useEnrolledCourses = (courseIds) => {
       const response = await getData(`courses/enrolled?courseIds=${courseIds.join(',')}`)
       return response.data.data
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 0,
+    gcTime: 10 * 60 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
     enabled: !!courseIds?.length
   })
 }
@@ -21,8 +23,10 @@ export const useCourseProgress = (studentId, courseId) => {
       const response = await getData(`student/${studentId}/courses/${courseId}/progress`)
       return response.data.data
     },
-    staleTime: 5 * 60 * 1000,
-    cacheTime: 30 * 60 * 1000,
+    staleTime: 0,
+    gcTime: 10 * 60 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
     enabled: !!studentId && !!courseId
   })
 }
@@ -31,12 +35,13 @@ export const useAssessmentDueDates = (courseId, enrollmentDate) => {
   return useQuery({
     queryKey: ['assessmentDueDates', courseId, enrollmentDate],
     queryFn: async () => {
-      // Fetch all data in a single API call
       const response = await getData(`assessments/due-dates/${courseId}?enrollmentDate=${enrollmentDate}`)
       return response.data
     },
-    staleTime: 5 * 60 * 1000,
-    cacheTime: 30 * 60 * 1000,
+    staleTime: 0,
+    gcTime: 10 * 60 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
     enabled: !!courseId && !!enrollmentDate
   })
 } 

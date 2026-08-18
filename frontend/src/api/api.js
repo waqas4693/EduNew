@@ -3,12 +3,18 @@ import axios from 'axios'
 // const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/'
 const API_URL = 'https://13.40.209.120/api/'
 
+const noCacheHeaders = {
+  'Cache-Control': 'no-cache',
+  Pragma: 'no-cache'
+}
+
 export const postData = async (endpoint, data, config = {}) => {
   try {
     const token = localStorage.getItem('token')
     const headers = {
       'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
+      ...noCacheHeaders,
+      ...(token && { Authorization: `Bearer ${token}` }),
       ...config.headers
     }
 
@@ -27,7 +33,12 @@ export const getData = async (endpoint) => {
     const token = localStorage.getItem('token')
     const response = await axios.get(`${API_URL}${endpoint}`, {
       headers: {
-        'Authorization': `Bearer ${token}`
+        ...noCacheHeaders,
+        Authorization: `Bearer ${token}`
+      },
+      // Bust intermediary/browser GET caches
+      params: {
+        _t: Date.now()
       }
     })
     return response
@@ -41,7 +52,9 @@ export const putData = async (endpoint, data) => {
     const token = localStorage.getItem('token')
     const response = await axios.put(`${API_URL}${endpoint}`, data, {
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Content-Type': 'application/json',
+        ...noCacheHeaders,
+        Authorization: `Bearer ${token}`
       }
     })
     return response
@@ -55,7 +68,9 @@ export const patchData = async (endpoint, data) => {
     const token = localStorage.getItem('token')
     const response = await axios.patch(`${API_URL}${endpoint}`, data, {
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Content-Type': 'application/json',
+        ...noCacheHeaders,
+        Authorization: `Bearer ${token}`
       }
     })
     return response
@@ -69,7 +84,8 @@ export const deleteData = async (endpoint) => {
     const token = localStorage.getItem('token')
     const response = await axios.delete(`${API_URL}${endpoint}`, {
       headers: {
-        'Authorization': `Bearer ${token}`
+        ...noCacheHeaders,
+        Authorization: `Bearer ${token}`
       }
     })
     return response
