@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react'
-<<<<<<< HEAD
 import { useNavigate, useParams } from 'react-router-dom'
-=======
->>>>>>> b4d431ca10dc7f95a42c744858d3507988a39a97
 import {
   Box,
   Radio,
@@ -14,10 +11,7 @@ import {
   FormControlLabel,
 } from '@mui/material'
 import { getData, postData, postFormData, API_URL } from '../../api/api'
-<<<<<<< HEAD
 import { useAuth } from '../../context/AuthContext'
-=======
->>>>>>> b4d431ca10dc7f95a42c744858d3507988a39a97
 import Grid from '@mui/material/Grid2'
 import FlagIcon from '@mui/icons-material/Flag'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
@@ -869,7 +863,6 @@ const ViewAssessment = () => {
         content: finalAttemptData
       })
 
-<<<<<<< HEAD
       if (response.status === 200 || response.status === 201) {
         alert(
           selectedAssessment?.assessmentType === 'MCQ'
@@ -878,11 +871,6 @@ const ViewAssessment = () => {
         )
         fetchExistingAttempt()
         fetchAssessments()
-=======
-      if (response.status === 201) {
-        alert('Assessment submitted successfully!')
-        fetchExistingAttempt()
->>>>>>> b4d431ca10dc7f95a42c744858d3507988a39a97
       }
     } catch (error) {
       console.error('Error submitting assessment:', error)
@@ -953,11 +941,7 @@ const ViewAssessment = () => {
           }}
           onClick={() => navigate(`/units/${courseId}/section/${unitId}`)}
         >
-<<<<<<< HEAD
           <ChevronLeftIcon sx={{ color: 'primary.main' }} /> Back To Section
-=======
-          <ChevronLeft sx={{ color: 'primary.main' }} /> Back To Section
->>>>>>> b4d431ca10dc7f95a42c744858d3507988a39a97
         </Typography>
       </Box>
 

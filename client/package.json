@@ -4,17 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-<<<<<<< HEAD
     "dev": "vite",
     "start": "vite",
     "build": "vite build",
     "postbuild": "node scripts/write-version.js",
-=======
-    "prebuild": "node scripts/write-version.js",
-    "dev": "vite",
-    "start": "vite",
-    "build": "vite build",
->>>>>>> b4d431ca10dc7f95a42c744858d3507988a39a97
     "preview": "vite preview",
     "test": "vitest run"
   },
