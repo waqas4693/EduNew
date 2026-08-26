@@ -43,7 +43,8 @@ const AssessmentMetrics = ({
         fullWidth
         size="small"
         type="number"
-        label="Interval (days)"
+        label="Days after enrollment"
+        helperText="Deadline = enrollment date + these days"
         value={interval}
         onChange={e => onIntervalChange(e.target.value)}
         disabled={disabled}

@@ -126,7 +126,9 @@ const Login = () => {
         if (user.role === STUDENT_ROLE && user.courseIds) {
           const enrollmentDates = {}
           user.courseIds.forEach(({ courseId, enrollmentDate }) => {
-            enrollmentDates[courseId] = enrollmentDate
+            if (courseId) {
+              enrollmentDates[String(courseId)] = enrollmentDate
+            }
           })
           localStorage.setItem('enrollmentDates', JSON.stringify(enrollmentDates))
         }

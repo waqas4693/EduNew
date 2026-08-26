@@ -10,7 +10,7 @@ import {
   IconButton,
   FormControlLabel,
 } from '@mui/material'
-import { getData, postData, postFormData, API_URL } from '../../api/api'
+import { getData, postData, postFormData } from '../../api/api'
 import { useAuth } from '../../context/AuthContext'
 import Grid from '@mui/material/Grid2'
 import FlagIcon from '@mui/icons-material/Flag'
@@ -22,7 +22,8 @@ import VolumeUpIcon from '@mui/icons-material/VolumeUp'
 
 const AssessmentRenderer = ({
   assessment,
-  signedUrl,
+  assessmentFileUrl,
+  supportingFileUrl,
   attemptData,
   onAnswerChange,
   onSubmit,
@@ -487,64 +488,80 @@ const AssessmentRenderer = ({
 
     case 'FILE':
       return (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: { xs: 2, md: 3 } }}>
           {renderAttemptStatus()}
-          <Box sx={{ mb: 4 }}>
-            <Typography variant='h6' sx={{ mb: 2 }}>
-              Assessment File
+          <Box
+            sx={{
+              mb: 3,
+              p: 2.5,
+              borderRadius: '12px',
+              bgcolor: 'rgba(31, 126, 194, 0.06)'
+            }}
+          >
+            <Typography sx={{ fontWeight: 600, mb: 1.5, color: 'secondary.dark' }}>
+              Assessment files
             </Typography>
-            <Button
-              variant='contained'
-              href={signedUrl}
-              target='_blank'
-              sx={{ mb: 2 }}
-            >
-              Download Assessment
-            </Button>
-          </Box>
-          {assessment.content.supportingFile && (
-            <Box sx={{ mb: 4 }}>
-              <Typography variant='h6' sx={{ mb: 2 }}>
-                Supporting Material
-              </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
               <Button
-                variant='outlined'
-                href={signedUrl}
-                target='_blank'
+                variant="contained"
+                href={assessmentFileUrl || undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                disabled={!assessmentFileUrl}
+                sx={{ borderRadius: '8px', boxShadow: 'none' }}
               >
-                Download Supporting Material
+                {assessmentFileUrl ? 'Download assessment' : 'Loading file…'}
               </Button>
+              {assessment.content.supportingFile && (
+                <Button
+                  variant="outlined"
+                  href={supportingFileUrl || undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  disabled={!supportingFileUrl}
+                  sx={{ borderRadius: '8px' }}
+                >
+                  {supportingFileUrl ? 'Download supporting material' : 'Loading file…'}
+                </Button>
+              )}
             </Box>
-          )}
-          <Box sx={{ mt: 4 }}>
-            <Typography variant='h6' sx={{ mb: 2 }}>
-              Submit Your Solution
+          </Box>
+          <Box
+            sx={{
+              p: 2.5,
+              borderRadius: '12px',
+              border: '1px solid rgba(10, 37, 64, 0.08)'
+            }}
+          >
+            <Typography sx={{ fontWeight: 600, mb: 1.5, color: 'secondary.dark' }}>
+              Submit your solution
             </Typography>
             <input
-              type='file'
+              type="file"
               onChange={e =>
                 onAnswerChange('submittedFile', 0, e.target.files[0])
               }
               style={{ display: 'none' }}
-              id='solution-file'
+              id="solution-file"
             />
-            <label htmlFor='solution-file'>
-              <Button variant='outlined' component='span' sx={{ mb: 2 }}>
-                Upload Solution File
+            <label htmlFor="solution-file">
+              <Button variant="outlined" component="span" sx={{ mb: 1.5, borderRadius: '8px' }}>
+                Choose solution file
               </Button>
             </label>
             {attemptData?.submittedFile && (
-              <Typography variant='body2' sx={{ ml: 2 }}>
-                Selected file: {attemptData.submittedFile.name}
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Selected:{' '}
+                {attemptData.submittedFile.name || String(attemptData.submittedFile)}
               </Typography>
             )}
             <Button
-              variant='contained'
+              variant="contained"
               onClick={onSubmit}
-              sx={{ mt: 2 }}
               fullWidth
+              sx={{ borderRadius: '8px', boxShadow: 'none' }}
             >
-              Submit Assessment
+              Submit assessment
             </Button>
           </Box>
           {renderSubmittedFile(attemptData?.submittedFile)}
@@ -584,34 +601,23 @@ const ViewAssessment = () => {
     return groups
   }, {})
 
-  const getFileUrl = (fileName, isSubmission = false) => {
+  const getSignedFileUrl = async (fileName, folder) => {
     if (!fileName) return null
-    const folder = isSubmission ? 'ASSESSMENT_SUBMISSIONS' : 'ASSESSMENT_FILES'
-    return `${API_URL}resources/files/${folder}/${fileName}`
-  }
-
-  const getS3BaseUrl = () => {
-    return `${API_URL}s3/url`
+    try {
+      const response = await getData(`resources/files/url/${folder}/${fileName}`)
+      return response.data.signedUrl
+    } catch (error) {
+      console.error(`Error getting signed URL for ${folder}/${fileName}:`, error)
+      return null
+    }
   }
 
   const getMCQImageUrl = async (imageFile) => {
-    try {
-      const response = await getData(`resources/files/url/MCQ_IMAGES/${imageFile}`)
-      return response.data.signedUrl
-    } catch (error) {
-      console.error('Error getting MCQ image signed URL:', error)
-      return null
-    }
+    return getSignedFileUrl(imageFile, 'MCQ_IMAGES')
   }
 
   const getMCQAudioUrl = async (audioFile) => {
-    try {
-      const response = await getData(`resources/files/url/MCQ_AUDIO/${audioFile}`)
-      return response.data.signedUrl
-    } catch (error) {
-      console.error('Error getting MCQ audio signed URL:', error)
-      return null
-    }
+    return getSignedFileUrl(audioFile, 'MCQ_AUDIO')
   }
 
   const fetchMCQImageUrls = async (mcqs) => {
@@ -706,50 +712,101 @@ const ViewAssessment = () => {
 
   useEffect(() => {
     const fetchFileUrls = async () => {
-      if (assessments[currentIndex]?.assessmentType === 'FILE') {
-        const assessment = assessments[currentIndex]
+      const assessment = selectedAssessment
+      if (!assessment || assessment.assessmentType !== 'FILE') return
 
-        if (assessment.content.assessmentFile) {
-          const fileUrl = getFileUrl(assessment.content.assessmentFile)
-          setSignedUrls(prev => ({
-            ...prev,
-            [assessment.content.assessmentFile]: fileUrl
-          }))
-        }
+      const nextUrls = {}
 
-        if (assessment.content.supportingFile) {
-          const supportingUrl = getFileUrl(assessment.content.supportingFile)
-          setSignedUrls(prev => ({
-            ...prev,
-            [assessment.content.supportingFile]: supportingUrl
-          }))
-        }
+      if (assessment.content?.assessmentFile) {
+        nextUrls[assessment.content.assessmentFile] = await getSignedFileUrl(
+          assessment.content.assessmentFile,
+          'ASSESSMENT_FILES'
+        )
       }
+
+      if (assessment.content?.supportingFile) {
+        nextUrls[assessment.content.supportingFile] = await getSignedFileUrl(
+          assessment.content.supportingFile,
+          'ASSESSMENT_FILES'
+        )
+      }
+
+      setSignedUrls(prev => ({ ...prev, ...nextUrls }))
     }
+
     fetchFileUrls()
-  }, [currentIndex, assessments])
+  }, [selectedAssessment])
 
   useEffect(() => {
-    if (assessments[currentIndex]?._id && user?._id) {
+    if (assessments[currentIndex]?._id && user?.studentId) {
       fetchExistingAttempt()
     }
   }, [currentIndex, assessments, user])
 
-  const calculateDueDate = (enrollmentDate, interval) => {
-    const enrollmentDateTime = new Date(enrollmentDate)
-    return new Date(
-      enrollmentDateTime.getTime() + interval * 24 * 60 * 60 * 1000
-    )
+  const startOfDay = (value) => {
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return null
+    date.setHours(0, 0, 0, 0)
+    return date
   }
 
-  const getAssessmentStatus = dueDate => {
-    const now = new Date()
-    const dueDateObj = new Date(dueDate)
-    const diffDays = Math.ceil((dueDateObj - now) / (1000 * 60 * 60 * 24))
+  const calculateDueDate = (enrollmentDate, interval, createdAt) => {
+    const enrollment = startOfDay(enrollmentDate)
+    const created = startOfDay(createdAt)
+    if (!enrollment && !created) return null
 
-    if (diffDays < 0) return { label: 'Overdue', color: 'error.light' }
-    if (diffDays === 0) return { label: 'Due Today', color: 'warning.light' }
-    return { label: `Due in ${diffDays} days`, color: 'info.light' }
+    const baseTime = Math.max(
+      enrollment?.getTime() || 0,
+      created?.getTime() || 0
+    )
+
+    return new Date(baseTime + Number(interval || 0) * 24 * 60 * 60 * 1000)
+  }
+
+  const formatDueDate = (dueDate) =>
+    new Date(dueDate).toLocaleDateString(undefined, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    })
+
+  const getAssessmentStatus = dueDate => {
+    const due = startOfDay(dueDate)
+    const today = startOfDay(new Date())
+    if (!due || !today) {
+      return { label: 'Due date unavailable', color: 'text.secondary' }
+    }
+
+    const diffDays = Math.round((due - today) / (1000 * 60 * 60 * 24))
+
+    if (diffDays < 0) {
+      return {
+        label: `Overdue · was due ${formatDueDate(due)}`,
+        color: 'error.main'
+      }
+    }
+    if (diffDays === 0) {
+      return { label: `Due today · ${formatDueDate(due)}`, color: 'warning.main' }
+    }
+    return {
+      label: `Due in ${diffDays} days · ${formatDueDate(due)}`,
+      color: 'info.main'
+    }
+  }
+
+  const resolveEnrollmentDate = () => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('enrollmentDates') || '{}')
+      const fromStorage = stored[String(courseId)]
+      if (fromStorage) return fromStorage
+    } catch (error) {
+      console.error('Error reading enrollment dates:', error)
+    }
+
+    const fromUser = user?.courseIds?.find(
+      (course) => String(course.courseId) === String(courseId)
+    )
+    return fromUser?.enrollmentDate || null
   }
 
   const fetchAssessments = async () => {
@@ -758,25 +815,26 @@ const ViewAssessment = () => {
         `assessments/${sectionId}?studentId=${user.studentId}`
       )
       if (response.status === 200) {
-        setAssessments(response.data.assessments)
-        
-        // Get enrollment date from localStorage
-        const enrollmentDates = JSON.parse(localStorage.getItem('enrollmentDates'))
-        const courseEnrollmentDate = enrollmentDates[courseId]
-        
+        const list = response.data.assessments || []
+        setAssessments(list)
+
+        const courseEnrollmentDate = resolveEnrollmentDate()
         if (!courseEnrollmentDate) {
           console.error('Missing enrollment date for course:', courseId)
+          setDueDates({})
           return
         }
 
-        // Calculate due dates for each assessment using its own interval
         const datesMap = {}
-        response.data.assessments.forEach(assessment => {
+        list.forEach(assessment => {
           const dueDate = calculateDueDate(
             courseEnrollmentDate,
-            assessment.interval
+            assessment.interval,
+            assessment.createdAt
           )
-          datesMap[assessment._id] = dueDate
+          if (dueDate) {
+            datesMap[assessment._id] = dueDate
+          }
         })
         setDueDates(datesMap)
       }
@@ -900,148 +958,204 @@ const ViewAssessment = () => {
     }
   }
 
-  // Update the AssessmentRenderer to handle submission files
   const renderSubmittedFile = (fileName) => {
-    if (!fileName) return null
-    const fileUrl = getFileUrl(fileName, true) // true indicates it's a submission
+    if (!fileName || fileName instanceof File) return null
+
+    const fileUrl = signedUrls[fileName]
     return (
       <Box sx={{ mt: 2 }}>
-        <Typography variant="subtitle1">Submitted File:</Typography>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+          Submitted file
+        </Typography>
         <Button
           variant="outlined"
-          href={fileUrl}
+          href={fileUrl || undefined}
           target="_blank"
           rel="noopener noreferrer"
-          sx={{ mt: 1 }}
+          disabled={!fileUrl}
+          sx={{ mt: 1, borderRadius: '8px' }}
+          onClick={async (event) => {
+            if (fileUrl) return
+            event.preventDefault()
+            const url = await getSignedFileUrl(fileName, 'ASSESSMENT_SUBMISSIONS')
+            if (url) {
+              setSignedUrls(prev => ({ ...prev, [fileName]: url }))
+              window.open(url, '_blank', 'noopener,noreferrer')
+            }
+          }}
         >
-          Download Submitted File
+          {fileUrl ? 'Download submitted file' : 'Prepare download'}
         </Button>
       </Box>
     )
   }
 
+  const typeLabel = {
+    MCQ: 'Multiple choice',
+    QNA: 'Written answers',
+    FILE: 'File upload'
+  }
+
   return (
     <Paper
-      elevation={5}
+      elevation={0}
       sx={{
         display: 'flex',
         borderRadius: '16px',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        overflow: 'hidden',
+        boxShadow: '0px 10px 32px rgba(10, 37, 64, 0.08)',
+        minHeight: '70vh'
       }}
     >
-      <Box sx={{ p: 1 }}>
+      <Box
+        sx={{
+          px: { xs: 2, md: 2.5 },
+          py: 1.5,
+          background: 'linear-gradient(135deg, #1F7EC2 0%, #155A8F 55%, #0A2540 100%)',
+          color: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 2
+        }}
+      >
         <Typography
-          variant='body2'
           sx={{
-            color: 'primary.main',
             cursor: 'pointer',
             display: 'inline-flex',
             alignItems: 'center',
-            width: 'fit-content'
+            gap: 0.5,
+            fontSize: 14,
+            opacity: 0.95
           }}
           onClick={() => navigate(`/units/${courseId}/section/${unitId}`)}
         >
-          <ChevronLeftIcon sx={{ color: 'primary.main' }} /> Back To Section
+          <ChevronLeftIcon fontSize="small" /> Back to section
+        </Typography>
+        <Typography
+          sx={{
+            fontFamily: '"Fraunces", serif',
+            fontWeight: 600,
+            fontSize: { xs: '1.1rem', md: '1.25rem' }
+          }}
+        >
+          Assessments
         </Typography>
       </Box>
 
-      <Box sx={{ display: 'flex', height: 'calc(100% - 48px)' }}>
-        {/* Assessment List Sidebar */}
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, flex: 1, minHeight: 0 }}>
         <Box
           sx={{
-            width: '300px',
-            borderRight: '1px solid rgba(0, 0, 0, 0.12)',
-            overflow: 'auto'
+            width: { xs: '100%', md: 320 },
+            borderRight: { md: '1px solid rgba(10, 37, 64, 0.08)' },
+            borderBottom: { xs: '1px solid rgba(10, 37, 64, 0.08)', md: 'none' },
+            overflow: 'auto',
+            bgcolor: 'rgba(10, 37, 64, 0.02)',
+            maxHeight: { xs: 280, md: 'none' }
           }}
         >
-          {Object.entries(groupedAssessments).map(([type, typeAssessments]) => (
-            <Box key={type} sx={{ mb: 2 }}>
-              <Typography
-                variant='body1'
-                sx={{
-                  p: '10px',
-                  color: 'white',
-                  bgcolor: 'primary.main'
-                }}
-              >
-                {type} Assessments
-              </Typography>
-              {typeAssessments.map((assessment, index) => (
-                <Box
-                  key={assessment._id}
-                  onClick={() => handleSelectAssessment(assessment)}
+          {assessments.length === 0 ? (
+            <Box sx={{ p: 3 }}>
+              <Typography color="text.secondary">No assessments in this section yet.</Typography>
+            </Box>
+          ) : (
+            Object.entries(groupedAssessments).map(([type, typeAssessments]) => (
+              <Box key={type} sx={{ mb: 1 }}>
+                <Typography
                   sx={{
-                    py: '3px',
-                    px: '10px',
-                    cursor: 'pointer',
-                    borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
-                    bgcolor:
-                      selectedAssessment?._id === assessment._id
-                        ? 'action.selected'
-                        : 'transparent',
-                    opacity:
-                      assessment.attempt?.status === 'SUBMITTED' ||
-                      assessment.attempt?.status === 'GRADED'
-                        ? 0.7
-                        : 1,
-                    '&:hover': {
-                      bgcolor: 'action.hover'
-                    }
+                    px: 2,
+                    py: 1,
+                    fontSize: 12,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    fontWeight: 700,
+                    color: 'text.secondary',
+                    bgcolor: 'rgba(31, 126, 194, 0.08)'
                   }}
                 >
-                  <Typography variant='subtitle1'>
-                    Assessment {index + 1}
-                    {assessment.attempt?.status && (
-                      <Box
-                        component='span'
-                        sx={{
-                          ml: 1,
-                          px: 1,
-                          py: 0.5,
-                          borderRadius: 1,
-                          fontSize: '0.75rem',
-                          bgcolor:
-                            assessment.attempt.status === 'SUBMITTED'
-                              ? 'info.light'
-                              : 'success.light'
-                        }}
-                      >
-                        {assessment.attempt.status}
-                      </Box>
-                    )}
-                  </Typography>
-                  <Typography variant='body2' color='text.secondary'>
-                    Marks: {assessment.totalMarks} | Section Weightage: {assessment.percentage}%
-                  </Typography>
-                  {dueDates[assessment._id] && !assessment.attempt?.status && (
-                    <Typography
-                      variant='body2'
+                  {typeLabel[type] || type}
+                </Typography>
+                {typeAssessments.map((assessment, index) => {
+                  const selected = selectedAssessment?._id === assessment._id
+                  const status = assessment.attempt?.status
+                  const dueStatus =
+                    dueDates[assessment._id] && !status
+                      ? getAssessmentStatus(dueDates[assessment._id])
+                      : null
+
+                  return (
+                    <Box
+                      key={assessment._id}
+                      onClick={() => handleSelectAssessment(assessment)}
                       sx={{
-                        color: getAssessmentStatus(dueDates[assessment._id])
-                          .color,
-                        fontWeight: 500
+                        px: 2,
+                        py: 1.5,
+                        cursor: 'pointer',
+                        borderBottom: '1px solid rgba(10, 37, 64, 0.06)',
+                        bgcolor: selected ? 'rgba(31, 126, 194, 0.12)' : 'transparent',
+                        borderLeft: selected ? '3px solid #1F7EC2' : '3px solid transparent',
+                        transition: 'background 0.15s',
+                        '&:hover': { bgcolor: 'rgba(31, 126, 194, 0.08)' }
                       }}
                     >
-                      {getAssessmentStatus(dueDates[assessment._id]).label}
-                    </Typography>
-                  )}
-                </Box>
-              ))}
-            </Box>
-          ))}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                        <Typography sx={{ fontWeight: 600, color: 'secondary.dark', fontSize: 15 }}>
+                          Assessment {index + 1}
+                        </Typography>
+                        {status && (
+                          <Box
+                            component="span"
+                            sx={{
+                              px: 1,
+                              py: 0.25,
+                              borderRadius: '999px',
+                              fontSize: 11,
+                              fontWeight: 700,
+                              bgcolor:
+                                status === 'GRADED'
+                                  ? 'rgba(46, 125, 50, 0.12)'
+                                  : 'rgba(25, 118, 210, 0.12)',
+                              color: status === 'GRADED' ? 'success.dark' : 'info.dark'
+                            }}
+                          >
+                            {status}
+                          </Box>
+                        )}
+                      </Box>
+                      <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>
+                        {assessment.totalMarks} marks · {assessment.percentage}% of section
+                      </Typography>
+                      {dueStatus && (
+                        <Typography
+                          sx={{
+                            mt: 0.5,
+                            fontSize: 12.5,
+                            fontWeight: 600,
+                            color: dueStatus.color
+                          }}
+                        >
+                          {dueStatus.label}
+                        </Typography>
+                      )}
+                    </Box>
+                  )
+                })}
+              </Box>
+            ))
+          )}
         </Box>
 
-        {/* Assessment Content Area */}
-        <Box
-          sx={{
-            flex: 1,
-            overflow: 'auto'
-          }}
-        >
+        <Box sx={{ flex: 1, overflow: 'auto', bgcolor: '#fff' }}>
           {selectedAssessment ? (
             <AssessmentRenderer
               assessment={selectedAssessment}
-              signedUrl={getS3BaseUrl()}
+              assessmentFileUrl={
+                signedUrls[selectedAssessment.content?.assessmentFile] || null
+              }
+              supportingFileUrl={
+                signedUrls[selectedAssessment.content?.supportingFile] || null
+              }
               mcqImageUrls={mcqImageUrls}
               attemptData={attemptData}
               onAnswerChange={handleAnswerChange}
@@ -1057,12 +1171,27 @@ const ViewAssessment = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                height: '100%'
+                height: '100%',
+                minHeight: 280,
+                px: 3,
+                textAlign: 'center'
               }}
             >
-              <Typography variant='h6' color='text.secondary'>
-                Select an assessment to begin
-              </Typography>
+              <Box>
+                <Typography
+                  sx={{
+                    fontFamily: '"Fraunces", serif',
+                    fontWeight: 600,
+                    color: 'secondary.dark',
+                    mb: 0.75
+                  }}
+                >
+                  Select an assessment
+                </Typography>
+                <Typography color="text.secondary">
+                  Choose one from the list to download files, answer questions, or submit.
+                </Typography>
+              </Box>
             </Box>
           )}
         </Box>
