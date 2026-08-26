@@ -1,0 +1,532 @@
+import User from '../models/user.js'
+import Unit from '../models/unit.js'
+import Course from '../models/course.js'
+import Student from '../models/student.js'
+import CourseUnlock from '../models/courseUnlock.js'
+import EmailVerification from '../models/emailVerification.js'
+import ProgressStats from '../models/progressStats.js'
+import UnitProgress from '../models/unitProgress.js'
+import CourseStats from '../models/courseStats.js'
+import CompletedUnits from '../models/completedUnits.js'
+import { generateVerificationToken, sendVerificationEmail } from '../utils/emailService.js'
+
+export const newStudent = async (req, res) => {
+  try {
+    const { name, email, password, contactNo, address, courseId, isDemo } = req.body
+
+    const existingUser = await User.findOne({ email })
+    if (existingUser) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'An account with this email address already exists. Please use a different email.' 
+      })
+    }
+
+    // Validate course exists
+    const course = await Course.findById(courseId)
+    if (!course) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Selected course not found. Please choose a valid course.' 
+      })
+    }
+
+    const user = new User({
+      email,
+      password: password,
+      role: 2,
+      status: 1,
+      isDemo: isDemo || false,
+      emailVerified: false
+    })
+    await user.save()
+
+    const student = new Student({
+      name,
+      email,
+      contactNo,
+      address,
+      status: 1,
+      isDemo: isDemo || false,
+      courses: [{
+        courseId: courseId,
+        courseStatus: 1,
+        enrollmentDate: new Date()
+      }]
+    })
+    await student.save()
+
+    // Create email verification token
+    const verificationToken = generateVerificationToken()
+    const expiresAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000) // 2 days from now
+
+    await EmailVerification.create({
+      userId: user._id,
+      studentId: student._id,
+      token: verificationToken,
+      expiresAt: expiresAt
+    })
+
+    // Send verification email
+    const emailSent = await sendVerificationEmail(email, name, verificationToken, password)
+
+    // Create initial unlock record (watermark starts empty → first section unlocks in UI)
+    await CourseUnlock.findOneAndUpdate(
+      { studentId: student._id, courseId },
+      {
+        $setOnInsert: {
+          studentId: student._id,
+          courseId,
+          lastUpdated: Date.now()
+        }
+      },
+      { upsert: true, new: true }
+    )
+
+    res.status(201).json({
+      success: true,
+      message: emailSent 
+        ? `Student "${name}" has been successfully invited! A verification email with login credentials has been sent to ${email}.` 
+        : `Student "${name}" has been successfully invited! However, the verification email could not be sent to ${email}. Please contact the student directly with their login credentials.`
+    })
+  } catch (error) {
+    console.error('Error creating student:', error)
+    
+    // Handle specific database errors
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'An account with this email address already exists. Please use a different email.'
+      })
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create student account. Please try again or contact support if the problem persists.'
+    })
+  }
+}
+
+export const getDashboardData = async (req, res) => {
+  try {
+    const studentId = req.params.id
+
+    const student = await Student.findById(studentId)
+      .populate('courses.courseId')
+      .lean()
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found'
+      })
+    }
+
+    const activeCourses = student.courses
+      .filter(course => course.courseStatus === 1)
+      .map(course => ({
+        _id: course.courseId._id,
+        name: course.courseId.name,
+        progress: calculateProgress(course) // You'll need to implement this
+      }))
+
+    // You might want to implement a separate model for activities
+    const recentActivities = [] // Implement based on your requirements
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalCourses: student.courses.length,
+        activeCourses,
+        recentActivities
+      }
+    })
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    })
+  }
+}
+
+export const getAllStudents = async (req, res) => {
+  try {
+    const { courseId } = req.params
+    const { status } = req.query
+    
+    let query = { status: status ? parseInt(status) : 1 }
+
+    if (courseId) {
+      query['courses.courseId'] = courseId
+      query['courses.courseStatus'] = 1
+    }
+
+    const students = await Student.find(query)
+      .select('name email contactNo status courses')
+      .populate({
+        path: 'courses.courseId',
+        select: 'name status',
+        match: { status: 1 } // Only populate active courses
+      })
+      .lean()
+
+    // Transform the data to include course information
+    const transformedStudents = students.map(student => ({
+      _id: student._id,
+      name: student.name,
+      email: student.email,
+      contactNo: student.contactNo,
+      status: student.status,
+      courses: student.courses
+        .filter(course => course.courseId) // Filter out any null populated courses
+        .map(course => ({
+          courseId: course.courseId._id,
+          name: course.courseId.name,
+          courseStatus: course.courseStatus,
+          enrollmentDate: course.enrollmentDate
+        }))
+    }))
+
+    res.status(200).json({
+      success: true,
+      data: {
+        students: transformedStudents
+      }
+    })
+
+  } catch (error) {
+    console.error('Error fetching students:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    })
+  }
+}
+
+export const updateStudentStatus = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body
+
+    // First find the student to get their email
+    const student = await Student.findById(id)
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' })
+    }
+
+    // Update student status
+    const updatedStudent = await Student.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    )
+
+    // Update corresponding user status
+    await User.findOneAndUpdate(
+      { email: student.email },
+      { status }
+    )
+
+    res.status(200).json(updatedStudent)
+  } catch (error) {
+    console.error('Error updating status:', error)
+    res.status(500).json({ 
+      message: 'Error updating status',
+      error: error.message 
+    })
+  }
+}
+
+export const getStudentCourses = async (req, res) => {
+  try {
+    const studentId = req.params.id
+
+    // First get the student and populate course details
+    const student = await Student.findById(studentId)
+      .populate({
+        path: 'courses.courseId',
+        select: 'name thumbnail status' // Only select needed fields
+      })
+      .lean()
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found'
+      })
+    }
+
+    // Transform the courses data
+    const courses = student.courses.map(course => ({
+      _id: course.courseId._id,
+      name: course.courseId.name,
+      thumbnail: course.courseId.thumbnail,
+      courseStatus: course.courseId.status,
+      enrollmentDate: course.enrollmentDate
+    }))
+
+    res.status(200).json({
+      success: true,
+      data: {
+        studentName: student.name,
+        courses
+      }
+    })
+
+  } catch (error) {
+    console.error('Error fetching student courses:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    })
+  }
+}
+
+export const assignCourse = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { courseId } = req.body
+
+    const student = await Student.findById(id)
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' })
+    }
+
+    // Check if course is already assigned
+    const courseExists = student.courses.some(
+      course => course.courseId.toString() === courseId
+    )
+
+    if (courseExists) {
+      return res.status(400).json({ 
+        message: 'Course is already assigned to this student' 
+      })
+    }
+
+    // Add new course
+    student.courses.push({
+      courseId,
+      courseStatus: 1,
+      enrollmentDate: new Date()
+    })
+
+    await student.save()
+
+    // Create initial unlock record (watermark starts empty → first section unlocks in UI)
+    await CourseUnlock.findOneAndUpdate(
+      { studentId: student._id, courseId },
+      {
+        $setOnInsert: {
+          studentId: student._id,
+          courseId,
+          lastUpdated: Date.now()
+        }
+      },
+      { upsert: true, new: true }
+    )
+
+    res.status(200).json({
+      message: 'Course assigned successfully',
+      student
+    })
+
+  } catch (error) {
+    console.error('Error assigning course:', error)
+    res.status(500).json({ 
+      message: 'Error assigning course',
+      error: error.message 
+    })
+  }
+}
+
+export const removeCourse = async (req, res) => {
+  try {
+    const { id, courseId } = req.params
+
+    const student = await Student.findById(id)
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' })
+    }
+
+    // Remove the course from the student's courses array
+    student.courses = student.courses.filter(
+      course => course.courseId.toString() !== courseId
+    )
+
+    await student.save()
+
+    res.status(200).json({
+      message: 'Course removed successfully',
+      student
+    })
+
+  } catch (error) {
+    console.error('Error removing course:', error)
+    res.status(500).json({ 
+      message: 'Error removing course',
+      error: error.message 
+    })
+  }
+}
+
+export const getCourseStudents = async (req, res) => {
+  try {
+    const { courseId } = req.params
+
+    // First get the course name
+    const course = await Course.findById(courseId)
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      })
+    }
+
+    // Find all students who have this course
+    const students = await Student.find({
+      'courses.courseId': courseId
+    }).select('name email contactNo status')
+
+    res.status(200).json({
+      success: true,
+      data: {
+        courseName: course.name,
+        students
+      }
+    })
+
+  } catch (error) {
+    console.error('Error fetching course students:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    })
+  }
+}
+
+export const getUnitProgress = async (req, res) => {
+  try {
+    const { studentId, courseId } = req.params
+
+    // Get course progress percentage from ProgressStats
+    const progressStats = await ProgressStats.findOne({ studentId, courseId })
+    const courseProgressPercentage = progressStats?.courseprogress || 0
+
+    // Get all units for the course
+    const units = await Unit.find({ courseId, status: 1 }).sort({ number: 1 }).lean()
+
+    // Get unit progress for each unit
+    const unitsProgress = await Promise.all(units.map(async unit => {
+      const unitProgress = await UnitProgress.findOne({
+        studentId,
+        courseId,
+        unitId: unit._id
+      })
+
+      return {
+        _id: unit._id,
+        name: unit.name,
+        number: unit.number,
+        progress: unitProgress?.percentage || 0
+      }
+    }))
+
+    // Get course stats for total units
+    const courseStats = await CourseStats.findOne({ courseId })
+    const totalUnits = courseStats?.totalUnits || units.length
+
+    // Get completed units count
+    const completedUnitsCount = await CompletedUnits.countDocuments({
+      studentId,
+      courseId,
+      status: 1
+    })
+
+    res.status(200).json({
+      success: true,
+      data: {
+        progressPercentage: courseProgressPercentage,
+        completedUnits: completedUnitsCount,
+        totalUnits: totalUnits,
+        units: unitsProgress
+      }
+    })
+
+  } catch (error) {
+    console.error('Error fetching course progress:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    })
+  }
+}
+
+export const getStudentById = async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const student = await Student.findById(id)
+      .populate({
+        path: 'courses.courseId',
+        select: 'name thumbnail status'
+      })
+      .lean()
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found'
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      data: student
+    })
+  } catch (error) {
+    console.error('Error fetching student:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    })
+  }
+}
+
+export const getDashboardStats = async (req, res) => {
+  try {
+    // Get total courses count
+    const totalCourses = await Course.countDocuments()
+    
+    // Get total students count
+    const totalStudents = await Student.countDocuments()
+    
+    // Get active courses count (status = 1)
+    const activeCourses = await Course.countDocuments({ status: 1 })
+    
+    // Get active students count (status = 1)
+    const activeStudents = await Student.countDocuments({ status: 1 })
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalCourses,
+        totalStudents,
+        activeCourses,
+        activeStudents
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    })
+  }
+}
