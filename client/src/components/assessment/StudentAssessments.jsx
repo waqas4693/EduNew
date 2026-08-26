@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
   Box,
-  Paper,
   Typography,
   Tabs,
   Tab,
@@ -28,6 +27,7 @@ import {
   getSelectedOptions,
   isMcqAnswerCorrect
 } from '../../utils/mcqHelpers';
+import PageShell from '../layout/PageShell';
 
 const StudentAssessments = ({ isAdminView }) => {
   const [assessments, setAssessments] = useState([]);
@@ -156,12 +156,10 @@ const StudentAssessments = ({ isAdminView }) => {
   };
 
   return (
-    <Box sx={{ p: 1 }}>
-      <Paper elevation={5} sx={{ p: '20px', borderRadius: '16px' }}>
-        <Typography variant="h5" sx={{ mb: 3, fontWeight: 'bold' }}>
-          {isAdminView ? "Student's Assessments" : "My Assessments"}
-        </Typography>
-
+    <PageShell
+      kicker="Assessments"
+      title={isAdminView ? "Student's Assessments" : "My Assessments"}
+    >
         <Tabs 
           value={tabValue} 
           onChange={(e, newValue) => setTabValue(newValue)}
@@ -249,8 +247,7 @@ const StudentAssessments = ({ isAdminView }) => {
             <Button onClick={() => setOpenReviewDialog(false)}>Close</Button>
           </DialogActions>
         </Dialog>
-      </Paper>
-    </Box>
+    </PageShell>
   );
 };
 

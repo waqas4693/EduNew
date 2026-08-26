@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {
   Box,
-  Paper,
   IconButton,
-  Typography,
   Menu,
   MenuItem,
   Table,
@@ -20,6 +18,7 @@ import {
 import { getData, patchData } from '../../api/api'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
+import PageShell from '../layout/PageShell'
 
 const InactiveCourses = () => {
   const [courses, setCourses] = useState([])
@@ -100,26 +99,8 @@ const InactiveCourses = () => {
   }
 
   return (
-    <Box sx={{ p: 1 }}>
-      <Paper 
-        elevation={5} 
-        sx={{ 
-          p: 3, 
-          borderRadius: '16px',
-          backgroundColor: 'white'
-        }}
-      >
-        <Typography
-          variant="h6"
-          sx={{
-            mb: 3,
-            fontSize: '24px',
-            fontWeight: 'bold'
-          }}
-        >
-          Inactive Courses
-        </Typography>
-        
+    <>
+      <PageShell kicker="Courses" title="Inactive Courses">
         <TableContainer>
           <Table sx={{ minWidth: 650 }}>
             <TableHead>
@@ -247,7 +228,7 @@ const InactiveCourses = () => {
             }
           }}
         />
-      </Paper>
+      </PageShell>
 
       <Menu
         anchorEl={anchorEl}
@@ -259,7 +240,7 @@ const InactiveCourses = () => {
           Mark Active
         </MenuItem>
       </Menu>
-    </Box>
+    </>
   )
 }
 

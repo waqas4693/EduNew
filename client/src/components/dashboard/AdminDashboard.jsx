@@ -3,7 +3,6 @@ import {
   Box,
   Card,
   Menu,
-  Paper,
   Tooltip,
   MenuItem,
   IconButton,
@@ -21,7 +20,7 @@ import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined'
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined'
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined'
 import { useNavigate } from 'react-router-dom'
-import { LayoutChromeButtons, useClaimLayoutChrome } from '../layout/LayoutChrome'
+import PageShell from '../layout/PageShell'
 
 const getThumbnailUrl = (fileName) => {
   if (!fileName) return ''
@@ -170,7 +169,6 @@ const AdminDashboard = () => {
   })
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
-  useClaimLayoutChrome()
 
   useEffect(() => {
     fetchDashboardData()
@@ -296,54 +294,7 @@ const AdminDashboard = () => {
 
   return (
     <Box sx={{ p: { xs: 0, md: 0.5 } }}>
-      <Paper
-        elevation={0}
-        sx={{
-          borderRadius: '16px',
-          overflow: 'hidden',
-          boxShadow: '0px 10px 32px rgba(10, 37, 64, 0.08)',
-          bgcolor: '#fff'
-        }}
-      >
-        <Box
-          sx={{
-            px: { xs: 2, md: 3 },
-            py: { xs: 2, md: 2.25 },
-            background:
-              'linear-gradient(135deg, #1F7EC2 0%, #155A8F 55%, #0A2540 100%)',
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1
-          }}
-        >
-          <LayoutChromeButtons light />
-          <Box>
-          <Typography
-            sx={{
-              fontFamily: '"Source Sans 3", sans-serif',
-              fontSize: 12,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              opacity: 0.82
-            }}
-          >
-            Overview
-          </Typography>
-          <Typography
-            sx={{
-              fontFamily: '"Fraunces", serif',
-              fontWeight: 600,
-              fontSize: { xs: '1.35rem', md: '1.55rem' },
-              lineHeight: 1.2
-            }}
-          >
-            Dashboard
-          </Typography>
-          </Box>
-        </Box>
-
-        <Box sx={{ p: { xs: 2.5, md: 4 } }}>
+      <PageShell kicker="Overview" title="Dashboard">
         {loading ? (
           <Box
             sx={{
@@ -424,10 +375,8 @@ const AdminDashboard = () => {
           </Grid>
         </Grid>
         )}
-        </Box>
-      </Paper>
+      </PageShell>
 
-      {/* Menu component remains outside the Paper */}
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
         <MenuItem onClick={handleEdit} sx={{ color: 'primary.main' }}>
           <EditIcon sx={{ mr: 1, fontSize: 20 }} />

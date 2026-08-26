@@ -20,18 +20,19 @@ export const useClaimLayoutChrome = () => {
   }, [chrome])
 }
 
-export const LayoutChromeButtons = ({ light = false }) => {
+const iconSx = (light) => ({ color: light ? '#fff' : 'secondary.dark' })
+
+/** Menu (+ calendar on mobile) — left side of the header */
+export const LayoutChromeNavButtons = ({ light = false }) => {
   const chrome = useLayoutChrome()
   if (!chrome) return null
-
-  const color = light ? '#fff' : 'secondary.dark'
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
       <IconButton
         onClick={chrome.toggleSidebar}
         aria-label="Open menu"
-        sx={{ color }}
+        sx={iconSx(light)}
       >
         <MenuIcon />
       </IconButton>
@@ -39,18 +40,35 @@ export const LayoutChromeButtons = ({ light = false }) => {
         <IconButton
           onClick={chrome.openCalendar}
           aria-label="Open calendar"
-          sx={{ color }}
+          sx={iconSx(light)}
         >
           <CalendarTodayIcon />
         </IconButton>
       )}
-      <IconButton
-        onClick={chrome.openPalette}
-        aria-label="Change background"
-        sx={{ color }}
-      >
-        <PaletteIcon />
-      </IconButton>
     </Box>
   )
 }
+
+/** Background picker — extreme right of the header */
+export const LayoutChromePaletteButton = ({ light = false }) => {
+  const chrome = useLayoutChrome()
+  if (!chrome) return null
+
+  return (
+    <IconButton
+      onClick={chrome.openPalette}
+      aria-label="Change background"
+      sx={iconSx(light)}
+    >
+      <PaletteIcon />
+    </IconButton>
+  )
+}
+
+/** @deprecated Prefer NavButtons + PaletteButton for left/right layout */
+export const LayoutChromeButtons = ({ light = false }) => (
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+    <LayoutChromeNavButtons light={light} />
+    <LayoutChromePaletteButton light={light} />
+  </Box>
+)

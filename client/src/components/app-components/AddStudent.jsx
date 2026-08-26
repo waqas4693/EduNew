@@ -3,7 +3,8 @@ import CustomTextField from '../reusable-components/CustomTextField'
 import { useState } from 'react'
 import { postData } from '../../api/api'
 import { useForm } from 'react-hook-form'
-import { Box, Button, Typography, Paper } from '@mui/material'
+import { Box, Button } from '@mui/material'
+import PageShell from '../layout/PageShell'
 
 const AddStudent = () => {
   const [loading, setLoading] = useState(false)
@@ -26,12 +27,8 @@ const AddStudent = () => {
   }
 
   return (
-    <Box sx={{ maxWidth: 500, mx: 'auto', mt: 4 }}>
-      <Paper sx={{ p: 4 }}>
-        <Typography variant="h5" sx={{ mb: 4 }}>
-          Add New Student
-        </Typography>
-
+    <Box sx={{ maxWidth: 560, mx: 'auto' }}>
+      <PageShell kicker="Students" title="Add New Student">
         <form onSubmit={handleSubmit(onSubmit)}>
           <CustomTextField
             label="Name"
@@ -95,7 +92,7 @@ const AddStudent = () => {
             {loading ? 'Adding...' : 'Add Student'}
           </Button>
         </form>
-      </Paper>
+      </PageShell>
     </Box>
   )
 }

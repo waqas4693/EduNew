@@ -5,7 +5,8 @@ import Sidebar from './Sidebar'
 import Calendar from '../calendar/Calendar'
 import {
   LayoutChromeProvider,
-  LayoutChromeButtons
+  LayoutChromeNavButtons,
+  LayoutChromePaletteButton
 } from './LayoutChrome'
 
 const backgroundImages = [
@@ -53,11 +54,13 @@ const DashboardLayout = ({ children }) => {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 px: 1.5,
-                py: 0.75,
-                bgcolor: 'rgba(255,255,255,0.92)'
+                py: 1,
+                background:
+                  'linear-gradient(135deg, #1F7EC2 0%, #155A8F 55%, #0A2540 100%)'
               }}
             >
-              <LayoutChromeButtons />
+              <LayoutChromeNavButtons light />
+              <LayoutChromePaletteButton light />
             </Box>
           )}
           <Box

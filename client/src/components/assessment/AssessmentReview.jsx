@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import {
   Box,
-  Paper,
   Typography,
   Table,
   TableBody,
@@ -38,6 +37,7 @@ import {
   getSelectedOptions,
   isMcqAnswerCorrect
 } from '../../utils/mcqHelpers'
+import PageShell from '../layout/PageShell'
 
 const AssessmentReview = () => {
   const { user } = useAuth()
@@ -543,12 +543,7 @@ const AssessmentReview = () => {
   }
 
   return (
-    <Box sx={{ p: 1 }}>
-      <Paper elevation={5} sx={{ p: '20px', borderRadius: '16px' }}>
-        <Typography variant="h5" sx={{ mb: 3, fontWeight: 'bold' }}>
-          Assessment Review
-        </Typography>
-
+    <PageShell kicker="Assessments" title="Assessment Review" subtitle="Submitted">
         <TableContainer>
           <Table>
             <TableHead>
@@ -797,8 +792,7 @@ const AssessmentReview = () => {
             <Button onClick={() => setOpenHistoryDialog(false)}>Close</Button>
           </DialogActions>
         </Dialog>
-      </Paper>
-    </Box>
+    </PageShell>
   )
 }
 

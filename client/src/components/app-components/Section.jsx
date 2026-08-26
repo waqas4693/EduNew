@@ -23,6 +23,11 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useSections, useUnlockedSections } from '../../hooks/useSections'
 import { setCurrentUnit } from '../../redux/slices/courseSlice'
 import { useCompletedSections, useSyncCourseUnlock } from '../../hooks/useUnlockSync'
+import {
+  LayoutChromeNavButtons,
+  LayoutChromePaletteButton,
+  useClaimLayoutChrome
+} from '../layout/LayoutChrome'
 
 import Grid from '@mui/material/Grid2'
 import IconButton from '@mui/material/IconButton'
@@ -39,6 +44,7 @@ const Section = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const dispatch = useDispatch()
+  useClaimLayoutChrome()
 
   const { user } = useAuth()
   const { courseId, unitId } = useParams()
@@ -243,6 +249,129 @@ const Section = () => {
     }
   }
 
+  const sectionHeader = (
+    <Box
+      sx={{
+        px: 2,
+        py: 1.5,
+        background: 'linear-gradient(135deg, #1F7EC2 0%, #155A8F 55%, #0A2540 100%)',
+        color: '#fff',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 1
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+        <LayoutChromeNavButtons light />
+        <Typography
+          variant='body2'
+          sx={{
+            color: '#fff',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            width: 'fit-content',
+            gap: 0
+          }}
+          onClick={handleBackToUnit}
+        >
+          <ChevronLeft sx={{ ml: -1, color: '#fff' }} /> Back To Unit
+        </Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto', flexShrink: 0 }}>
+        <LayoutChromePaletteButton light />
+      </Box>
+    </Box>
+  )
+
+  const sectionListSkeleton = (
+    [...Array(3)].map((_, index) => (
+      <Box key={index} sx={{ mb: 3 }}>
+        <Skeleton
+          variant='rectangular'
+          height={80}
+          sx={{ borderRadius: '6px', mb: 1 }}
+        />
+        <Skeleton width='30%' height={20} sx={{ mb: 1 }} />
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            mb: 2
+          }}
+        >
+          <Skeleton width='40%' height={20} />
+          <Skeleton width='40%' height={20} />
+        </Box>
+        <Skeleton variant='rectangular' height={1} sx={{ mb: 3 }} />
+      </Box>
+    ))
+  )
+
+  const sectionCourseIntro = (
+    <>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <CardMedia
+          component='img'
+          image={courseImage || '/background-images/1.jpg'}
+          alt='Course Image'
+          sx={{
+            width: 100,
+            height: 100,
+            borderRadius: '8px',
+            mr: 2
+          }}
+        />
+        <Typography
+          variant='h6'
+          sx={{
+            fontSize: '18px',
+            fontWeight: 'bold'
+          }}
+        >
+          {courseName || 'Course Name Not Available'}
+        </Typography>
+      </Box>
+
+      <Typography
+        variant='h6'
+        sx={{
+          fontSize: '18px',
+          fontWeight: 'bold',
+          mb: 3
+        }}
+      >
+        {unitName || 'Unit Name Not Available'}
+      </Typography>
+    </>
+  )
+
+  const restrictionDialog = (
+    <Dialog
+      open={showRestrictionDialog}
+      onClose={() => setShowRestrictionDialog(false)}
+      PaperProps={{
+        sx: {
+          borderRadius: 2,
+          minWidth: 300
+        }
+      }}
+    >
+      <DialogTitle>Access Restricted</DialogTitle>
+      <DialogContent>
+        <Typography>
+          This content is not available in the demo version. Please contact your administrator for full access.
+        </Typography>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setShowRestrictionDialog(false)} variant='contained'>
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
+  )
+
   if (isMobile) {
     // Mobile: Only section content, no calendar
     return (
@@ -250,248 +379,161 @@ const Section = () => {
         <Paper
           elevation={5}
           sx={{
-            p: '24px 12px',
             borderRadius: '16px',
-            backgroundColor: 'white'
+            backgroundColor: 'white',
+            overflow: 'hidden'
           }}
         >
-          <Box sx={{ mb: 1 }}>
-            <Typography
-              variant='body2'
-              sx={{
-                color: 'primary.main',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                width: 'fit-content',
-                gap: 0
-              }}
-              onClick={handleBackToUnit}
-            >
-              <ChevronLeft sx={{ ml: -1 }} /> Back To Unit
-            </Typography>
-          </Box>
+          {sectionHeader}
+          <Box sx={{ px: '12px', py: '24px', bgcolor: 'white' }}>
+            {sectionCourseIntro}
 
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-            <CardMedia
-              component='img'
-              image={courseImage || '/background-images/1.jpg'}
-              alt='Course Image'
-              sx={{
-                width: 100,
-                height: 100,
-                borderRadius: '8px',
-                mr: 2
-              }}
-            />
-            <Typography
-              variant='h6'
-              sx={{
-                fontSize: '18px',
-                fontWeight: 'bold'
-              }}
-            >
-              {courseName || 'Course Name Not Available'}
-            </Typography>
-          </Box>
+            {sectionsLoading || progressLoading ? (
+              sectionListSkeleton
+            ) : (
+              sections?.map((section, index) => {
+                const isUnlocked = isSectionUnlocked(section._id)
+                const isAccessible = isSectionAccessible(index)
+                const isCompleted = isSectionCompleted(section._id)
+                const canOpen = canOpenSection(section._id)
 
-          <Typography
-            variant='h6'
-            sx={{
-              fontSize: '18px',
-              fontWeight: 'bold',
-              mb: 3
-            }}
-          >
-            {unitName || 'Unit Name Not Available'}
-          </Typography>
-
-          {sectionsLoading || progressLoading ? (
-            [...Array(3)].map((_, index) => (
-              <Box key={index} sx={{ mb: 3 }}>
-                <Skeleton
-                  variant='rectangular'
-                  height={80}
-                  sx={{ borderRadius: '6px', mb: 1 }}
-                />
-                <Skeleton width='30%' height={20} sx={{ mb: 1 }} />
-                <Box
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    mb: 2
-                  }}
-                >
-                  <Skeleton width='40%' height={20} />
-                  <Skeleton width='40%' height={20} />
-                </Box>
-                <Skeleton variant='rectangular' height={1} sx={{ mb: 3 }} />
-              </Box>
-            ))
-          ) : (
-            sections?.map((section, index) => {
-              const isUnlocked = isSectionUnlocked(section._id)
-              const isAccessible = isSectionAccessible(index)
-              const isCompleted = isSectionCompleted(section._id)
-              const canOpen = canOpenSection(section._id)
-
-              return (
-                <ListItem
-                  key={section._id}
-                  id={`section-${section._id}`}
-                  sx={{
-                    pl: '80px',
-                    pr: 2,
-                    py: 2.5,
-                    bgcolor: '#F5F5F5',
-                    borderRadius: '6px',
-                    boxShadow: '0px 1px 3px rgba(0,0,0,0.1)',
-                    mb: 1,
-                    position: 'relative',
-                    cursor: 'default',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    transition: 'all 0.3s ease',
-                    border: location.state?.completedSectionId === section._id ? '2px solid #4caf50' : 'none'
-                  }}
-                >
-                  <Box
+                return (
+                  <ListItem
+                    key={section._id}
+                    id={`section-${section._id}`}
                     sx={{
-                      mr: 2,
-                      color: 'white',
-                      minWidth: '70px',
-                      bgcolor: isCompleted ? 'success.main' : (canOpen ? 'primary.main' : '#9e9e9e'),
-                      textAlign: 'center',
-                      borderTopLeftRadius: '6px',
-                      borderBottomLeftRadius: '6px',
-                      height: '100%',
+                      pl: '80px',
+                      pr: 2,
+                      py: 2.5,
+                      bgcolor: '#F5F5F5',
+                      borderRadius: '6px',
+                      boxShadow: '0px 1px 3px rgba(0,0,0,0.1)',
+                      mb: 1,
+                      position: 'relative',
+                      cursor: 'default',
                       display: 'flex',
                       flexDirection: 'column',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      position: 'absolute',
-                      left: 0,
-                      top: 0,
-                      bottom: 0
+                      alignItems: 'flex-start',
+                      transition: 'all 0.3s ease',
+                      border: location.state?.completedSectionId === section._id ? '2px solid #4caf50' : 'none'
                     }}
                   >
-                    <Typography
-                      sx={{ fontSize: '16px', fontWeight: 500, p: '20px' }}
-                    >
-                      {section.number}
-                    </Typography>
-                  </Box>
-
-                  <Box sx={{ flex: 1, width: '100%', mb: 2, display: 'flex', alignItems: 'center' }}>
-                    <Typography
+                    <Box
                       sx={{
-                        fontWeight: 'bold',
-                        fontSize: '14px',
-                        overflow: 'hidden',
-                        WebkitLineClamp: 2,
-                        display: '-webkit-box',
-                        textOverflow: 'ellipsis',
-                        WebkitBoxOrient: 'vertical'
+                        mr: 2,
+                        color: 'white',
+                        minWidth: '70px',
+                        bgcolor: isCompleted ? 'success.main' : (canOpen ? 'primary.main' : '#9e9e9e'),
+                        textAlign: 'center',
+                        borderTopLeftRadius: '6px',
+                        borderBottomLeftRadius: '6px',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        bottom: 0
                       }}
                     >
-                      {section.name}
-                    </Typography>
-                    
-                    {isCompleted ? (
-                      <CheckCircle 
-                        sx={{ ml: 1, color: 'success.main', fontSize: '18px' }} 
-                      />
-                    ) : canOpen ? (
-                      <LockOpenOutlined 
-                        sx={{ ml: 1, color: 'primary.main', fontSize: '18px' }} 
-                      />
-                    ) : (
-                      <Tooltip title="Complete previous sections to unlock">
-                        <LockOutlined 
-                          sx={{ ml: 1, color: 'text.secondary', fontSize: '18px' }} 
-                        />
-                      </Tooltip>
-                    )}
-                  </Box>
+                      <Typography
+                        sx={{ fontSize: '16px', fontWeight: 500, p: '20px' }}
+                      >
+                        {section.number}
+                      </Typography>
+                    </Box>
 
-                  <Box sx={{ display: 'flex', gap: 2, alignSelf: 'flex-end' }}>
-                    {section.resources.length > 0 && (
-                      <Tooltip title="Learning" placement="top" enterTouchDelay={0} leaveTouchDelay={1500}>
-                        <span>
-                          <IconButton
-                            color={isCompleted ? 'success' : (canOpen ? 'primary' : 'default')}
-                            onClick={() => handleSectionClick(section, canOpen)}
-                            disabled={!canOpen}
-                            sx={{
-                              bgcolor: isCompleted ? 'success.main' : (canOpen ? 'primary.main' : '#9e9e9e'),
-                              color: 'white',
-                              '&:hover': {
-                                bgcolor: isCompleted ? 'success.dark' : (canOpen ? 'primary.dark' : '#9e9e9e')
-                              },
-                              '&.Mui-disabled': {
-                                bgcolor: '#9e9e9e',
-                                color: 'white'
-                              }
-                            }}
-                          >
-                            {canOpen ? <MenuBook /> : <LockOutlined />}
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                    )}
-                    {section.assessments?.length > 0 && (
-                      <Tooltip title="Assessment" placement="top" enterTouchDelay={0} leaveTouchDelay={1500}>
-                        <span>
-                          <IconButton
-                            color={canOpen ? 'primary' : 'default'}
-                            onClick={() => handleAssessmentClick(section, canOpen)}
-                            disabled={!canOpen}
-                            sx={{
-                              bgcolor: canOpen ? 'primary.main' : '#9e9e9e',
-                              color: 'white',
-                              '&:hover': {
-                                bgcolor: canOpen ? 'primary.dark' : '#9e9e9e'
-                              },
-                              '&.Mui-disabled': {
-                                bgcolor: '#9e9e9e',
-                                color: 'white'
-                              }
-                            }}
-                          >
-                            {canOpen ? <AssignmentOutlined /> : <LockOutlined />}
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                    )}
-                  </Box>
-                </ListItem>
-              )
-            })
-          )}
+                    <Box sx={{ flex: 1, width: '100%', mb: 2, display: 'flex', alignItems: 'center' }}>
+                      <Typography
+                        sx={{
+                          fontWeight: 'bold',
+                          fontSize: '14px',
+                          overflow: 'hidden',
+                          WebkitLineClamp: 2,
+                          display: '-webkit-box',
+                          textOverflow: 'ellipsis',
+                          WebkitBoxOrient: 'vertical'
+                        }}
+                      >
+                        {section.name}
+                      </Typography>
+                      
+                      {isCompleted ? (
+                        <CheckCircle 
+                          sx={{ ml: 1, color: 'success.main', fontSize: '18px' }} 
+                        />
+                      ) : canOpen ? (
+                        <LockOpenOutlined 
+                          sx={{ ml: 1, color: 'primary.main', fontSize: '18px' }} 
+                        />
+                      ) : (
+                        <Tooltip title="Complete previous sections to unlock">
+                          <LockOutlined 
+                            sx={{ ml: 1, color: 'text.secondary', fontSize: '18px' }} 
+                          />
+                        </Tooltip>
+                      )}
+                    </Box>
+
+                    <Box sx={{ display: 'flex', gap: 2, alignSelf: 'flex-end' }}>
+                      {section.resources.length > 0 && (
+                        <Tooltip title="Learning" placement="top" enterTouchDelay={0} leaveTouchDelay={1500}>
+                          <span>
+                            <IconButton
+                              color={isCompleted ? 'success' : (canOpen ? 'primary' : 'default')}
+                              onClick={() => handleSectionClick(section, canOpen)}
+                              disabled={!canOpen}
+                              sx={{
+                                bgcolor: isCompleted ? 'success.main' : (canOpen ? 'primary.main' : '#9e9e9e'),
+                                color: 'white',
+                                '&:hover': {
+                                  bgcolor: isCompleted ? 'success.dark' : (canOpen ? 'primary.dark' : '#9e9e9e')
+                                },
+                                '&.Mui-disabled': {
+                                  bgcolor: '#9e9e9e',
+                                  color: 'white'
+                                }
+                              }}
+                            >
+                              {canOpen ? <MenuBook /> : <LockOutlined />}
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      )}
+                      {section.assessments?.length > 0 && (
+                        <Tooltip title="Assessment" placement="top" enterTouchDelay={0} leaveTouchDelay={1500}>
+                          <span>
+                            <IconButton
+                              color={canOpen ? 'primary' : 'default'}
+                              onClick={() => handleAssessmentClick(section, canOpen)}
+                              disabled={!canOpen}
+                              sx={{
+                                bgcolor: canOpen ? 'primary.main' : '#9e9e9e',
+                                color: 'white',
+                                '&:hover': {
+                                  bgcolor: canOpen ? 'primary.dark' : '#9e9e9e'
+                                },
+                                '&.Mui-disabled': {
+                                  bgcolor: '#9e9e9e',
+                                  color: 'white'
+                                }
+                              }}
+                            >
+                              {canOpen ? <AssignmentOutlined /> : <LockOutlined />}
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      )}
+                    </Box>
+                  </ListItem>
+                )
+              })
+            )}
+          </Box>
         </Paper>
-        <Dialog
-          open={showRestrictionDialog}
-          onClose={() => setShowRestrictionDialog(false)}
-          PaperProps={{
-            sx: {
-              borderRadius: 2,
-              minWidth: 300
-            }
-          }}
-        >
-          <DialogTitle>Access Restricted</DialogTitle>
-          <DialogContent>
-            <Typography>
-              This content is not available in the demo version. Please contact your administrator for full access.
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setShowRestrictionDialog(false)} variant='contained'>
-              Close
-            </Button>
-          </DialogActions>
-        </Dialog>
+        {restrictionDialog}
       </Box>
     )
   }
@@ -502,257 +544,170 @@ const Section = () => {
         <Paper
           elevation={5}
           sx={{
-            p: '24px 24px',
             borderRadius: '16px',
-            backgroundColor: 'white'
+            backgroundColor: 'white',
+            overflow: 'hidden'
           }}
         >
-          <Box sx={{ mb: 1 }}>
-            <Typography
-              variant='body2'
-              sx={{
-                color: 'primary.main',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                width: 'fit-content',
-                gap: 0
-              }}
-              onClick={handleBackToUnit}
-            >
-              <ChevronLeft sx={{ ml: -1 }} /> Back To Unit
-            </Typography>
-          </Box>
+          {sectionHeader}
+          <Box sx={{ px: '24px', py: '24px', bgcolor: 'white' }}>
+            {sectionCourseIntro}
 
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-            <CardMedia
-              component='img'
-              image={courseImage || '/background-images/1.jpg'}
-              alt='Course Image'
-              sx={{
-                width: 100,
-                height: 100,
-                borderRadius: '8px',
-                mr: 2
-              }}
-            />
-            <Typography
-              variant='h6'
-              sx={{
-                fontSize: '18px',
-                fontWeight: 'bold'
-              }}
-            >
-              {courseName || 'Course Name Not Available'}
-            </Typography>
-          </Box>
+            {sectionsLoading || progressLoading ? (
+              sectionListSkeleton
+            ) : (
+              sections?.map((section, index) => {
+                const isUnlocked = isSectionUnlocked(section._id)
+                const isAccessible = isSectionAccessible(index)
+                const isCompleted = isSectionCompleted(section._id)
+                const canOpen = canOpenSection(section._id)
 
-          <Typography
-            variant='h6'
-            sx={{
-              fontSize: '18px',
-              fontWeight: 'bold',
-              mb: 3
-            }}
-          >
-            {unitName || 'Unit Name Not Available'}
-          </Typography>
-
-          {sectionsLoading || progressLoading ? (
-            [...Array(3)].map((_, index) => (
-              <Box key={index} sx={{ mb: 3 }}>
-                <Skeleton
-                  variant='rectangular'
-                  height={80}
-                  sx={{ borderRadius: '6px', mb: 1 }}
-                />
-                <Skeleton width='30%' height={20} sx={{ mb: 1 }} />
-                <Box
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    mb: 2
-                  }}
-                >
-                  <Skeleton width='40%' height={20} />
-                  <Skeleton width='40%' height={20} />
-                </Box>
-                <Skeleton variant='rectangular' height={1} sx={{ mb: 3 }} />
-              </Box>
-            ))
-          ) : (
-            sections?.map((section, index) => {
-              const isUnlocked = isSectionUnlocked(section._id)
-              const isAccessible = isSectionAccessible(index)
-              const isCompleted = isSectionCompleted(section._id)
-              const canOpen = canOpenSection(section._id)
-
-              return (
-                <ListItem
-                  key={section._id}
-                  id={`section-${section._id}`}
-                  sx={{
-                    pl: '80px',
-                    pr: 2,
-                    py: 2.5,
-                    bgcolor: '#F5F5F5',
-                    borderRadius: '6px',
-                    boxShadow: '0px 1px 3px rgba(0,0,0,0.1)',
-                    mb: 1,
-                    position: 'relative',
-                    cursor: 'default',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    transition: 'all 0.3s ease',
-                    border: location.state?.completedSectionId === section._id ? '2px solid #4caf50' : 'none'
-                  }}
-                >
-                  <Box
+                return (
+                  <ListItem
+                    key={section._id}
+                    id={`section-${section._id}`}
                     sx={{
-                      mr: 2,
-                      color: 'white',
-                      minWidth: '70px',
-                      bgcolor: isCompleted ? 'success.main' : (canOpen ? 'primary.main' : '#9e9e9e'),
-                      textAlign: 'center',
-                      borderTopLeftRadius: '6px',
-                      borderBottomLeftRadius: '6px',
-                      height: '100%',
+                      pl: '80px',
+                      pr: 2,
+                      py: 2.5,
+                      bgcolor: '#F5F5F5',
+                      borderRadius: '6px',
+                      boxShadow: '0px 1px 3px rgba(0,0,0,0.1)',
+                      mb: 1,
+                      position: 'relative',
+                      cursor: 'default',
                       display: 'flex',
                       flexDirection: 'column',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      position: 'absolute',
-                      left: 0,
-                      top: 0,
-                      bottom: 0
+                      alignItems: 'flex-start',
+                      transition: 'all 0.3s ease',
+                      border: location.state?.completedSectionId === section._id ? '2px solid #4caf50' : 'none'
                     }}
                   >
-                    <Typography
-                      sx={{ fontSize: '16px', fontWeight: 500, p: '20px' }}
-                    >
-                      {section.number}
-                    </Typography>
-                  </Box>
-
-                  <Box sx={{ flex: 1, width: '100%', mb: 2, display: 'flex', alignItems: 'center' }}>
-                    <Typography
+                    <Box
                       sx={{
-                        fontWeight: 'bold',
-                        fontSize: '14px',
-                        overflow: 'hidden',
-                        WebkitLineClamp: 2,
-                        display: '-webkit-box',
-                        textOverflow: 'ellipsis',
-                        WebkitBoxOrient: 'vertical'
+                        mr: 2,
+                        color: 'white',
+                        minWidth: '70px',
+                        bgcolor: isCompleted ? 'success.main' : (canOpen ? 'primary.main' : '#9e9e9e'),
+                        textAlign: 'center',
+                        borderTopLeftRadius: '6px',
+                        borderBottomLeftRadius: '6px',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        bottom: 0
                       }}
                     >
-                      {section.name}
-                    </Typography>
-                    {isCompleted ? (
-                      <CheckCircle 
-                        sx={{ ml: 1, color: 'success.main', fontSize: '18px' }} 
-                      />
-                    ) : canOpen ? (
-                      <LockOpenOutlined 
-                        sx={{ ml: 1, color: 'primary.main', fontSize: '18px' }} 
-                      />
-                    ) : (
-                      <Tooltip title="Complete previous sections to unlock">
-                        <LockOutlined 
-                          sx={{ ml: 1, color: 'text.secondary', fontSize: '18px' }} 
+                      <Typography
+                        sx={{ fontSize: '16px', fontWeight: 500, p: '20px' }}
+                      >
+                        {section.number}
+                      </Typography>
+                    </Box>
+
+                    <Box sx={{ flex: 1, width: '100%', mb: 2, display: 'flex', alignItems: 'center' }}>
+                      <Typography
+                        sx={{
+                          fontWeight: 'bold',
+                          fontSize: '14px',
+                          overflow: 'hidden',
+                          WebkitLineClamp: 2,
+                          display: '-webkit-box',
+                          textOverflow: 'ellipsis',
+                          WebkitBoxOrient: 'vertical'
+                        }}
+                      >
+                        {section.name}
+                      </Typography>
+                      {isCompleted ? (
+                        <CheckCircle 
+                          sx={{ ml: 1, color: 'success.main', fontSize: '18px' }} 
                         />
-                      </Tooltip>
-                    )}
-                  </Box>
+                      ) : canOpen ? (
+                        <LockOpenOutlined 
+                          sx={{ ml: 1, color: 'primary.main', fontSize: '18px' }} 
+                        />
+                      ) : (
+                        <Tooltip title="Complete previous sections to unlock">
+                          <LockOutlined 
+                            sx={{ ml: 1, color: 'text.secondary', fontSize: '18px' }} 
+                          />
+                        </Tooltip>
+                      )}
+                    </Box>
 
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: 1.5,
-                      alignSelf: 'flex-end',
-                      justifyContent: 'flex-end',
-                      maxWidth: '100%'
-                    }}
-                  >
-                    {section.resources.length > 0 && (
-                      <Tooltip title={!isAccessible ? "Contact your administrator for full access" : ""} placement="top">
-                        <span>
-                          <Button
-                            variant='contained'
-                            startIcon={canOpen ? <MenuBook /> : <LockOutlined />}
-                            onClick={() => handleSectionClick(section, canOpen)}
-                            disabled={!canOpen}
-                            sx={{
-                              bgcolor: isCompleted ? 'success.main' : (canOpen ? 'primary.main' : '#9e9e9e'),
-                              color: 'white',
-                              borderRadius: '8px',
-                              textTransform: 'none',
-                              '&:hover': {
-                                bgcolor: isCompleted ? 'success.dark' : (canOpen ? 'primary.dark' : '#9e9e9e')
-                              }
-                            }}
-                          >
-                            Learning
-                          </Button>
-                        </span>
-                      </Tooltip>
-                    )}
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 1.5,
+                        alignSelf: 'flex-end',
+                        justifyContent: 'flex-end',
+                        maxWidth: '100%'
+                      }}
+                    >
+                      {section.resources.length > 0 && (
+                        <Tooltip title={!isAccessible ? "Contact your administrator for full access" : ""} placement="top">
+                          <span>
+                            <Button
+                              variant='contained'
+                              startIcon={canOpen ? <MenuBook /> : <LockOutlined />}
+                              onClick={() => handleSectionClick(section, canOpen)}
+                              disabled={!canOpen}
+                              sx={{
+                                bgcolor: isCompleted ? 'success.main' : (canOpen ? 'primary.main' : '#9e9e9e'),
+                                color: 'white',
+                                borderRadius: '8px',
+                                textTransform: 'none',
+                                '&:hover': {
+                                  bgcolor: isCompleted ? 'success.dark' : (canOpen ? 'primary.dark' : '#9e9e9e')
+                                }
+                              }}
+                            >
+                              Learning
+                            </Button>
+                          </span>
+                        </Tooltip>
+                      )}
 
-                    {section.assessments && section.assessments.length > 0 && (
-                      <Tooltip title={!isAccessible ? "Contact your administrator for full access" : ""} placement="top">
-                        <span>
-                          <Button
-                            variant='outlined'
-                            startIcon={<AssignmentOutlined />}
-                            onClick={() => handleAssessmentClick(section, canOpen)}
-                            disabled={!canOpen}
-                            sx={{
-                              color: isCompleted ? 'success.main' : (canOpen ? 'primary.main' : '#9e9e9e'),
-                              borderColor: isCompleted ? 'success.main' : (canOpen ? 'primary.main' : '#9e9e9e'),
-                              borderRadius: '8px',
-                              textTransform: 'none',
-                              '&:hover': {
+                      {section.assessments && section.assessments.length > 0 && (
+                        <Tooltip title={!isAccessible ? "Contact your administrator for full access" : ""} placement="top">
+                          <span>
+                            <Button
+                              variant='outlined'
+                              startIcon={<AssignmentOutlined />}
+                              onClick={() => handleAssessmentClick(section, canOpen)}
+                              disabled={!canOpen}
+                              sx={{
+                                color: isCompleted ? 'success.main' : (canOpen ? 'primary.main' : '#9e9e9e'),
                                 borderColor: isCompleted ? 'success.main' : (canOpen ? 'primary.main' : '#9e9e9e'),
-                                backgroundColor: isCompleted ? 'rgba(76, 175, 80, 0.04)' : (canOpen ? 'rgba(31, 126, 194, 0.04)' : 'transparent')
-                              }
-                            }}
-                          >
-                            Assessment
-                          </Button>
-                        </span>
-                      </Tooltip>
-                    )}
-                  </Box>
-                </ListItem>
-              )
-            })
-          )}
+                                borderRadius: '8px',
+                                textTransform: 'none',
+                                '&:hover': {
+                                  borderColor: isCompleted ? 'success.main' : (canOpen ? 'primary.main' : '#9e9e9e'),
+                                  backgroundColor: isCompleted ? 'rgba(76, 175, 80, 0.04)' : (canOpen ? 'rgba(31, 126, 194, 0.04)' : 'transparent')
+                                }
+                              }}
+                            >
+                              Assessment
+                            </Button>
+                          </span>
+                        </Tooltip>
+                      )}
+                    </Box>
+                  </ListItem>
+                )
+              })
+            )}
+          </Box>
         </Paper>
       </Grid>
-      <Dialog
-        open={showRestrictionDialog}
-        onClose={() => setShowRestrictionDialog(false)}
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            minWidth: 300
-          }
-        }}
-      >
-        <DialogTitle>Access Restricted</DialogTitle>
-        <DialogContent>
-          <Typography>
-            This content is not available in the demo version. Please contact your administrator for full access.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowRestrictionDialog(false)} variant='contained'>
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {restrictionDialog}
     </Grid>
   )
 }

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import {
   Box,
-  Paper,
   Typography,
   TextField,
   Button,
@@ -17,7 +16,7 @@ import SaveIcon from '@mui/icons-material/Save'
 import MailOutlineIcon from '@mui/icons-material/MailOutline'
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined'
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined'
-import { LayoutChromeButtons, useClaimLayoutChrome } from '../layout/LayoutChrome'
+import PageShell from '../layout/PageShell'
 
 const ROLE_LABELS = {
   1: 'Administrator',
@@ -56,7 +55,6 @@ const Profile = () => {
   const [profileError, setProfileError] = useState('')
   const [profileSuccess, setProfileSuccess] = useState('')
   const [profileLoading, setProfileLoading] = useState(false)
-  useClaimLayoutChrome()
 
   useEffect(() => {
     if (user) {
@@ -179,54 +177,7 @@ const Profile = () => {
 
   return (
     <Box sx={{ p: { xs: 0, md: 0.5 } }}>
-      <Paper
-        elevation={0}
-        sx={{
-          borderRadius: '16px',
-          overflow: 'hidden',
-          boxShadow: '0px 10px 32px rgba(10, 37, 64, 0.08)',
-          bgcolor: '#fff'
-        }}
-      >
-        <Box
-          sx={{
-            px: { xs: 2, md: 3 },
-            py: { xs: 2, md: 2.25 },
-            background:
-              'linear-gradient(135deg, #1F7EC2 0%, #155A8F 55%, #0A2540 100%)',
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1
-          }}
-        >
-          <LayoutChromeButtons light />
-          <Box>
-          <Typography
-            sx={{
-              fontFamily: '"Source Sans 3", sans-serif',
-              fontSize: 12,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              opacity: 0.82
-            }}
-          >
-            Account
-          </Typography>
-          <Typography
-            sx={{
-              fontFamily: '"Fraunces", serif',
-              fontWeight: 600,
-              fontSize: { xs: '1.35rem', md: '1.55rem' },
-              lineHeight: 1.2
-            }}
-          >
-            Profile
-          </Typography>
-          </Box>
-        </Box>
-
-        <Box sx={{ p: { xs: 2.5, md: 4 } }}>
+      <PageShell kicker="Account" title="Profile">
           <Grid container spacing={{ xs: 3, md: 4 }}>
             <Grid size={{ xs: 12, md: 4 }}>
               <Box
@@ -489,8 +440,7 @@ const Profile = () => {
               </Box>
             </Grid>
           </Grid>
-        </Box>
-      </Paper>
+      </PageShell>
     </Box>
   )
 }

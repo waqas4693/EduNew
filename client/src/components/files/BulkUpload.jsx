@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import {
   Box,
-  Paper,
   Typography,
   Button,
   CircularProgress,
@@ -33,6 +32,7 @@ import {
 } from '@mui/icons-material'
 import { postData, getData } from '../../api/api'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import PageShell from '../layout/PageShell'
 
 const RESOURCE_TYPES = ['VIDEO', 'IMAGE', 'AUDIO', 'PDF', 'PPT']
 
@@ -571,20 +571,7 @@ const BulkUpload = () => {
 
   return (
     <>
-      <Paper elevation={5} sx={{ p: '20px', borderRadius: '16px' }}>
-        <Box
-          sx={{
-            mb: '20px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}
-        >
-          <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-            Bulk Resource Upload
-          </Typography>
-        </Box>
-
+      <PageShell kicker="Resources" title="Bulk Resource Upload">
         {/* Course and Unit Selection */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="h6" sx={{ mb: 2, color: 'text.secondary' }}>
@@ -908,7 +895,7 @@ const BulkUpload = () => {
             {success}
           </Alert>
         )}
-      </Paper>
+      </PageShell>
 
       {/* Preview Dialog */}
       <Dialog

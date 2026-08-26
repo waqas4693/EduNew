@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react'
 import {
-  Box,
-  Paper,
   Typography,
   Table,
   TableBody,
@@ -18,6 +16,7 @@ import {
   Stack
 } from '@mui/material'
 import { getData } from '../../api/api'
+import PageShell from '../layout/PageShell'
 
 const GradedAssessments = () => {
   const [assessments, setAssessments] = useState([])
@@ -47,12 +46,7 @@ const GradedAssessments = () => {
   }
 
   return (
-    <Box sx={{ p: 1 }}>
-      <Paper elevation={5} sx={{ p: '20px', borderRadius: '16px' }}>
-        <Typography variant="h5" sx={{ mb: 3, fontWeight: 'bold' }}>
-          Graded Assessments
-        </Typography>
-
+    <PageShell kicker="Assessments" title="Graded Assessments">
         <TableContainer>
           <Table>
             <TableHead>
@@ -133,8 +127,7 @@ const GradedAssessments = () => {
             <Button onClick={() => setOpenReviewDialog(false)}>Close</Button>
           </DialogActions>
         </Dialog>
-      </Paper>
-    </Box>
+    </PageShell>
   )
 }
 

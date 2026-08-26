@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   Box,
-  Paper,
-  Typography,
   TextField,
   Table,
   TableBody,
@@ -20,10 +18,12 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button
+  Button,
+  Typography
 } from '@mui/material'
 import { MoreVert as MoreVertIcon } from '@mui/icons-material'
 import { getData, patchData } from '../../api/api'
+import PageShell from '../layout/PageShell'
 
 const CourseStudents = () => {
   const { id } = useParams()
@@ -112,30 +112,12 @@ const CourseStudents = () => {
   )
 
   return (
-    <Box sx={{ p: 1 }}>
-      <Paper elevation={5} sx={{ p: '20px', borderRadius: '16px' }}>
-        <Box
-          sx={{
-            mb: '20px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}
-        >
-          <Box>
-            <Typography variant='h5' sx={{ fontWeight: 'bold' }}>
-              {courseName}
-            </Typography>
-            <Typography 
-              variant='subtitle2' 
-              sx={{ 
-                color: 'text.secondary',
-                mt: 0.5 
-              }}
-            >
-              Total Enrolled: {students.length} students
-            </Typography>
-          </Box>
+    <>
+      <PageShell
+        kicker="Courses"
+        title={courseName || 'Course students'}
+        subtitle={`Total Enrolled: ${students.length} students`}
+        actions={
           <TextField
             placeholder='Search'
             size='small'
@@ -143,12 +125,13 @@ const CourseStudents = () => {
             onChange={e => setSearchTerm(e.target.value)}
             sx={{
               '& .MuiOutlinedInput-root': {
-                borderRadius: '8px'
+                borderRadius: '8px',
+                bgcolor: '#fff'
               }
             }}
           />
-        </Box>
-
+        }
+      >
         <TableContainer>
           <Table sx={{ minWidth: 650 }}>
             <TableHead>
@@ -230,7 +213,7 @@ const CourseStudents = () => {
         >
           <MenuItem onClick={handleRemoveStudent}>Remove from Course</MenuItem>
         </Menu>
-      </Paper>
+      </PageShell>
 
       <Dialog
         open={openDialog}
@@ -257,7 +240,7 @@ const CourseStudents = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </>
   )
 }
 

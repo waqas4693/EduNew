@@ -25,7 +25,7 @@ import Grid from '@mui/material/Grid2'
 import Calendar from '../calendar/Calendar'
 import SpeedIcon from '@mui/icons-material/Speed'
 import EmailIcon from '@mui/icons-material/Email'
-import { LayoutChromeButtons, useClaimLayoutChrome } from '../layout/LayoutChrome'
+import PageShell from '../layout/PageShell'
 
 // Custom hook for handling all assessment due dates
 const useAllAssessmentDueDates = (courseEnrollments) => {
@@ -376,7 +376,6 @@ const StudentDashboard = () => {
   const { allDueDates, error } = useAllAssessmentDueDates(user?.courseIds)
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
-  useClaimLayoutChrome()
 
   if (error) {
     console.error('Error loading assessment due dates:', error)
@@ -408,53 +407,7 @@ const StudentDashboard = () => {
         size={{ xs: 12, md: Object.keys(allDueDates || {}).length > 0 ? 8 : 12 }}
         order={{ xs: 1, md: 1 }}
       >
-        <Paper
-          elevation={0}
-          sx={{
-            borderRadius: '16px',
-            overflow: 'hidden',
-            boxShadow: '0px 10px 32px rgba(10, 37, 64, 0.08)',
-            bgcolor: '#fff'
-          }}
-        >
-          <Box
-            sx={{
-              px: { xs: 2, md: 3 },
-              py: { xs: 2, md: 2.25 },
-              background:
-                'linear-gradient(135deg, #1F7EC2 0%, #155A8F 55%, #0A2540 100%)',
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1
-            }}
-          >
-            <LayoutChromeButtons light />
-            <Box>
-            <Typography
-              sx={{
-                fontFamily: '"Source Sans 3", sans-serif',
-                fontSize: 12,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                opacity: 0.82
-              }}
-            >
-              Learning
-            </Typography>
-            <Typography
-              sx={{
-                fontFamily: '"Fraunces", serif',
-                fontWeight: 600,
-                fontSize: { xs: '1.35rem', md: '1.55rem' },
-                lineHeight: 1.2
-              }}
-            >
-              Current courses
-            </Typography>
-            </Box>
-          </Box>
-          <Box sx={{ p: { xs: 2.5, md: 4 } }}>
+        <PageShell kicker="Learning" title="Current courses">
           <Grid container spacing={2}>
             {courses?.length > 0 ? (
               courses.map(course => (
@@ -470,8 +423,7 @@ const StudentDashboard = () => {
               </Grid>
             )}
           </Grid>
-          </Box>
-        </Paper>
+        </PageShell>
       </Grid>
 
       {/* Calendar — only when due-date data exists */}

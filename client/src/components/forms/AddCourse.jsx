@@ -6,8 +6,6 @@ import {
   Box,
   TextField,
   Button,
-  Typography,
-  Paper,
   Tabs,
   Tab,
   Divider
@@ -15,6 +13,7 @@ import {
 import { useState, useEffect } from 'react'
 import { postData, getData, putData, postFormData } from '../../api/api'
 import { useLocation, useNavigate } from 'react-router-dom'
+import PageShell from '../layout/PageShell'
 
 const TabPanel = ({ children, value, index }) => (
   <div hidden={value !== index} style={{ padding: '20px 0' }}>
@@ -124,21 +123,11 @@ const AddCourse = () => {
   }
 
   return (
-    <Box sx={{ p: 1 }}>
-      <Paper sx={{ borderRadius: '16px', p: 2 }}>
-        <Typography
-          variant='h5'
-          sx={{ mb: 1, fontWeight: 'bold', fontSize: '24px' }}
-        >
-          {editMode ? 'Edit Course' : 'Add Course'}
-        </Typography>
-        <Typography
-          variant='body1'
-          sx={{ mb: 2, fontSize: '18px', color: '#5B5B5B' }}
-        >
-          {editMode ? 'Update the course details.' : 'Please provide the details of the course.'}
-        </Typography>
-
+    <PageShell
+      kicker="Courses"
+      title={editMode ? 'Edit Course' : 'Add Course'}
+      subtitle={editMode ? 'Update the course details.' : 'Please provide the details of the course.'}
+    >
         <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'start' }}>
           <Box sx={{ flex: 1 }}>
             <TextField
@@ -248,8 +237,7 @@ const AddCourse = () => {
             <AddAssessment courseId={courseId} editMode={editMode} />
           </TabPanel>
         </Box>
-      </Paper>
-    </Box>
+    </PageShell>
   )
 }
 

@@ -18,11 +18,17 @@ import { ChevronLeft, ChevronRight, OpenInNew } from '@mui/icons-material'
 import { useGetStudentProgress, useUpdateProgress } from '../../hooks/useProgress'
 import { postData } from '../../api/api'
 import { useQueryClient } from '@tanstack/react-query'
+import {
+  LayoutChromeNavButtons,
+  LayoutChromePaletteButton,
+  useClaimLayoutChrome
+} from '../layout/LayoutChrome'
 
 const LearnerFrame = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const updateProgressMutation = useUpdateProgress()
+  useClaimLayoutChrome()
 
   const { user } = useAuth()
   const { courseId, unitId, sectionId } = useParams()
@@ -449,32 +455,41 @@ const LearnerFrame = () => {
       <Grid size={12}>
         <Paper elevation={5} sx={{ borderRadius: '16px', overflow: 'hidden' }}>
           <Box sx={{
-            p: 1,
+            px: 2,
+            py: 1.5,
+            background: 'linear-gradient(135deg, #1F7EC2 0%, #155A8F 55%, #0A2540 100%)',
+            color: '#fff',
             display: 'flex',
-            justifyContent: 'space-between',
             alignItems: 'center',
-            borderBottom: '1px solid #f0f0f0'
+            justifyContent: 'space-between',
+            gap: 1
           }}>
-            <Typography
-              variant='body2'
-              sx={{
-                color: 'primary.main',
-                cursor: isCompleting ? 'default' : 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                width: 'fit-content',
-                opacity: isCompleting ? 0.6 : 1
-              }}
-              onClick={() => {
-                if (!isCompleting) handleBackToSection()
-              }}
-            >
-              <ChevronLeft sx={{ color: 'primary.main' }} /> Back To Section
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+              <LayoutChromeNavButtons light />
+              <Typography
+                variant='body2'
+                sx={{
+                  color: '#fff',
+                  cursor: isCompleting ? 'default' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  width: 'fit-content',
+                  opacity: isCompleting ? 0.6 : 1
+                }}
+                onClick={() => {
+                  if (!isCompleting) handleBackToSection()
+                }}
+              >
+                <ChevronLeft sx={{ color: '#fff' }} /> Back To Section
+              </Typography>
+            </Box>
 
-            <Typography variant='body2' sx={{ color: 'text.secondary' }}>
-              Section Progress: {Math.round(progress?.resourceProgressPercentage || 0)}%
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto', flexShrink: 0 }}>
+              <Typography variant='body2' sx={{ color: 'rgba(255,255,255,0.88)' }}>
+                Section Progress: {Math.round(progress?.resourceProgressPercentage || 0)}%
+              </Typography>
+              <LayoutChromePaletteButton light />
+            </Box>
           </Box>
 
           <Box

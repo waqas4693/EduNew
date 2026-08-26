@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import {
   Box,
-  Paper,
-  Typography,
   Table,
   TableBody,
   TableCell,
@@ -18,6 +16,7 @@ import {
   Autocomplete
 } from '@mui/material'
 import { getData } from '../../api/api'
+import PageShell from '../layout/PageShell'
 
 const ResourceAnalytics = () => {
   const [loading, setLoading] = useState(true)
@@ -74,19 +73,18 @@ const ResourceAnalytics = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress />
-      </Box>
+      <PageShell kicker="Admin" title="Resource Analytics">
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
+          <CircularProgress />
+        </Box>
+      </PageShell>
     )
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>Resource Analytics</Typography>
-      
+    <PageShell kicker="Admin" title="Resource Analytics">
       {/* Filters */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+      <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
           <FormControl sx={{ minWidth: 200 }}>
             <InputLabel>Course</InputLabel>
             <Select
@@ -131,11 +129,10 @@ const ResourceAnalytics = () => {
               <MenuItem value="MCQ">MCQ</MenuItem>
             </Select>
           </FormControl>
-        </Box>
-      </Paper>
+      </Box>
 
       {/* Data Table */}
-      <TableContainer component={Paper}>
+      <TableContainer>
         <Table>
           <TableHead>
             <TableRow>
@@ -165,7 +162,7 @@ const ResourceAnalytics = () => {
           </TableBody>
         </Table>
       </TableContainer>
-    </Box>
+    </PageShell>
   )
 }
 

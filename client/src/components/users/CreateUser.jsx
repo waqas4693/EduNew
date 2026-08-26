@@ -1,10 +1,8 @@
 import { useState } from 'react'
 import {
   Box,
-  Paper,
   TextField,
   Button,
-  Typography,
   FormControl,
   InputLabel,
   Select,
@@ -14,6 +12,7 @@ import {
 } from '@mui/material'
 import { postData } from '../../api/api'
 import PersonAddIcon from '@mui/icons-material/PersonAdd'
+import PageShell from '../layout/PageShell'
 
 const ROLES = [
   { value: 3, label: 'Assessor' },
@@ -67,25 +66,12 @@ const CreateUser = () => {
   }
 
   return (
-    <Box sx={{ p: 1 }}>
-      <Paper elevation={5} sx={{ p: 4, borderRadius: '16px' }}>
+    <PageShell
+      kicker="Users"
+      title="Create New User"
+      subtitle="Please provide the details to create a new user account."
+    >
         <Stack spacing={2}>
-          <Box>
-            <Typography variant="h5" fontWeight="bold">
-              Create New User
-            </Typography>
-            <Typography
-              variant="body1"
-              sx={{ 
-                mt: 1,
-                fontSize: '18px',
-                color: '#5B5B5B'
-              }}
-            >
-              Please provide the details to create a new user account.
-            </Typography>
-          </Box>
-
           <form onSubmit={handleSubmit} style={{ width: '100%' }}>
             <Stack spacing={1.5}>
               {error && <Alert severity="error" sx={{ width: '100%' }}>{error}</Alert>}
@@ -187,8 +173,7 @@ const CreateUser = () => {
             </Stack>
           </form>
         </Stack>
-      </Paper>
-    </Box>
+    </PageShell>
   )
 }
 

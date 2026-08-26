@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import {
   Box,
   Radio,
@@ -19,6 +19,11 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
 import LinearProgress from '@mui/material/LinearProgress'
 import VolumeUpIcon from '@mui/icons-material/VolumeUp'
+import {
+  LayoutChromeNavButtons,
+  LayoutChromePaletteButton,
+  useClaimLayoutChrome
+} from '../layout/LayoutChrome'
 
 const AssessmentRenderer = ({
   assessment,
@@ -575,9 +580,8 @@ const AssessmentRenderer = ({
 
 const ViewAssessment = () => {
   const { user } = useAuth()
-  const { courseId, unitId, sectionId } = useParams()
-
-  const navigate = useNavigate()
+  const { courseId, sectionId } = useParams()
+  useClaimLayoutChrome()
 
   const [dueDates, setDueDates] = useState({})
   const [audioUrls, setAudioUrls] = useState({})
@@ -1017,31 +1021,25 @@ const ViewAssessment = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 2
+          gap: 2,
+          flexWrap: 'nowrap'
         }}
       >
-        <Typography
-          sx={{
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 0.5,
-            fontSize: 14,
-            opacity: 0.95
-          }}
-          onClick={() => navigate(`/units/${courseId}/section/${unitId}`)}
-        >
-          <ChevronLeftIcon fontSize="small" /> Back to section
-        </Typography>
-        <Typography
-          sx={{
-            fontFamily: '"Fraunces", serif',
-            fontWeight: 600,
-            fontSize: { xs: '1.1rem', md: '1.25rem' }
-          }}
-        >
-          Assessments
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
+          <LayoutChromeNavButtons light />
+          <Typography
+            sx={{
+              fontFamily: '"Fraunces", serif',
+              fontWeight: 600,
+              fontSize: { xs: '1.1rem', md: '1.25rem' }
+            }}
+          >
+            Assessments
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, ml: 'auto' }}>
+          <LayoutChromePaletteButton light />
+        </Box>
       </Box>
 
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, flex: 1, minHeight: 0 }}>

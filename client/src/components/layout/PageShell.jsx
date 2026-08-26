@@ -1,7 +1,11 @@
 import { Box, Paper, Typography } from '@mui/material'
-import { LayoutChromeButtons, useClaimLayoutChrome } from './LayoutChrome'
+import {
+  LayoutChromeNavButtons,
+  LayoutChromePaletteButton,
+  useClaimLayoutChrome
+} from './LayoutChrome'
 
-const PageShell = ({ kicker, title, subtitle, actions, children }) => {
+const PageShell = ({ kicker, title, subtitle, actions, children, contentSx }) => {
   useClaimLayoutChrome()
 
   return (
@@ -24,11 +28,11 @@ const PageShell = ({ kicker, title, subtitle, actions, children }) => {
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 2,
-          flexWrap: 'wrap'
+          flexWrap: 'nowrap'
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-          <LayoutChromeButtons light />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
+          <LayoutChromeNavButtons light />
           <Box sx={{ minWidth: 0 }}>
             {kicker && (
               <Typography
@@ -60,9 +64,21 @@ const PageShell = ({ kicker, title, subtitle, actions, children }) => {
             )}
           </Box>
         </Box>
-        {actions}
+
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            flexShrink: 0,
+            ml: 'auto'
+          }}
+        >
+          {actions}
+          <LayoutChromePaletteButton light />
+        </Box>
       </Box>
-      <Box sx={{ p: { xs: 2.5, md: 4 } }}>{children}</Box>
+      <Box sx={{ p: { xs: 2.5, md: 4 }, ...contentSx }}>{children}</Box>
     </Paper>
   )
 }
