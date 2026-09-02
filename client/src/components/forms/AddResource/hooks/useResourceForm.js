@@ -6,40 +6,43 @@ const useResourceForm = (initialResources = []) => {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [error, setError] = useState('')
 
-  const addResource = useCallback((nextNumber) => {
-    setResources(prev => [
-      ...prev,
-      {
-        name: '',
-        number: nextNumber + prev.length,
-        resourceType: '',
-        content: {
-          fileName: '',
-          questions: [
-            { question: '', answer: '' },
-            { question: '', answer: '' },
-            { question: '', answer: '' }
-          ],
-          backgroundImage: '',
-          previewImage: '',
-          file: null,
-          thumbnail: null,
-          externalLinks: [
-            { name: '', url: '' }
-          ],
-          audioFile: null,
-          audioRepeatCount: 1,
-          mcq: {
-            question: '',
-            options: ['', '', '', ''],
-            numberOfCorrectAnswers: 1,
-            correctAnswers: [],
-            imageFile: null,
-            audioFile: null
+  const addResource = useCallback((explicitNumber) => {
+    setResources((prev) => {
+      const maxNumber = prev.reduce((max, resource) => Math.max(max, resource.number || 0), 0)
+      const number = typeof explicitNumber === 'number' ? explicitNumber : maxNumber + 1
+
+      return [
+        ...prev,
+        {
+          name: '',
+          number,
+          resourceType: '',
+          content: {
+            fileName: '',
+            questions: [
+              { question: '', answer: '' },
+              { question: '', answer: '' },
+              { question: '', answer: '' }
+            ],
+            backgroundImage: '',
+            previewImage: '',
+            file: null,
+            thumbnail: null,
+            externalLinks: [{ name: '', url: '' }],
+            audioFile: null,
+            audioRepeatCount: 1,
+            mcq: {
+              question: '',
+              options: ['', '', '', ''],
+              numberOfCorrectAnswers: 1,
+              correctAnswers: [],
+              imageFile: null,
+              audioFile: null
+            }
           }
         }
-      }
-    ])
+      ]
+    })
   }, [])
 
   const handleFormChange = useCallback((index, field, value) => {

@@ -6,7 +6,7 @@ import { calculateRemainingPercentage } from '../utils/assessmentHelpers'
  * Custom hook for managing course hierarchy data (courses, units, sections)
  * and existing assessments
  */
-export const useHierarchyData = () => {
+export const useHierarchyData = ({ manualAssessmentLoad = false } = {}) => {
   const [courseId, setCourseId] = useState(null)
   const [unitId, setUnitId] = useState(null)
   const [sectionId, setSectionId] = useState(null)
@@ -94,12 +94,15 @@ export const useHierarchyData = () => {
     }
   }, [unitId, fetchSections])
 
-  // Fetch assessments when section changes
+  // Fetch assessments when section changes (unless manual load in builder)
   useEffect(() => {
-    if (sectionId) {
+    if (sectionId && !manualAssessmentLoad) {
       fetchExistingAssessments()
+    } else if (!sectionId) {
+      setExistingAssessments([])
+      setRemainingPercentage(100)
     }
-  }, [sectionId, fetchExistingAssessments])
+  }, [sectionId, manualAssessmentLoad, fetchExistingAssessments])
 
   return {
     courseId,

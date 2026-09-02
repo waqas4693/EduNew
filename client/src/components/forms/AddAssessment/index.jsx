@@ -1,6 +1,7 @@
-import { Box, Typography, Backdrop, CircularProgress, LinearProgress } from '@mui/material'
+import { Box, Typography, Backdrop, CircularProgress, LinearProgress, Alert, Button, Chip, Paper } from '@mui/material'
+import { Add as AddIcon } from '@mui/icons-material'
 import PropTypes from 'prop-types'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAssessmentForm } from './hooks/useAssessmentForm'
 import { useHierarchyData } from './hooks/useHierarchyData'
 import { useAssessmentAPI } from './hooks/useAssessmentAPI'
@@ -33,7 +34,9 @@ import FileAssessmentForm from './components/forms/FileAssessmentForm'
 /**
  * Refactored AddAssessment component using compartmentalized structure
  */
-const AddAssessment = ({ courseId: propsCourseId, editMode }) => {
+const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false }) => {
+  const [assessmentsLoaded, setAssessmentsLoaded] = useState(false)
+  const [showCreateForm, setShowCreateForm] = useState(!builderMode)
   // Form state management
   const {
     formData,
@@ -56,12 +59,13 @@ const AddAssessment = ({ courseId: propsCourseId, editMode }) => {
     courses,
     units,
     sections,
+    existingAssessments,
     remainingPercentage,
     setCourseId,
     setUnitId,
     setSectionId,
     fetchExistingAssessments
-  } = useHierarchyData()
+  } = useHierarchyData({ manualAssessmentLoad: builderMode })
 
   // API operations
   const {
@@ -100,6 +104,16 @@ const AddAssessment = ({ courseId: propsCourseId, editMode }) => {
     }
   }, [propsCourseId, courseId, setCourseId])
 
+  useEffect(() => {
+    setAssessmentsLoaded(false)
+    setShowCreateForm(!builderMode)
+  }, [sectionId, builderMode])
+
+  const handleLoadAssessments = async () => {
+    await fetchExistingAssessments()
+    setAssessmentsLoaded(true)
+  }
+
   // Handle Questions for QNA
   const handleQuestionsChange = (questions) => {
     handleContentChange('questions', questions)
@@ -125,6 +139,10 @@ const AddAssessment = ({ courseId: propsCourseId, editMode }) => {
         setTimeout(() => {
           resetForm()
           fetchExistingAssessments()
+          setAssessmentsLoaded(true)
+          if (builderMode) {
+            setShowCreateForm(false)
+          }
         }, 2000)
       } else {
         setError(result.message)
@@ -210,15 +228,16 @@ const AddAssessment = ({ courseId: propsCourseId, editMode }) => {
       <ErrorMessage message={errorMessage} />
       
       <form onSubmit={handleSubmit}>
-        {/* Course/Unit/Section Selection */}
         <FormSection>
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <CourseSelector
-              courses={courses}
-              value={courseId}
-              onChange={setCourseId}
-              disabled={isSubmitting}
-            />
+          <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5, flexWrap: 'wrap' }}>
+            {!builderMode && (
+              <CourseSelector
+                courses={courses}
+                value={courseId}
+                onChange={setCourseId}
+                disabled={isSubmitting}
+              />
+            )}
             <UnitSelector
               units={units}
               value={unitId}
@@ -234,6 +253,89 @@ const AddAssessment = ({ courseId: propsCourseId, editMode }) => {
           </Box>
         </FormSection>
 
+        {sectionId && builderMode && (
+          <Box sx={{ display: 'flex', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handleLoadAssessments}
+              sx={{ borderRadius: '8px' }}
+            >
+              Load assessments
+            </Button>
+            <Button
+              startIcon={<AddIcon />}
+              size="small"
+              variant="contained"
+              onClick={() => setShowCreateForm(true)}
+              sx={{ borderRadius: '8px' }}
+            >
+              Add assessment
+            </Button>
+          </Box>
+        )}
+
+        {sectionId && assessmentsLoaded && (
+          <Paper
+            variant="outlined"
+            sx={{
+              borderRadius: '12px',
+              overflow: 'hidden',
+              borderColor: 'rgba(10, 37, 64, 0.12)',
+              mb: 1.5
+            }}
+          >
+            {existingAssessments.length === 0 ? (
+              <Box sx={{ px: 2, py: 2.5, textAlign: 'center' }}>
+                <Typography variant="body2" color="text.secondary">
+                  No assessments in this section yet.
+                </Typography>
+              </Box>
+            ) : (
+              existingAssessments.map((assessment, index) => (
+                <Box
+                  key={assessment._id}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    px: 2,
+                    py: 1.25,
+                    borderBottom:
+                      index < existingAssessments.length - 1
+                        ? '1px solid rgba(10, 37, 64, 0.08)'
+                        : 'none',
+                    bgcolor: index % 2 === 0 ? '#fff' : 'rgba(245, 248, 251, 0.7)'
+                  }}
+                >
+                  <Chip
+                    label={assessment.assessmentType}
+                    size="small"
+                    sx={{ fontWeight: 700, minWidth: 52 }}
+                  />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography sx={{ fontWeight: 600, fontSize: 14 }} noWrap>
+                      {assessment.title}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {assessment.totalMarks} marks · {assessment.percentage}% of section
+                      {assessment.interval ? ` · due in ${assessment.interval} days` : ''}
+                    </Typography>
+                  </Box>
+                </Box>
+              ))
+            )}
+          </Paper>
+        )}
+
+        {sectionId && builderMode && !assessmentsLoaded && !showCreateForm && (
+          <Alert severity="info" sx={{ mb: 1.5 }}>
+            Load existing assessments or click &quot;Add assessment&quot; to create a new one.
+          </Alert>
+        )}
+
+        {showCreateForm && (
+          <>
         {/* Basic Assessment Information */}
         <FormSection>
           <AssessmentBasicInfo
@@ -306,6 +408,8 @@ const AddAssessment = ({ courseId: propsCourseId, editMode }) => {
           isSubmitting={isSubmitting}
           disabled={!sectionId}
         />
+          </>
+        )}
       </form>
     </>
   )
@@ -313,12 +417,14 @@ const AddAssessment = ({ courseId: propsCourseId, editMode }) => {
 
 AddAssessment.propTypes = {
   courseId: PropTypes.string,
-  editMode: PropTypes.bool
+  editMode: PropTypes.bool,
+  builderMode: PropTypes.bool
 }
 
 AddAssessment.defaultProps = {
   courseId: null,
-  editMode: false
+  editMode: false,
+  builderMode: false
 }
 
 export default AddAssessment

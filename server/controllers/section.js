@@ -198,49 +198,6 @@ export const getLatestSectionNumber = async (req, res) => {
   }
 }
 
-export const updateSectionNumber = async (req, res) => {
-  try {
-    const { id } = req.params
-    const { newNumber, unitId } = req.body
-
-    // Check for number conflicts
-    const existingSection = await Section.findOne({
-      unitId,
-      number: newNumber,
-      status: 1,
-      _id: { $ne: id }
-    })
-
-    if (existingSection) {
-      return res.status(400).json({
-        success: false,
-        message: `Section number ${newNumber} already exists in this unit`
-      })
-    }
-
-    // Update section number
-    const section = await Section.findByIdAndUpdate(
-      id,
-      { number: newNumber },
-      { new: true }
-    )
-
-    if (!section) {
-      return res.status(404).json({
-        success: false,
-        message: 'Section not found'
-      })
-    }
-
-    res.status(200).json({
-      success: true,
-      data: section
-    })
-  } catch (error) {
-    handleError(res, error)
-  }
-}
-
 export const swapSectionNumbers = async (req, res) => {
   try {
     const { sectionId1, sectionId2 } = req.body

@@ -4,7 +4,6 @@ import {
   getUnitSections,
   updateSection,
   getLatestSectionNumber,
-  updateSectionNumber,
   swapSectionNumbers,
   insertSection
 } from '../controllers/section.js'
@@ -20,6 +19,5 @@ router.post('/insert', requireAdmin, insertSection)
 router.get('/latest-number/:unitId', getLatestSectionNumber)
 router.get('/:unitId', getUnitSections)
 router.patch('/:id', requireAdmin, updateSection)
-router.patch('/:id/number', requireAdmin, updateSectionNumber)
 
 export default router
