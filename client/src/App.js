@@ -1,7 +1,9 @@
 import Login from './components/auth/Login'
 import Profile from './components/profile/Profile'
 import CssBaseline from '@mui/material/CssBaseline'
-import AddCourse from './components/forms/AddCourse'
+import CreateCourse from './components/course-builder/CreateCourse'
+import CourseBuilder from './components/course-builder/CourseBuilder'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Units from './components/app-components/Units'
 import courseReducer from './redux/slices/courseSlice'
 import Section from './components/app-components/Section'
@@ -35,7 +37,6 @@ import { configureStore } from '@reduxjs/toolkit'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { LocalizationProvider } from '@mui/x-date-pickers'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles'
 import SplashScreen from './components/splash/SplashScreen'
@@ -138,12 +139,28 @@ function App() {
                                 } 
                               />
                               <Route 
-                                path="/add-course" 
+                                path="/courses/new" 
                                 element={
                                   <PrivateRoute requiredRole={[1]}>
-                                    <AddCourse />
+                                    <CreateCourse />
                                   </PrivateRoute>
                                 } 
+                              />
+                              <Route
+                                path="/courses/:courseId/builder"
+                                element={<Navigate to="overview" replace />}
+                              />
+                              <Route
+                                path="/courses/:courseId/builder/:tab"
+                                element={
+                                  <PrivateRoute requiredRole={[1]}>
+                                    <CourseBuilder />
+                                  </PrivateRoute>
+                                }
+                              />
+                              <Route
+                                path="/add-course"
+                                element={<Navigate to="/admin/courses/new" replace />}
                               />
                               <Route 
                                 path="/invite-student" 

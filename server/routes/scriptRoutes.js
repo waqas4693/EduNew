@@ -1,9 +1,10 @@
 import express from 'express'
 import { grantPartialAccess } from '../controllers/scriptController.js'
+import { verifyToken, requireAdmin } from '../middleware/auth.js'
 
 const router = express.Router()
 
-// Endpoint to grant partial course access to a specific student
-router.get('/grant-partial-access', grantPartialAccess)
+router.use(verifyToken)
+router.get('/grant-partial-access', requireAdmin, grantPartialAccess)
 
-export default router 
+export default router

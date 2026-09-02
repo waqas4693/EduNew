@@ -1,13 +1,15 @@
 import express from 'express'
-import { 
+import {
   submitAttempt,
   getAttemptByStudent
 } from '../controllers/assessmentAttemptController.js'
-// import { protect } from '../middleware/auth.js'
+import { verifyToken } from '../middleware/auth.js'
 
 const router = express.Router()
+
+router.use(verifyToken)
 
 router.post('/', submitAttempt)
 router.get('/:assessmentId', getAttemptByStudent)
 
-export default router 
+export default router

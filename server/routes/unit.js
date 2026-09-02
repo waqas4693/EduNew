@@ -1,6 +1,6 @@
 import express from 'express'
-import { 
-  createUnit, 
+import {
+  createUnit,
   getCourseUnits,
   updateUnit,
   getLatestUnitNumber,
@@ -8,15 +8,18 @@ import {
   swapUnitNumbers,
   insertUnit
 } from '../controllers/unit.js'
+import { verifyToken, requireAdmin } from '../middleware/auth.js'
 
 const router = express.Router()
 
-router.post('/', createUnit)
-router.get('/:courseId', getCourseUnits)
-router.patch('/:id', updateUnit)
-router.get('/latest-number/:courseId', getLatestUnitNumber)
-router.patch('/:id/number', updateUnitNumber)
-router.post('/swap-numbers', swapUnitNumbers)
-router.post('/insert', insertUnit)
+router.use(verifyToken)
 
-export default router 
+router.post('/', requireAdmin, createUnit)
+router.post('/swap-numbers', requireAdmin, swapUnitNumbers)
+router.post('/insert', requireAdmin, insertUnit)
+router.get('/latest-number/:courseId', getLatestUnitNumber)
+router.get('/:courseId', getCourseUnits)
+router.patch('/:id', requireAdmin, updateUnit)
+router.patch('/:id/number', requireAdmin, updateUnitNumber)
+
+export default router

@@ -1,9 +1,12 @@
 import express from 'express'
 import { createUser, getAssessmentUsers } from '../controllers/userController.js'
+import { verifyToken, requireAdmin, requireAssessmentRoles } from '../middleware/auth.js'
 
 const router = express.Router()
 
-router.post('/create', createUser)
-router.get('/assessment-users', getAssessmentUsers)
+router.use(verifyToken)
 
-export default router 
+router.post('/create', requireAdmin, createUser)
+router.get('/assessment-users', requireAssessmentRoles, getAssessmentUsers)
+
+export default router

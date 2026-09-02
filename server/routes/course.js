@@ -1,22 +1,25 @@
 import express from 'express'
-import { 
-  createCourse, 
-  getCourses, 
+import {
+  createCourse,
+  getCourses,
   getEnrolledCourses,
   getCourseById,
   updateCourse,
   updateCourseStatus,
   getInactiveCourses
 } from '../controllers/course.js'
+import { verifyToken, requireAdmin } from '../middleware/auth.js'
 
 const router = express.Router()
 
-router.post('/', createCourse)
+router.use(verifyToken)
+
+router.post('/', requireAdmin, createCourse)
 router.get('/', getCourses)
-router.get('/inactive', getInactiveCourses)
+router.get('/inactive', requireAdmin, getInactiveCourses)
 router.get('/enrolled', getEnrolledCourses)
 router.get('/:id', getCourseById)
-router.put('/:id', updateCourse)
-router.patch('/:id/status', updateCourseStatus)
+router.put('/:id', requireAdmin, updateCourse)
+router.patch('/:id/status', requireAdmin, updateCourseStatus)
 
-export default router 
+export default router

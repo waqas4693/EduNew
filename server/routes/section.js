@@ -1,6 +1,6 @@
 import express from 'express'
-import { 
-  createSection, 
+import {
+  createSection,
   getUnitSections,
   updateSection,
   getLatestSectionNumber,
@@ -8,15 +8,18 @@ import {
   swapSectionNumbers,
   insertSection
 } from '../controllers/section.js'
+import { verifyToken, requireAdmin } from '../middleware/auth.js'
 
 const router = express.Router()
 
-router.post('/', createSection)
-router.get('/:unitId', getUnitSections)
-router.patch('/:id', updateSection)
-router.get('/latest-number/:unitId', getLatestSectionNumber)
-router.patch('/:id/number', updateSectionNumber)
-router.post('/swap-numbers', swapSectionNumbers)
-router.post('/insert', insertSection)
+router.use(verifyToken)
 
-export default router 
+router.post('/', requireAdmin, createSection)
+router.post('/swap-numbers', requireAdmin, swapSectionNumbers)
+router.post('/insert', requireAdmin, insertSection)
+router.get('/latest-number/:unitId', getLatestSectionNumber)
+router.get('/:unitId', getUnitSections)
+router.patch('/:id', requireAdmin, updateSection)
+router.patch('/:id/number', requireAdmin, updateSectionNumber)
+
+export default router

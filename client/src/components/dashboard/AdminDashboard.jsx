@@ -207,9 +207,7 @@ const AdminDashboard = () => {
 
   const handleEdit = () => {
     if (selectedCourse) {
-      navigate('/admin/add-course', {
-        state: { courseId: selectedCourse._id }
-      })
+      navigate(`/admin/courses/${selectedCourse._id}/builder/overview`)
     }
     handleMenuClose()
   }

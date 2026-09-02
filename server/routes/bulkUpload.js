@@ -1,24 +1,25 @@
 import express from 'express'
 import multer from 'multer'
 import { bulkUploadResources } from '../controllers/bulkUpload.js'
+import { verifyToken, requireAdmin } from '../middleware/auth.js'
 
 const router = express.Router()
 
-// Configure multer for handling multiple file types
 const storage = multer.memoryStorage()
-const upload = multer({ 
+const upload = multer({
   storage,
   limits: {
-    fileSize: 20000 * 1024 * 1024, // 20GB limit
-    files: 100 // Max 100 files
+    fileSize: 20000 * 1024 * 1024,
+    files: 100
   }
 })
 
-// Define the fields we expect
 const uploadFields = upload.fields([
-  { name: 'files', maxCount: 100 }, // For video/pdf files
+  { name: 'files', maxCount: 100 }
 ])
 
-router.post('/mcq', uploadFields, bulkUploadResources)
+router.use(verifyToken)
 
-export default router 
+router.post('/mcq', requireAdmin, uploadFields, bulkUploadResources)
+
+export default router

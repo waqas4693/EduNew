@@ -1,6 +1,6 @@
 import express from 'express'
 import multer from 'multer'
-import { 
+import {
   getAllSubmittedAssessments,
   updateAssessmentStatus,
   uploadFeedback,
@@ -10,16 +10,18 @@ import {
   getStudentAssessments,
   gradeAssessment
 } from '../controllers/assessmentReviewController.js'
+import { verifyToken, requireAssessmentRoles } from '../middleware/auth.js'
 
 const router = express.Router()
+
 const upload = multer({ storage: multer.memoryStorage() })
 
-// Get assessments based on role and status
+router.use(verifyToken)
+router.use(requireAssessmentRoles)
+
 router.get('/submitted', getAllSubmittedAssessments)
 router.get('/graded', getGradedAssessments)
 router.get('/student/:studentId', getStudentAssessments)
-
-// Assessment workflow endpoints
 router.patch('/status/:attemptId', updateAssessmentStatus)
 router.patch('/grade/:attemptId', gradeAssessment)
 router.post('/feedback/:attemptId', upload.single('feedbackFile'), uploadFeedback)

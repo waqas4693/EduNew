@@ -15,7 +15,7 @@ import {
 } from '@mui/material'
 import { useState } from 'react'
 import { postData } from '../../api/api'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { Visibility, VisibilityOff, ArrowBack } from '@mui/icons-material'
 
@@ -85,6 +85,8 @@ const BrandBackdrop = () => (
 )
 
 const Login = () => {
+  const location = useLocation()
+  const [sessionNotice, setSessionNotice] = useState(location.state?.message || '')
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -324,6 +326,23 @@ const Login = () => {
             Home
           </Button>
         </Box>
+
+        {sessionNotice && (
+          <Box
+            sx={{
+              mb: 2,
+              px: 2,
+              py: 1.5,
+              borderRadius: '10px',
+              bgcolor: 'rgba(31, 126, 194, 0.08)',
+              color: COLORS.navy,
+              fontFamily: '"Source Sans 3", sans-serif',
+              fontSize: '0.95rem'
+            }}
+          >
+            {sessionNotice}
+          </Box>
+        )}
 
         <Box
           sx={{

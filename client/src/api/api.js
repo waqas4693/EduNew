@@ -13,6 +13,12 @@ const noCacheHeaders = {
   Pragma: 'no-cache'
 }
 
+let unauthorizedHandler = null
+
+export const registerUnauthorizedHandler = (handler) => {
+  unauthorizedHandler = handler
+}
+
 const getAuthHeaders = (extraHeaders = {}) => {
   const token = localStorage.getItem('token')
 
@@ -22,6 +28,16 @@ const getAuthHeaders = (extraHeaders = {}) => {
     ...extraHeaders
   }
 }
+
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && unauthorizedHandler) {
+      unauthorizedHandler(error.response?.data?.message)
+    }
+    return Promise.reject(error)
+  }
+)
 
 export const postData = async (endpoint, data, config = {}) => {
   try {
@@ -43,6 +59,34 @@ export const postData = async (endpoint, data, config = {}) => {
 export const postFormData = async (endpoint, data, config = {}) => {
   try {
     const response = await axios.post(`${API_URL}${endpoint}`, data, {
+      timeout: UPLOAD_TIMEOUT_MS,
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
+      ...config,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        ...getAuthHeaders(),
+        ...config.headers
+      },
+      onUploadProgress: config.onUploadProgress
+    })
+    return response
+  } catch (error) {
+    if (error.code === 'ECONNABORTED') {
+      throw {
+        data: {
+          message: 'Upload timed out. Try a smaller file or check your connection.'
+        }
+      }
+    }
+
+    throw error.response || error
+  }
+}
+
+export const putFormData = async (endpoint, data, config = {}) => {
+  try {
+    const response = await axios.put(`${API_URL}${endpoint}`, data, {
       timeout: UPLOAD_TIMEOUT_MS,
       maxBodyLength: Infinity,
       maxContentLength: Infinity,

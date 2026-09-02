@@ -4,16 +4,15 @@ import {
   getUnitStats,
   getSectionStats
 } from '../controllers/stats.js'
+import { verifyToken, requireAdmin } from '../middleware/auth.js'
 
 const router = express.Router()
 
-// Course stats routes
+router.use(verifyToken)
+router.use(requireAdmin)
+
 router.get('/course/:courseId', getCourseStats)
-
-// Unit stats routes
 router.get('/unit/:unitId', getUnitStats)
-
-// Section stats routes
 router.get('/section/:sectionId', getSectionStats)
 
-export default router 
+export default router

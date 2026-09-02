@@ -97,13 +97,31 @@ const Units = () => {
 
   useEffect(() => {
     const fetchCourseDetails = async () => {
+      if (!courseId) return
+
       try {
         const response = await getData(`courses/${courseId}`)
         if (response.status === 200) {
+          const course = response.data.data
+          let imageUrl = course.thumbnail
+
+          if (course.thumbnail) {
+            try {
+              const thumbnailResponse = await getData(
+                `resources/files/url/THUMBNAILS/${course.thumbnail}`
+              )
+              if (thumbnailResponse.status === 200) {
+                imageUrl = thumbnailResponse.data.signedUrl
+              }
+            } catch (thumbnailError) {
+              console.error('Error fetching course thumbnail:', thumbnailError)
+            }
+          }
+
           dispatch(setCurrentCourse({
             id: courseId,
-            name: response.data.course.name,
-            image: response.data.course.thumbnail
+            name: course.name,
+            image: imageUrl
           }))
         }
       } catch (error) {
@@ -111,9 +129,7 @@ const Units = () => {
       }
     }
 
-    if (!currentCourse || currentCourse.id !== courseId) {
-      fetchCourseDetails()
-    }
+    fetchCourseDetails()
   }, [courseId, dispatch])
 
   const handleUnitClick = (unitId, unitName) => {

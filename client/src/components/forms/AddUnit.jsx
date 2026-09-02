@@ -14,11 +14,11 @@ import {
   DialogActions
 } from '@mui/material'
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material'
-import { postData, getData, putData } from '../../api/api'
+import { postData, getData, patchData } from '../../api/api'
 import NumberInput from '../common/NumberInput'
 import { debounce } from 'lodash'
 
-const AddUnit = ({ courseId, editMode }) => {
+const AddUnit = ({ courseId, editMode, builderMode = false, onStructureChange, onNotify }) => {
   const [units, setUnits] = useState([])
   const [courses, setCourses] = useState([])
   const [selectedCourse, setSelectedCourse] = useState(null)
@@ -32,7 +32,7 @@ const AddUnit = ({ courseId, editMode }) => {
   const debouncedNameUpdate = useCallback(
     debounce(async (unitId, newName) => {
       try {
-        const response = await putData(`units/${unitId}`, { name: newName })
+        const response = await patchData(`units/${unitId}`, { name: newName })
         if (response.status === 200) {
           setUnits(prev => prev.map(unit => 
             unit._id === unitId ? { ...unit, name: newName } : unit
@@ -51,6 +51,12 @@ const AddUnit = ({ courseId, editMode }) => {
   }, [])
 
   useEffect(() => {
+    if (builderMode && courseId) {
+      setSelectedCourse({ _id: courseId })
+      fetchExistingUnits(courseId)
+      return
+    }
+
     if (editMode && courseId && courses.length > 0) {
       const course = courses.find(c => c._id === courseId)
       if (course) {
@@ -58,7 +64,7 @@ const AddUnit = ({ courseId, editMode }) => {
         fetchExistingUnits(courseId)
       }
     }
-  }, [editMode, courseId, courses])
+  }, [editMode, builderMode, courseId, courses])
 
   const fetchCourses = async () => {
     try {
@@ -125,7 +131,7 @@ const AddUnit = ({ courseId, editMode }) => {
       // Only update in backend if not in insert mode
       if (!insertMode) {
         // Update in backend
-        const response = await putData(`units/${unitId}/number`, {
+        const response = await patchData(`units/${unitId}/number`, {
           newNumber,
           courseId: selectedCourse._id
         })
@@ -314,10 +320,25 @@ const AddUnit = ({ courseId, editMode }) => {
 
     try {
       if (editMode) {
-        // Update existing units
-        for (const unit of units) {
-          await putData(`units/${unit._id}`, { name: unit.name })
+        const existingUnits = units.filter((unit) => unit._id)
+        const newUnits = units.filter((unit) => !unit._id && unit.name?.trim())
+
+        for (const unit of existingUnits) {
+          await patchData(`units/${unit._id}`, { name: unit.name })
         }
+
+        if (newUnits.length) {
+          await postData('units', {
+            units: newUnits.map((unit) => ({
+              ...unit,
+              courseId: selectedCourse?._id || courseId
+            }))
+          })
+        }
+
+        await fetchExistingUnits(selectedCourse?._id || courseId)
+        onStructureChange?.()
+        onNotify?.('Units saved successfully.')
       } else {
         // Create new units
         const response = await postData('units', { units })
@@ -345,6 +366,7 @@ const AddUnit = ({ courseId, editMode }) => {
         </Alert>
       )}
 
+      {!builderMode && (
       <Autocomplete
         options={courses}
         value={selectedCourse}
@@ -371,6 +393,7 @@ const AddUnit = ({ courseId, editMode }) => {
         )}
         sx={{ mb: 2 }}
       />
+      )}
 
       {units.map((unit, index) => (
         <Box key={index}>
@@ -435,7 +458,7 @@ const AddUnit = ({ courseId, editMode }) => {
           mt: 2
         }}
       >
-        {!editMode && !insertMode && (
+        {(!editMode || builderMode) && !insertMode && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 'auto' }}>
             <IconButton
               onClick={addNewUnit}

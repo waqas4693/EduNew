@@ -83,6 +83,72 @@ export const loginUser = async (req, res) => {
   }
 }
 
+const buildUserSession = async (decoded) => {
+  const user = await User.findById(decoded.id)
+
+  if (!user || user.status === 2) {
+    return null
+  }
+
+  let userData = {
+    id: user._id,
+    email: user.email,
+    role: user.role,
+    emailVerified: user.emailVerified || false,
+    isDemo: user.isDemo || false,
+    name: user.name || 'Administrator'
+  }
+
+  if (user.role === 2) {
+    const student = await Student.findById(decoded.studentId)
+
+    if (!student || student.status === 2) {
+      return null
+    }
+
+    userData = {
+      ...userData,
+      studentId: student._id,
+      name: student.name,
+      contactNo: student.contactNo,
+      address: student.address,
+      isDemo: student.isDemo || false,
+      courseIds: student.courses
+        .filter((course) => course.courseStatus === 1)
+        .map((course) => ({
+          courseId: course.courseId,
+          enrollmentDate: course.enrollmentDate
+        }))
+    }
+  }
+
+  return userData
+}
+
+export const verifySession = async (req, res) => {
+  try {
+    const userData = await buildUserSession(req.user)
+
+    if (!userData) {
+      return res.status(401).json({
+        success: false,
+        message: 'Session invalid. Please log in again.'
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { user: userData }
+    })
+  } catch (error) {
+    console.error('Session verification error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    })
+  }
+}
+
 export const updatePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;

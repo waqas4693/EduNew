@@ -12,23 +12,22 @@ import {
   getStudentById,
   getDashboardStats
 } from '../controllers/student.js'
-import { verifyToken } from '../middleware/auth.js'
+import { verifyToken, requireAdmin } from '../middleware/auth.js'
 
 const router = express.Router()
 
-router.post('/', newStudent)
+router.use(verifyToken)
 
-router.get('/', verifyToken, getAllStudents)
-router.get('/stats', verifyToken, getDashboardStats)
-router.get('/:id', verifyToken, getStudentById)
-router.get('/:id/courses', getStudentCourses)
-router.get('/:id/dashboard', verifyToken, getDashboardData)
-router.get('/course/:courseId', verifyToken, getAllStudents)
+router.post('/', requireAdmin, newStudent)
+router.get('/', requireAdmin, getAllStudents)
+router.get('/stats', requireAdmin, getDashboardStats)
+router.get('/course/:courseId', requireAdmin, getCourseStudents)
 router.get('/:studentId/courses/:courseId/progress', getUnitProgress)
-
-router.patch('/:id/status', updateStudentStatus)
-router.patch('/:id/assign-course', assignCourse)
-
-router.delete('/:id/courses/:courseId', removeCourse)
+router.get('/:id/courses', getStudentCourses)
+router.get('/:id/dashboard', getDashboardData)
+router.get('/:id', getStudentById)
+router.patch('/:id/status', requireAdmin, updateStudentStatus)
+router.patch('/:id/assign-course', requireAdmin, assignCourse)
+router.delete('/:id/courses/:courseId', requireAdmin, removeCourse)
 
 export default router

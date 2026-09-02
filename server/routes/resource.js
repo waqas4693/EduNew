@@ -1,6 +1,6 @@
 import express from 'express'
-import { 
-  createResource, 
+import {
+  createResource,
   getSectionResources,
   updateResource,
   getLatestResourceNumber,
@@ -9,16 +9,19 @@ import {
   searchResourcesByName,
   deleteResource
 } from '../controllers/resource.js'
+import { verifyToken, requireAdmin } from '../middleware/auth.js'
 
 const router = express.Router()
 
-router.post('/', createResource)
-router.get('/:sectionId', getSectionResources)
-router.get('/:sectionId/search', searchResourcesByName)
-router.put('/:id', updateResource)
-router.delete('/:id', deleteResource)
-router.get('/latest-number/:sectionId', getLatestResourceNumber)
-router.patch('/:id/number', updateResourceNumber)
-router.post('/insert', insertResource)
+router.use(verifyToken)
 
-export default router 
+router.post('/', requireAdmin, createResource)
+router.post('/insert', requireAdmin, insertResource)
+router.get('/latest-number/:sectionId', getLatestResourceNumber)
+router.get('/:sectionId/search', searchResourcesByName)
+router.get('/:sectionId', getSectionResources)
+router.put('/:id', requireAdmin, updateResource)
+router.delete('/:id', requireAdmin, deleteResource)
+router.patch('/:id/number', requireAdmin, updateResourceNumber)
+
+export default router

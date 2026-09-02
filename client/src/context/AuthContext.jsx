@@ -1,7 +1,8 @@
+import { Box, CircularProgress } from '@mui/material'
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { getData } from '../api/api'
+import { getData, registerUnauthorizedHandler } from '../api/api'
 
 const AuthContext = createContext(null)
 
@@ -21,43 +22,94 @@ const syncEnrollmentDates = (courseIds = []) => {
   localStorage.setItem('enrollmentDates', JSON.stringify(enrollmentDates))
 }
 
+const clearStoredSession = () => {
+  localStorage.removeItem('user')
+  localStorage.removeItem('token')
+  if (localStorage.getItem('enrollmentDates')) {
+    localStorage.removeItem('enrollmentDates')
+  }
+}
+
+const redirectForRole = (role, navigate) => {
+  switch (role) {
+    case ADMIN_ROLE:
+      navigate('/admin/dashboard', { replace: true })
+      break
+    case STUDENT_ROLE:
+      navigate('/dashboard', { replace: true })
+      break
+    case ASSESSOR_ROLE:
+    case MODERATOR_ROLE:
+    case VERIFIER_ROLE:
+      navigate('/admin/assessment-review/submitted', { replace: true })
+      break
+    default:
+      break
+  }
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
+  const logout = useCallback((message) => {
+    setUser(null)
+    queryClient.clear()
+    clearStoredSession()
+    navigate('/login', {
+      replace: true,
+      state: message ? { message } : undefined
+    })
+  }, [navigate, queryClient])
+
   useEffect(() => {
-    try {
+    registerUnauthorizedHandler((message) => {
+      logout(message || 'Session expired. Please log in again.')
+    })
+  }, [logout])
+
+  useEffect(() => {
+    const initializeSession = async () => {
+      const token = localStorage.getItem('token')
       const storedUser = localStorage.getItem('user')
-      if (storedUser) {
-        const userData = JSON.parse(storedUser)
-        setUser(userData)
+
+      if (!token || !storedUser) {
+        clearStoredSession()
+        setUser(null)
+        setLoading(false)
+        return
+      }
+
+      try {
+        const response = await getData('auth/verify')
+        const verifiedUser = response.data?.data?.user
+
+        if (response.status !== 200 || !verifiedUser) {
+          throw new Error('Invalid session')
+        }
+
+        if (verifiedUser.role === STUDENT_ROLE && verifiedUser.courseIds) {
+          syncEnrollmentDates(verifiedUser.courseIds)
+        }
+
+        setUser(verifiedUser)
+        localStorage.setItem('user', JSON.stringify(verifiedUser))
 
         if (window.location.pathname === '/login') {
-          switch (userData.role) {
-            case ADMIN_ROLE:
-              navigate('/admin/dashboard')
-              break
-            case STUDENT_ROLE:
-              navigate('/dashboard')
-              break
-            case ASSESSOR_ROLE:
-            case MODERATOR_ROLE:
-            case VERIFIER_ROLE:
-              navigate('/admin/assessment-review/submitted')
-              break
-            default:
-              break
-          }
+          redirectForRole(verifiedUser.role, navigate)
         }
+      } catch (error) {
+        console.error('Session verification failed:', error)
+        clearStoredSession()
+        setUser(null)
+      } finally {
+        setLoading(false)
       }
-    } catch (error) {
-      console.error('Error parsing user data:', error)
-      localStorage.removeItem('user')
-    } finally {
-      setLoading(false)
     }
+
+    initializeSession()
   }, [navigate])
 
   const login = (userData, token) => {
@@ -71,9 +123,7 @@ export const AuthProvider = ({ children }) => {
         isDemo: userData.isDemo || false
       }
 
-      // Drop any previous session query cache so a new login never shows stale courses
       queryClient.clear()
-
       setUser(userWithDemo)
       localStorage.setItem('user', JSON.stringify(userWithDemo))
       localStorage.setItem('token', token)
@@ -82,21 +132,6 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  const logout = () => {
-    setUser(null)
-    queryClient.clear()
-    localStorage.removeItem('user')
-    localStorage.removeItem('token')
-    if (localStorage.getItem('enrollmentDates')) {
-      localStorage.removeItem('enrollmentDates')
-    }
-    navigate('/login')
-  }
-
-  /**
-   * Re-fetch active course enrollments from the database and update local session.
-   * Fixes "new course assigned but old device still shows old list".
-   */
   const refreshStudentSession = useCallback(async () => {
     const token = localStorage.getItem('token')
     const storedUser = localStorage.getItem('user')
@@ -155,11 +190,15 @@ export const AuthProvider = ({ children }) => {
   }, [queryClient])
 
   if (loading) {
-    return null
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    )
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, refreshStudentSession }}>
+    <AuthContext.Provider value={{ user, login, logout, refreshStudentSession, authLoading: loading }}>
       {children}
     </AuthContext.Provider>
   )

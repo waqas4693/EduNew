@@ -8,13 +8,13 @@ import {
   IconButton,
   Alert,
 } from '@mui/material'
-import { postData, getData, putData } from '../../api/api'
+import { postData, getData, patchData } from '../../api/api'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import NumberInput from '../common/NumberInput'
 import { debounce } from 'lodash'
 
-const AddSection = ({ courseId: propsCourseId, editMode }) => {
+const AddSection = ({ courseId: propsCourseId, editMode, builderMode = false, onStructureChange, onNotify }) => {
   const [sections, setSections] = useState([])
   const [courseId, setCourseId] = useState(null)
   const [courses, setCourses] = useState([])
@@ -31,7 +31,7 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
   const debouncedNameUpdate = useCallback(
     debounce(async (sectionId, newName) => {
       try {
-        const response = await putData(`sections/${sectionId}`, { name: newName })
+        const response = await patchData(`sections/${sectionId}`, { name: newName })
         if (response.status === 200) {
           setSections(prev => prev.map(section => 
             section._id === sectionId ? { ...section, name: newName } : section
@@ -50,6 +50,12 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
   }, [])
 
   useEffect(() => {
+    if (builderMode && propsCourseId) {
+      setSelectedCourse({ _id: propsCourseId })
+      setCourseId(propsCourseId)
+      return
+    }
+
     if (editMode && propsCourseId && courses.length > 0) {
       const course = courses.find(c => c._id === propsCourseId)
       if (course) {
@@ -57,7 +63,7 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
         setCourseId(course._id)
       }
     }
-  }, [editMode, propsCourseId, courses])
+  }, [editMode, builderMode, propsCourseId, courses])
 
   useEffect(() => {
     if (courseId) {
@@ -150,7 +156,7 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
       // Only update in backend if not in insert mode
       if (!insertMode) {
         // Update in backend
-        const response = await putData(`sections/${sectionId}/number`, {
+        const response = await patchData(`sections/${sectionId}/number`, {
           newNumber,
           unitId: selectedUnit._id
         })
@@ -339,10 +345,23 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
 
     try {
       if (editMode) {
-        // Update existing sections
-        for (const section of sections) {
-          await putData(`sections/${section._id}`, { name: section.name })
+        const existingSections = sections.filter((section) => section._id)
+        const newSections = sections.filter((section) => !section._id && section.name?.trim())
+
+        for (const section of existingSections) {
+          await patchData(`sections/${section._id}`, { name: section.name })
         }
+
+        if (newSections.length) {
+          await postData('sections', { sections: newSections })
+        }
+
+        if (selectedUnit?._id) {
+          await fetchExistingSections(selectedUnit._id)
+        }
+
+        onStructureChange?.()
+        onNotify?.('Sections saved successfully.')
       } else {
         // Create new sections
         const response = await postData('sections', { sections })
@@ -371,6 +390,7 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
       )}
 
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+        {!builderMode && (
         <Autocomplete
           options={courses}
           value={selectedCourse}
@@ -396,6 +416,7 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
           )}
           sx={{ flex: 1 }}
         />
+        )}
 
         <Autocomplete
           options={units}
@@ -489,7 +510,7 @@ const AddSection = ({ courseId: propsCourseId, editMode }) => {
           mt: 2
         }}
       >
-        {!editMode && !insertMode && (
+        {(!editMode || builderMode) && !insertMode && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 'auto' }}>
             <IconButton
               onClick={addNewSection}

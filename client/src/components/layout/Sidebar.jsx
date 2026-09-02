@@ -329,7 +329,7 @@ const Sidebar = ({ open, onClose }) => {
       text: 'Courses',
       icon: <SchoolIcon />,
       subItems: [
-        { text: 'Course Management', path: '/admin/add-course' },
+        { text: 'Course Management', path: '/admin/courses/new' },
         { text: 'Inactive Courses', path: '/admin/inactive-courses' }
       ]
     },

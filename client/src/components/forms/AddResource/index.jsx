@@ -14,8 +14,7 @@ import {
   CircularProgress,
 } from '@mui/material'
 import { useState, useEffect } from 'react'
-import axios from 'axios'
-import { API_URL, getData } from '../../../api/api'
+import { getData, postFormData, putFormData } from '../../../api/api'
 import AddIcon from '@mui/icons-material/Add'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import MediaViewer from '../../MediaViewer'
@@ -33,7 +32,7 @@ import {
   processResourceContent
 } from './utils/resourceHelpers'
 
-const AddResource = ({ courseId: propsCourseId, editMode }) => {
+const AddResource = ({ courseId: propsCourseId, editMode, builderMode = false, onNotify }) => {
   const [courseId, setCourseId] = useState(null)
   const [unitId, setUnitId] = useState(null)
   const [sectionId, setSectionId] = useState(null)
@@ -76,10 +75,13 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         const response = await getData('courses')
         if (response.status === 200) {
           setCourses(response.data.data)
-          if (editMode && propsCourseId) {
+          if ((editMode || builderMode) && propsCourseId) {
             const course = response.data.data.find(c => c._id === propsCourseId)
             if (course) {
               setSelectedCourse(course)
+              setCourseId(propsCourseId)
+            } else if (builderMode) {
+              setSelectedCourse({ _id: propsCourseId, name: 'Current course' })
               setCourseId(propsCourseId)
             }
           }
@@ -90,7 +92,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
     }
 
     fetchCoursesData()
-  }, [editMode, propsCourseId])
+  }, [editMode, builderMode, propsCourseId])
 
   useEffect(() => {
     if (courseId) {
@@ -143,19 +145,19 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
           const content = { ...resource.content }
 
           if (content.fileName) {
-            const fileResponse = await axios.get(`${API_URL}resources/files/url/${resource.resourceType}/${content.fileName}`)
+            const fileResponse = await getData(`resources/files/url/${resource.resourceType}/${content.fileName}`)
             content.fileUrl = fileResponse.data.signedUrl
           }
           if (content.backgroundImage) {
-            const bgResponse = await axios.get(`${API_URL}resources/files/url/BACKGROUNDS/${content.backgroundImage}`)
+            const bgResponse = await getData(`resources/files/url/BACKGROUNDS/${content.backgroundImage}`)
             content.backgroundImageUrl = bgResponse.data.signedUrl
           }
           if (content.mcq?.imageFile) {
-            const mcqImgResponse = await axios.get(`${API_URL}resources/files/url/MCQ_IMAGES/${content.mcq.imageFile}`)
+            const mcqImgResponse = await getData(`resources/files/url/MCQ_IMAGES/${content.mcq.imageFile}`)
             content.mcq.imageFileUrl = mcqImgResponse.data.signedUrl
           }
           if (content.mcq?.audioFile) {
-            const mcqAudioResponse = await axios.get(`${API_URL}resources/files/url/MCQ_AUDIO/${content.mcq.audioFile}`)
+            const mcqAudioResponse = await getData(`resources/files/url/MCQ_AUDIO/${content.mcq.audioFile}`)
             content.mcq.audioFileUrl = mcqAudioResponse.data.signedUrl
           }
 
@@ -201,6 +203,54 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
     }
   }
 
+  const buildResourceFormData = (resource, { includeSection = false, sectionIdValue } = {}) => {
+    const cleanContent = {
+      ...resource.content,
+      file: undefined,
+      backgroundImage: undefined,
+      audioFile: undefined,
+      fileUrl: undefined,
+      backgroundImageUrl: undefined,
+      mcq: resource.content.mcq
+        ? {
+            ...resource.content.mcq,
+            imageFile: undefined,
+            audioFile: undefined,
+            imageFileUrl: undefined,
+            audioFileUrl: undefined
+          }
+        : null
+    }
+
+    const formData = new FormData()
+    formData.append('name', resource.name)
+    formData.append('resourceType', resource.resourceType)
+    formData.append('content', JSON.stringify(cleanContent))
+
+    if (includeSection) {
+      formData.append('number', resource.number)
+      formData.append('sectionId', sectionIdValue)
+    }
+
+    if (resource.content.file instanceof File) {
+      formData.append('file', resource.content.file)
+    }
+    if (resource.content.backgroundImage instanceof File) {
+      formData.append('backgroundImage', resource.content.backgroundImage)
+    }
+    if (resource.content.audioFile instanceof File) {
+      formData.append('audioFile', resource.content.audioFile)
+    }
+    if (resource.content.mcq?.imageFile instanceof File) {
+      formData.append('mcqImage', resource.content.mcq.imageFile)
+    }
+    if (resource.content.mcq?.audioFile instanceof File) {
+      formData.append('mcqAudio', resource.content.mcq.audioFile)
+    }
+
+    return formData
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsUploading(true)
@@ -212,129 +262,79 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
         return
       }
 
-      // Validate all resources
-      const validationErrors = resources.flatMap(resource => validateResource(resource))
+      const validationErrors = resources.flatMap((resource) => validateResource(resource))
       if (validationErrors.length > 0) {
         setError(validationErrors.join('\n'))
         return
       }
 
-      if (editMode) {
-        const updatePromises = resources.map(async resource => {
-          const cleanContent = {
-            ...resource.content,
-            file: undefined,
-            backgroundImage: undefined,
-            audioFile: undefined,
-            fileUrl: undefined,
-            backgroundImageUrl: undefined,
-            mcq: resource.content.mcq ? {
-              ...resource.content.mcq,
-              imageFile: undefined,
-              audioFile: undefined,
-              imageFileUrl: undefined,
-              audioFileUrl: undefined
-            } : null
-          }
-
-          const formData = new FormData()
-          formData.append('name', resource.name)
-          formData.append('resourceType', resource.resourceType)
-          formData.append('content', JSON.stringify(cleanContent))
-
-          // Handle file uploads
-          if (resource.content.file instanceof File) {
-            formData.append('file', resource.content.file)
-          }
-          if (resource.content.backgroundImage instanceof File) {
-            formData.append('backgroundImage', resource.content.backgroundImage)
-          }
-          if (resource.content.audioFile instanceof File) {
-            formData.append('audioFile', resource.content.audioFile)
-          }
-          if (resource.content.mcq?.imageFile instanceof File) {
-            formData.append('mcqImage', resource.content.mcq.imageFile)
-          }
-          if (resource.content.mcq?.audioFile instanceof File) {
-            formData.append('mcqAudio', resource.content.mcq.audioFile)
-          }
-
-          return axios.put(`${API_URL}resources/${resource._id}`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-            onUploadProgress: (progressEvent) => {
-              const percentCompleted = Math.round(
-                (progressEvent.loaded * 100) / progressEvent.total
-              )
-              setUploadProgress(percentCompleted)
-            }
-          })
-        })
-
-        await Promise.all(updatePromises)
-        alert('Resources updated successfully')
-      } else {
-        const resourcePromises = resources.map(async resource => {
-          const cleanContent = {
-            ...resource.content,
-            file: undefined,
-            backgroundImage: undefined,
-            audioFile: undefined,
-            mcq: resource.content.mcq ? {
-              ...resource.content.mcq,
-              imageFile: undefined,
-              audioFile: undefined
-            } : null
-          }
-
-          const formData = new FormData()
-          formData.append('name', resource.name)
-          formData.append('number', resource.number)
-          formData.append('resourceType', resource.resourceType)
-          formData.append('sectionId', sectionId)
-          formData.append('content', JSON.stringify(cleanContent))
-
-          // Handle file uploads
-          if (resource.content.file instanceof File) {
-            formData.append('file', resource.content.file)
-          }
-          if (resource.content.backgroundImage instanceof File) {
-            formData.append('backgroundImage', resource.content.backgroundImage)
-          }
-          if (resource.content.audioFile instanceof File) {
-            formData.append('audioFile', resource.content.audioFile)
-          }
-          if (resource.content.mcq?.imageFile instanceof File) {
-            formData.append('mcqImage', resource.content.mcq.imageFile)
-          }
-          if (resource.content.mcq?.audioFile instanceof File) {
-            formData.append('mcqAudio', resource.content.mcq.audioFile)
-          }
-
-          return axios.post(`${API_URL}resources`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-            onUploadProgress: (progressEvent) => {
-              const percentCompleted = Math.round(
-                (progressEvent.loaded * 100) / progressEvent.total
-              )
-              setUploadProgress(percentCompleted)
-            }
-          })
-        })
-
-        await Promise.all(resourcePromises)
-        alert('Resources added successfully')
+      const uploadConfig = {
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          )
+          setUploadProgress(percentCompleted)
+        }
       }
 
-      // Reset form
-      setResources([{
-        name: '',
-        number: null,
-        resourceType: '',
-        content: getInitialResourceContent()
-      }])
-    } catch (error) {
-      console.error('Error:', error)
-      setError('Error uploading resources: ' + error.message)
+      if (editMode) {
+        const existingResources = resources.filter((resource) => resource._id)
+        const newResources = builderMode ? resources.filter((resource) => !resource._id) : []
+
+        await Promise.all(
+          existingResources.map((resource) =>
+            putFormData(
+              `resources/${resource._id}`,
+              buildResourceFormData(resource),
+              uploadConfig
+            )
+          )
+        )
+
+        if (newResources.length) {
+          await Promise.all(
+            newResources.map((resource) =>
+              postFormData(
+                'resources',
+                buildResourceFormData(resource, {
+                  includeSection: true,
+                  sectionIdValue: sectionId
+                }),
+                uploadConfig
+              )
+            )
+          )
+        }
+
+        onNotify?.('Resources saved successfully.')
+        await fetchResources()
+      } else {
+        await Promise.all(
+          resources.map((resource) =>
+            postFormData(
+              'resources',
+              buildResourceFormData(resource, {
+                includeSection: true,
+                sectionIdValue: sectionId
+              }),
+              uploadConfig
+            )
+          )
+        )
+
+        onNotify?.('Resources added successfully.')
+        setResources([
+          {
+            name: '',
+            number: null,
+            resourceType: '',
+            content: getInitialResourceContent()
+          }
+        ])
+      }
+    } catch (submitError) {
+      console.error('Error:', submitError)
+      setError(submitError?.data?.message || 'Error uploading resources.')
     } finally {
       setIsUploading(false)
       setUploadProgress(0)
@@ -405,19 +405,19 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
           const content = { ...resource.content }
 
           if (content.fileName) {
-            const fileResponse = await axios.get(`${API_URL}resources/files/url/${resource.resourceType}/${content.fileName}`)
+            const fileResponse = await getData(`resources/files/url/${resource.resourceType}/${content.fileName}`)
             content.fileUrl = fileResponse.data.signedUrl
           }
           if (content.backgroundImage) {
-            const bgResponse = await axios.get(`${API_URL}resources/files/url/BACKGROUNDS/${content.backgroundImage}`)
+            const bgResponse = await getData(`resources/files/url/BACKGROUNDS/${content.backgroundImage}`)
             content.backgroundImageUrl = bgResponse.data.signedUrl
           }
           if (content.mcq?.imageFile) {
-            const mcqImgResponse = await axios.get(`${API_URL}resources/files/url/MCQ_IMAGES/${content.mcq.imageFile}`)
+            const mcqImgResponse = await getData(`resources/files/url/MCQ_IMAGES/${content.mcq.imageFile}`)
             content.mcq.imageFileUrl = mcqImgResponse.data.signedUrl
           }
           if (content.mcq?.audioFile) {
-            const mcqAudioResponse = await axios.get(`${API_URL}resources/files/url/MCQ_AUDIO/${content.mcq.audioFile}`)
+            const mcqAudioResponse = await getData(`resources/files/url/MCQ_AUDIO/${content.mcq.audioFile}`)
             content.mcq.audioFileUrl = mcqAudioResponse.data.signedUrl
           }
 
@@ -449,6 +449,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
     <>
       <form onSubmit={handleSubmit}>
         <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+          {!builderMode && (
           <Autocomplete
             fullWidth
             size='small'
@@ -473,6 +474,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
               />
             )}
           />
+          )}
           <Autocomplete
             fullWidth
             size='small'
@@ -830,7 +832,7 @@ const AddResource = ({ courseId: propsCourseId, editMode }) => {
             alignItems: 'center'
           }}
         >
-          {!editMode && (
+          {(!editMode || builderMode) && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <IconButton
                 onClick={() => addResource(resources[0]?.number || 1)}
