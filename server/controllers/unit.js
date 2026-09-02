@@ -189,49 +189,6 @@ export const getLatestUnitNumber = async (req, res) => {
   }
 }
 
-export const updateUnitNumber = async (req, res) => {
-  try {
-    const { id } = req.params
-    const { newNumber, courseId } = req.body
-
-    // Check for number conflicts
-    const existingUnit = await Unit.findOne({
-      courseId,
-      number: newNumber,
-      status: 1,
-      _id: { $ne: id }
-    })
-
-    if (existingUnit) {
-      return res.status(400).json({
-        success: false,
-        message: `Unit number ${newNumber} already exists in this course`
-      })
-    }
-
-    // Update unit number
-    const unit = await Unit.findByIdAndUpdate(
-      id,
-      { number: newNumber },
-      { new: true }
-    )
-
-    if (!unit) {
-      return res.status(404).json({
-        success: false,
-        message: 'Unit not found'
-      })
-    }
-
-    res.status(200).json({
-      success: true,
-      data: unit
-    })
-  } catch (error) {
-    handleError(res, error)
-  }
-}
-
 export const swapUnitNumbers = async (req, res) => {
   try {
     const { unitId1, unitId2 } = req.body

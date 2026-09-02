@@ -4,7 +4,6 @@ import {
   getCourseUnits,
   updateUnit,
   getLatestUnitNumber,
-  updateUnitNumber,
   swapUnitNumbers,
   insertUnit
 } from '../controllers/unit.js'
@@ -20,6 +19,5 @@ router.post('/insert', requireAdmin, insertUnit)
 router.get('/latest-number/:courseId', getLatestUnitNumber)
 router.get('/:courseId', getCourseUnits)
 router.patch('/:id', requireAdmin, updateUnit)
-router.patch('/:id/number', requireAdmin, updateUnitNumber)
 
 export default router

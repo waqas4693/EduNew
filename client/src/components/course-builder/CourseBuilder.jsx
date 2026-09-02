@@ -3,9 +3,7 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
-  Divider,
   List,
   ListItemButton,
   ListItemIcon,
@@ -18,7 +16,6 @@ import {
 import {
   ArrowBack,
   AssessmentOutlined,
-  FolderOutlined,
   LayersOutlined,
   MenuBookOutlined,
   SettingsOutlined,
@@ -45,8 +42,6 @@ const CourseBuilder = () => {
   const navigate = useNavigate()
 
   const [course, setCourse] = useState(null)
-  const [units, setUnits] = useState([])
-  const [sectionsByUnit, setSectionsByUnit] = useState({})
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [name, setName] = useState('')
@@ -60,7 +55,7 @@ const CourseBuilder = () => {
     [tab]
   )
 
-  const loadCourseTree = useCallback(async () => {
+  const loadCourse = useCallback(async () => {
     setLoading(true)
     setLoadError('')
 
@@ -80,19 +75,6 @@ const CourseBuilder = () => {
       } else {
         setThumbnailPreview('')
       }
-
-      const unitsResponse = await getData(`units/${courseId}`)
-      const unitList = unitsResponse.data?.units || []
-      setUnits(unitList)
-
-      const sectionEntries = await Promise.all(
-        unitList.map(async (unit) => {
-          const sectionsResponse = await getData(`sections/${unit._id}`)
-          return [unit._id, sectionsResponse.data?.sections || []]
-        })
-      )
-
-      setSectionsByUnit(Object.fromEntries(sectionEntries))
     } catch (error) {
       console.error('Error loading course builder:', error)
       setLoadError(error?.data?.message || 'Unable to load this course.')
@@ -102,8 +84,8 @@ const CourseBuilder = () => {
   }, [courseId])
 
   useEffect(() => {
-    loadCourseTree()
-  }, [loadCourseTree])
+    loadCourse()
+  }, [loadCourse])
 
   const handleOverviewSave = async () => {
     if (!name.trim()) {
@@ -161,18 +143,14 @@ const CourseBuilder = () => {
     setThumbnailPreview(URL.createObjectURL(file))
   }
 
-  const refreshOutline = () => {
-    loadCourseTree()
-  }
-
   if (!validTab) {
     return <Navigate to={`/admin/courses/${courseId}/builder/overview`} replace />
   }
 
   if (loading) {
     return (
-      <PageShell kicker="Course Builder" title="Loading course…">
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+      <PageShell kicker="Course Builder" title="Loading course…" contentSx={{ p: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
           <CircularProgress />
         </Box>
       </PageShell>
@@ -181,7 +159,7 @@ const CourseBuilder = () => {
 
   if (loadError) {
     return (
-      <PageShell kicker="Course Builder" title="Course unavailable">
+      <PageShell kicker="Course Builder" title="Course unavailable" contentSx={{ p: 2 }}>
         <Alert severity="error" sx={{ mb: 2 }}>
           {loadError}
         </Alert>
@@ -196,8 +174,8 @@ const CourseBuilder = () => {
     switch (tab) {
       case 'overview':
         return (
-          <Paper sx={{ p: 3, borderRadius: '14px' }}>
-            <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
+          <Box sx={{ maxWidth: 560 }}>
+            <Typography variant="subtitle1" sx={{ mb: 1.5, fontWeight: 700 }}>
               Course settings
             </Typography>
 
@@ -207,17 +185,18 @@ const CourseBuilder = () => {
               label="Course Name"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              sx={{ mb: 2, maxWidth: 520, '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+              sx={{ mb: 1.5, '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
             />
 
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', mb: 3 }}>
-              <Button variant="outlined" component="label" sx={{ borderRadius: '8px' }}>
+            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
+              <Button variant="outlined" component="label" size="small" sx={{ borderRadius: '8px' }}>
                 {thumbnailPreview ? 'Change thumbnail' : 'Upload thumbnail'}
                 <input type="file" hidden accept="image/*" onChange={handleThumbnailChange} />
               </Button>
               <Button
                 variant="contained"
                 color="success"
+                size="small"
                 disabled={savingOverview}
                 onClick={handleOverviewSave}
                 sx={{ borderRadius: '8px' }}
@@ -229,11 +208,11 @@ const CourseBuilder = () => {
             {thumbnailPreview && (
               <Box
                 sx={{
-                  width: 220,
-                  height: 140,
-                  borderRadius: '12px',
+                  width: 200,
+                  height: 128,
+                  borderRadius: '10px',
                   overflow: 'hidden',
-                  boxShadow: '0 8px 24px rgba(10, 37, 64, 0.08)'
+                  boxShadow: '0 6px 18px rgba(10, 37, 64, 0.08)'
                 }}
               >
                 <img
@@ -243,7 +222,7 @@ const CourseBuilder = () => {
                 />
               </Box>
             )}
-          </Paper>
+          </Box>
         )
       case 'units':
         return (
@@ -251,7 +230,6 @@ const CourseBuilder = () => {
             courseId={courseId}
             editMode
             builderMode
-            onStructureChange={refreshOutline}
             onNotify={(message, severity = 'success') =>
               setSnackbar({ open: true, message, severity })
             }
@@ -263,7 +241,6 @@ const CourseBuilder = () => {
             courseId={courseId}
             editMode
             builderMode
-            onStructureChange={refreshOutline}
             onNotify={(message, severity = 'success') =>
               setSnackbar({ open: true, message, severity })
             }
@@ -291,12 +268,15 @@ const CourseBuilder = () => {
     <PageShell
       kicker="Course Builder"
       title={course?.name || 'Untitled course'}
-      subtitle="Build and maintain your course structure in one place."
+      subtitle="Manage course content"
+      contentSx={{ p: { xs: 1.25, md: 1.5 } }}
       actions={
         <Button
           startIcon={<ArrowBack />}
+          size="small"
           onClick={() => navigate('/admin/dashboard')}
-          sx={{ borderRadius: '8px' }}
+          sx={{ borderRadius: '8px', color: '#fff', borderColor: 'rgba(255,255,255,0.4)' }}
+          variant="outlined"
         >
           Dashboard
         </Button>
@@ -305,29 +285,22 @@ const CourseBuilder = () => {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', lg: '280px minmax(0, 1fr)' },
-          gap: 3,
+          gridTemplateColumns: { xs: '1fr', lg: '220px minmax(0, 1fr)' },
+          gap: { xs: 1.5, md: 2 },
           alignItems: 'start'
         }}
       >
         <Paper
+          variant="outlined"
           sx={{
-            borderRadius: '14px',
+            borderRadius: '12px',
             overflow: 'hidden',
+            borderColor: 'rgba(10, 37, 64, 0.1)',
             position: { lg: 'sticky' },
-            top: 24
+            top: 16
           }}
         >
-          <Box sx={{ p: 2, bgcolor: 'rgba(31, 126, 194, 0.06)' }}>
-            <Typography sx={{ fontWeight: 700, color: 'primary.dark' }}>
-              Builder sections
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Changes stay on this page — refresh-safe via URL.
-            </Typography>
-          </Box>
-
-          <List sx={{ py: 0 }}>
+          <List dense sx={{ py: 0.5 }}>
             {BUILDER_TABS.map((item) => {
               const Icon = item.icon
               return (
@@ -336,70 +309,28 @@ const CourseBuilder = () => {
                   component={NavLink}
                   to={`/admin/courses/${courseId}/builder/${item.id}`}
                   sx={{
+                    py: 1,
                     '&.active': {
-                      bgcolor: 'rgba(31, 126, 194, 0.12)',
-                      borderRight: '3px solid',
+                      bgcolor: 'rgba(31, 126, 194, 0.1)',
+                      borderLeft: '3px solid',
                       borderColor: 'primary.main'
                     }
                   }}
                 >
-                  <ListItemIcon sx={{ minWidth: 40 }}>
-                    <Icon color="primary" />
+                  <ListItemIcon sx={{ minWidth: 34 }}>
+                    <Icon fontSize="small" color="primary" />
                   </ListItemIcon>
-                  <ListItemText primary={item.label} />
+                  <ListItemText
+                    primary={item.label}
+                    primaryTypographyProps={{ fontSize: 14, fontWeight: 600 }}
+                  />
                 </ListItemButton>
               )
             })}
           </List>
-
-          <Divider />
-
-          <Box sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-              <FolderOutlined fontSize="small" color="action" />
-              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                Course outline
-              </Typography>
-            </Box>
-
-            {units.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                No units yet. Add your first unit to start building.
-              </Typography>
-            ) : (
-              units.map((unit) => (
-                <Box key={unit._id} sx={{ mb: 1.5 }}>
-                  <Chip
-                    size="small"
-                    label={`Unit ${unit.number}`}
-                    sx={{ mr: 1, mb: 0.5, fontWeight: 700 }}
-                  />
-                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    {unit.name}
-                  </Typography>
-                  {(sectionsByUnit[unit._id] || []).length === 0 ? (
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', pl: 1 }}>
-                      No sections
-                    </Typography>
-                  ) : (
-                    (sectionsByUnit[unit._id] || []).map((section) => (
-                      <Typography
-                        key={section._id}
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ display: 'block', pl: 1.5, mb: 0.25 }}
-                      >
-                        {section.number}. {section.name}
-                      </Typography>
-                    ))
-                  )}
-                </Box>
-              ))
-            )}
-          </Box>
         </Paper>
 
-        <Box>{renderTabContent()}</Box>
+        <Box sx={{ minWidth: 0 }}>{renderTabContent()}</Box>
       </Box>
 
       <Snackbar
