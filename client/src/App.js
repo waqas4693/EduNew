@@ -29,6 +29,7 @@ import GradedAssessments from './components/assessment/GradedAssessments'
 import ResourceAnalytics from './components/admin/ResourceAnalytics'
 import StudentAssessments from './components/assessment/StudentAssessments'
 import CreateUser from './components/users/CreateUser'
+import UpdateUserPassword from './components/users/UpdateUserPassword'
 import BulkUpload from './components/files/BulkUpload'
 import StudentProfile from './components/students/StudentProfile'
 
@@ -201,6 +202,14 @@ function App() {
                                     <CreateUser />
                                   </PrivateRoute>
                                 } 
+                              />
+                              <Route
+                                path="/update-password"
+                                element={
+                                  <PrivateRoute requiredRole={[1]}>
+                                    <UpdateUserPassword />
+                                  </PrivateRoute>
+                                }
                               />
                               <Route 
                                 path="/bulk-upload" 

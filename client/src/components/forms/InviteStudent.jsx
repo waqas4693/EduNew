@@ -208,7 +208,7 @@ const InviteStudent = () => {
     } catch (err) {
       const errorMessage = err.data?.message || 
                           err.data?.error || 
-                          'Failed to invite student. Please contact support.'
+                          'Failed to create student. Please contact support.'
       setError(errorMessage)
     } finally {
       setIsSubmitting(false)
@@ -230,8 +230,8 @@ const InviteStudent = () => {
   return (
     <PageShell
       kicker="Students"
-      title="Invite student"
-      subtitle="Add a learner and assign their first course."
+      title="Add student"
+      subtitle="Create an active student account, set their password, and assign a course."
     >
       <form onSubmit={handleSubmit}>
         <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
@@ -356,7 +356,7 @@ const InviteStudent = () => {
               textTransform: 'none'
             }}
           >
-            {isSubmitting ? 'Processing...' : 'Invite Student'}
+            {isSubmitting ? 'Creating…' : 'Create student'}
           </Button>
         </Box>
       </form>

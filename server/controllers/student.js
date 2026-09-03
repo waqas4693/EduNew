@@ -3,12 +3,10 @@ import Unit from '../models/unit.js'
 import Course from '../models/course.js'
 import Student from '../models/student.js'
 import CourseUnlock from '../models/courseUnlock.js'
-import EmailVerification from '../models/emailVerification.js'
 import ProgressStats from '../models/progressStats.js'
 import UnitProgress from '../models/unitProgress.js'
 import CourseStats from '../models/courseStats.js'
 import CompletedUnits from '../models/completedUnits.js'
-import { generateVerificationToken, sendVerificationEmail } from '../utils/emailService.js'
 
 export const newStudent = async (req, res) => {
   try {
@@ -37,7 +35,7 @@ export const newStudent = async (req, res) => {
       role: 2,
       status: 1,
       isDemo: isDemo || false,
-      emailVerified: false
+      emailVerified: true
     })
     await user.save()
 
@@ -56,20 +54,6 @@ export const newStudent = async (req, res) => {
     })
     await student.save()
 
-    // Create email verification token
-    const verificationToken = generateVerificationToken()
-    const expiresAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000) // 2 days from now
-
-    await EmailVerification.create({
-      userId: user._id,
-      studentId: student._id,
-      token: verificationToken,
-      expiresAt: expiresAt
-    })
-
-    // Send verification email
-    const emailSent = await sendVerificationEmail(email, name, verificationToken, password)
-
     // Create initial unlock record (watermark starts empty → first section unlocks in UI)
     await CourseUnlock.findOneAndUpdate(
       { studentId: student._id, courseId },
@@ -85,9 +69,7 @@ export const newStudent = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: emailSent 
-        ? `Student "${name}" has been successfully invited! A verification email with login credentials has been sent to ${email}.` 
-        : `Student "${name}" has been successfully invited! However, the verification email could not be sent to ${email}. Please contact the student directly with their login credentials.`
+      message: `Student "${name}" has been created and activated. They can sign in with ${email} using the password you set.`
     })
   } catch (error) {
     console.error('Error creating student:', error)

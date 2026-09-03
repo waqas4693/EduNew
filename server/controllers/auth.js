@@ -29,11 +29,17 @@ export const loginUser = async (req, res) => {
       })
     }
 
+    // Students are activated by admin at creation — keep legacy accounts usable
+    if (user.role === 2 && !user.emailVerified) {
+      user.emailVerified = true
+      await user.save()
+    }
+
     let userData = {
       id: user._id,
       email: user.email,
       role: user.role,
-      emailVerified: user.emailVerified || false,
+      emailVerified: user.role === 2 ? true : (user.emailVerified || false),
       isDemo: user.isDemo || false
     }
 

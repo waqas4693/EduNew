@@ -339,14 +339,15 @@ const Sidebar = ({ open, onClose }) => {
       subItems: [
         { text: 'Active Students', path: '/admin/active-students' },
         { text: 'Inactive Students', path: '/admin/inactive-students' },
-        { text: 'Invite Student', path: '/admin/invite-student' }
+        { text: 'Add Student', path: '/admin/invite-student' }
       ]
     },
     {
       text: 'Accounts',
       icon: <PersonAddIcon />,
       subItems: [
-        { text: 'Create Account', path: '/admin/create-user' }
+        { text: 'Create Account', path: '/admin/create-user' },
+        { text: 'Update Password', path: '/admin/update-password' }
       ]
     },
     {

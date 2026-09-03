@@ -10,8 +10,7 @@ import {
   DialogActions,
   Button,
   useTheme,
-  useMediaQuery,
-  Alert
+  useMediaQuery
 } from '@mui/material'
 import { getData } from '../../api/api'
 import { useDispatch } from 'react-redux'
@@ -24,7 +23,6 @@ import { useEnrolledCourses, useCourseProgress } from '../../hooks/useCourses'
 import Grid from '@mui/material/Grid2'
 import Calendar from '../calendar/Calendar'
 import SpeedIcon from '@mui/icons-material/Speed'
-import EmailIcon from '@mui/icons-material/Email'
 import PageShell from '../layout/PageShell'
 
 // Custom hook for handling all assessment due dates
@@ -68,28 +66,14 @@ const useAllAssessmentDueDates = (courseEnrollments) => {
 const CourseRow = memo(({ course, studentId }) => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const { user } = useAuth()
   const [imageError, setImageError] = useState(false)
   const [thumbnailUrl, setThumbnailUrl] = useState('')
   const [thumbnailLoading, setThumbnailLoading] = useState(true)
   const [openDialog, setOpenDialog] = useState(false)
-  const [openVerificationDialog, setOpenVerificationDialog] = useState(false)
 
   const { data: progressData, isLoading: progressLoading } = useCourseProgress(studentId, course.id)
 
   const progress = progressData?.progressPercentage || 0
-
-  // Check if user is verified
-  const isEmailVerified = user?.emailVerified
-
-  // Handle course access restriction
-  const handleCourseAccess = (action) => {
-    if (!isEmailVerified) {
-      setOpenVerificationDialog(true)
-      return false
-    }
-    return true
-  }
 
   // Fetch thumbnail URL
   useEffect(() => {
@@ -118,9 +102,7 @@ const CourseRow = memo(({ course, studentId }) => {
 
   const handleQuickView = e => {
     e.stopPropagation()
-    if (handleCourseAccess('quickView')) {
     setOpenDialog(true)
-    }
   }
 
   const handleCloseDialog = () => {
@@ -128,7 +110,6 @@ const CourseRow = memo(({ course, studentId }) => {
   }
 
   const handleThumbnailClick = () => {
-    if (handleCourseAccess('thumbnail')) {
     dispatch(
       setCurrentCourse({
         id: course.id,
@@ -137,54 +118,17 @@ const CourseRow = memo(({ course, studentId }) => {
       })
     )
     navigate(`/units/${course.id}`)
-    }
   }
 
   const handleDetailView = (e) => {
     e.stopPropagation()
-    if (handleCourseAccess('detailView')) {
     navigate(`/students/${studentId}/courses/${course.id}/progress`, {
       state: {
         courseName: course.name,
         studentName: ''
       }
     })
-    }
   }
-
-  const handleVerificationDialogClose = () => {
-    setOpenVerificationDialog(false)
-  }
-
-  const verificationDialog = (
-    <Dialog
-      open={openVerificationDialog}
-      onClose={handleVerificationDialogClose}
-      maxWidth='sm'
-      fullWidth
-      PaperProps={{
-        sx: { borderRadius: '14px', p: 1 }
-      }}
-    >
-      <DialogTitle sx={{ textAlign: 'center', fontFamily: '"Fraunces", serif', fontWeight: 600 }}>
-        <EmailIcon sx={{ fontSize: 40, color: 'primary.main', display: 'block', mx: 'auto', mb: 1 }} />
-        Email verification required
-      </DialogTitle>
-      <DialogContent>
-        <Alert severity="info" sx={{ mb: 2, borderRadius: '10px' }}>
-          Please verify your email address to access course content.
-        </Alert>
-        <Typography sx={{ mb: 1.5 }}>
-          Check your inbox for a verification link. If you have not received it, look in spam or contact support.
-        </Typography>
-      </DialogContent>
-      <DialogActions sx={{ justifyContent: 'center', pb: 2 }}>
-        <Button onClick={handleVerificationDialogClose} variant='contained' sx={{ minWidth: 120, boxShadow: 'none' }}>
-          Got it
-        </Button>
-      </DialogActions>
-    </Dialog>
-  )
 
   return (
     <>
@@ -198,7 +142,6 @@ const CourseRow = memo(({ course, studentId }) => {
           display: 'flex',
           flexDirection: 'column',
           boxShadow: '0px 8px 24px rgba(10, 37, 64, 0.06)',
-          opacity: isEmailVerified ? 1 : 0.78,
           transition: 'transform 0.2s, box-shadow 0.2s',
           '&:hover': {
             transform: 'translateY(-2px)',
@@ -363,8 +306,6 @@ const CourseRow = memo(({ course, studentId }) => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {verificationDialog}
     </>
   )
 })
@@ -383,25 +324,6 @@ const StudentDashboard = () => {
 
   return (
     <Box sx={{ p: { xs: 0, md: 0.5 } }}>
-      {!user?.emailVerified && (
-        <Alert 
-          severity="warning" 
-          sx={{ 
-            mb: 2.5, 
-            borderRadius: '12px',
-            '& .MuiAlert-icon': { fontSize: 24 }
-          }}
-          icon={<EmailIcon />}
-        >
-          <Typography sx={{ fontWeight: 700, mb: 0.5 }}>
-            Email verification required
-          </Typography>
-          <Typography variant="body2">
-            Please verify your email address to access course content. Check your inbox for a verification link.
-          </Typography>
-        </Alert>
-      )}
-
     <Grid container spacing={2}>
       <Grid 
         size={{ xs: 12, md: Object.keys(allDueDates || {}).length > 0 ? 8 : 12 }}
