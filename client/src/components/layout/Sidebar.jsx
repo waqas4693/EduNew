@@ -53,10 +53,8 @@ const SidebarContent = ({
     <Box sx={{ overflow: 'auto', height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Box
         sx={{
-          height: LAYOUT_HEADER_HEIGHT,
-          minHeight: LAYOUT_HEADER_HEIGHT,
           px: 2,
-          py: 0,
+          py: 1.5,
           display: 'flex',
           alignItems: 'center',
           borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
@@ -276,7 +274,9 @@ const Sidebar = ({ open, onClose }) => {
     overflowX: 'hidden',
     whiteSpace: 'nowrap',
     transition: widthTransition,
-    backgroundImage: 'none'
+    backgroundImage: 'none',
+    top: LAYOUT_HEADER_HEIGHT,
+    height: `calc(100% - ${LAYOUT_HEADER_HEIGHT}px)`
   }
 
   const adminMenuItems = [
@@ -419,7 +419,10 @@ const Sidebar = ({ open, onClose }) => {
         flexShrink: 0,
         whiteSpace: 'nowrap',
         transition: widthTransition,
-        '& .MuiDrawer-paper': paperSx
+        '& .MuiDrawer-paper': {
+          ...paperSx,
+          position: 'fixed'
+        }
       }}
     >
       <SidebarContent {...contentProps} />
