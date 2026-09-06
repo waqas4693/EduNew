@@ -14,7 +14,8 @@ export const MCQPropTypes = {
 }
 
 export const QuestionPropTypes = {
-  question: PropTypes.string
+  question: PropTypes.string,
+  answer: PropTypes.string
 }
 
 export const ContentPropTypes = {

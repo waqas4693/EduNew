@@ -8,9 +8,9 @@ import { QuestionPropTypes } from '../../types/assessmentTypes'
 /**
  * Questions and Answers form component
  */
-const QNAForm = ({ questions, onQuestionsChange }) => {
+const QNAForm = ({ questions, onQuestionsChange, disabled = false }) => {
   const addQuestion = () => {
-    const newQuestions = [...questions, { question: '' }]
+    const newQuestions = [...questions, { question: '', answer: '' }]
     onQuestionsChange(newQuestions)
   }
 
@@ -19,32 +19,66 @@ const QNAForm = ({ questions, onQuestionsChange }) => {
     onQuestionsChange(updatedQuestions)
   }
 
-  const handleQuestionChange = (index, value) => {
+  const handleFieldChange = (index, field, value) => {
     const newQuestions = [...questions]
-    newQuestions[index] = { question: value }
+    newQuestions[index] = {
+      question: newQuestions[index]?.question || '',
+      answer: newQuestions[index]?.answer || '',
+      [field]: value
+    }
     onQuestionsChange(newQuestions)
   }
 
   return (
     <Box>
       {questions.map((q, index) => (
-        <Box key={index} sx={{ display: 'flex', gap: 2, mb: 2 }}>
+        <Box
+          key={index}
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1.25,
+            mb: 2,
+            p: 1.5,
+            borderRadius: '8px',
+            border: '1px solid rgba(10, 37, 64, 0.1)'
+          }}
+        >
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              size="small"
+              label={`Question ${index + 1}`}
+              value={q.question || ''}
+              onChange={(e) => handleFieldChange(index, 'question', e.target.value)}
+              disabled={disabled}
+              sx={FORM_FIELD_STYLES.textField}
+            />
+            <IconButton
+              onClick={() => removeQuestion(index)}
+              color="error"
+              disabled={disabled}
+              aria-label={`Remove question ${index + 1}`}
+            >
+              <DeleteIcon />
+            </IconButton>
+          </Box>
           <TextField
             fullWidth
             multiline
-            rows={4}
+            rows={3}
             size="small"
-            label={`Question ${index + 1}`}
-            value={q.question}
-            onChange={e => handleQuestionChange(index, e.target.value)}
+            label={`Model answer ${index + 1} (optional)`}
+            value={q.answer || ''}
+            onChange={(e) => handleFieldChange(index, 'answer', e.target.value)}
+            disabled={disabled}
             sx={FORM_FIELD_STYLES.textField}
           />
-          <IconButton onClick={() => removeQuestion(index)} color="error">
-            <DeleteIcon />
-          </IconButton>
         </Box>
       ))}
-      <Button startIcon={<AddIcon />} onClick={addQuestion}>
+      <Button startIcon={<AddIcon />} onClick={addQuestion} disabled={disabled}>
         Add Question
       </Button>
     </Box>
@@ -53,7 +87,8 @@ const QNAForm = ({ questions, onQuestionsChange }) => {
 
 QNAForm.propTypes = {
   questions: PropTypes.arrayOf(PropTypes.shape(QuestionPropTypes)).isRequired,
-  onQuestionsChange: PropTypes.func.isRequired
+  onQuestionsChange: PropTypes.func.isRequired,
+  disabled: PropTypes.bool
 }
 
 export default QNAForm

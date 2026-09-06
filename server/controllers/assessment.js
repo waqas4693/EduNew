@@ -190,8 +190,12 @@ export const updateAssessment = async (req, res) => {
       assessmentType,
       totalMarks,
       percentage,
+      interval,
       isTimeBound,
       timeAllowed,
+      assessor,
+      moderator,
+      verifier,
       content: rawContent
     } = req.body
 
@@ -203,19 +207,56 @@ export const updateAssessment = async (req, res) => {
       })
     }
 
+    const nextType = assessmentType || existingAssessment.assessmentType
+
+    if (nextType !== existingAssessment.assessmentType) {
+      return res.status(400).json({
+        success: false,
+        message: 'Assessment type cannot be changed after creation'
+      })
+    }
+
+    if (percentage !== undefined) {
+      const siblings = await Assessment.find({
+        sectionId: existingAssessment.sectionId,
+        _id: { $ne: id }
+      })
+      const usedByOthers = siblings.reduce((sum, item) => sum + item.percentage, 0)
+      if (usedByOthers + Number(percentage) > 100) {
+        return res.status(400).json({
+          success: false,
+          message: 'Total percentage cannot exceed 100%'
+        })
+      }
+    }
+
+    if (nextType === 'MCQ' && (isTimeBound === true || isTimeBound === 'true')) {
+      if (!timeAllowed || Number(timeAllowed) <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Time allowed must be a positive number for time-bound assessments'
+        })
+      }
+    }
+
     const content = parseAssessmentContent(rawContent)
     let updatedContent = { ...content }
 
-    if (assessmentType === 'MCQ' && content?.mcqs) {
+    if (nextType === 'MCQ' && content?.mcqs) {
       const mcqsWithFiles = await Promise.all(
         content.mcqs.map(async (mcq, index) => {
           const updatedMcq = { ...mcq }
+          const existingMcq = existingAssessment.content?.mcqs?.[index]
 
-          if (existingAssessment.content?.mcqs?.[index]) {
-            const existingMcq = existingAssessment.content.mcqs[index]
-            updatedMcq.imageFile = existingMcq.imageFile
-            updatedMcq.audioFile = existingMcq.audioFile
-          }
+          updatedMcq.imageFile =
+            typeof mcq.imageFile === 'string' && mcq.imageFile
+              ? mcq.imageFile
+              : existingMcq?.imageFile || null
+
+          updatedMcq.audioFile =
+            typeof mcq.audioFile === 'string' && mcq.audioFile
+              ? mcq.audioFile
+              : existingMcq?.audioFile || null
 
           const imageFile = req.files?.find((file) => file.fieldname === `mcqImage_${index}`)
           if (imageFile) {
@@ -241,30 +282,47 @@ export const updateAssessment = async (req, res) => {
       updatedContent.mcqs = mcqsWithFiles
     }
 
-    if (assessmentType === 'FILE') {
+    if (nextType === 'QNA') {
       updatedContent = {
-        ...(existingAssessment.content
-          ? JSON.parse(JSON.stringify(existingAssessment.content))
-          : {}),
-        ...updatedContent
+        questions: Array.isArray(content?.questions) ? content.questions : []
       }
-
-      updatedContent = await uploadFileAssessmentAssets(updatedContent, req.files || [])
     }
 
-    const assessment = await Assessment.findByIdAndUpdate(
-      id,
-      {
-        assessmentType,
-        totalMarks,
-        percentage,
-        isTimeBound,
-        timeAllowed,
-        content: updatedContent,
-        updatedAt: Date.now()
-      },
-      { new: true }
-    )
+    if (nextType === 'FILE') {
+      // Keep existing file assets; do not replace on update
+      updatedContent = existingAssessment.content
+        ? JSON.parse(JSON.stringify(existingAssessment.content))
+        : {}
+    }
+
+    const setFields = {
+      assessmentType: nextType,
+      totalMarks,
+      percentage,
+      isTimeBound,
+      timeAllowed,
+      content: updatedContent,
+      updatedAt: Date.now()
+    }
+
+    if (interval !== undefined) {
+      setFields.interval = interval
+    }
+
+    const updateQuery = { $set: setFields }
+
+    if (nextType === 'MCQ') {
+      updateQuery.$unset = { assessor: '', moderator: '', verifier: '' }
+    } else {
+      if (assessor) setFields.assessor = assessor
+      if (moderator) setFields.moderator = moderator
+      if (verifier) setFields.verifier = verifier
+    }
+
+    const assessment = await Assessment.findByIdAndUpdate(id, updateQuery, {
+      new: true,
+      runValidators: true
+    })
 
     if (!assessment) {
       return res.status(404).json({
@@ -275,7 +333,8 @@ export const updateAssessment = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: assessment
+      data: assessment,
+      message: 'Assessment updated successfully'
     })
   } catch (error) {
     handleError(res, error)

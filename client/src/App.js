@@ -26,7 +26,6 @@ import StudentCourses from './components/students/StudentCourses'
 import CourseStudents from './components/courses/CourseStudents'
 import AssessmentReview from './components/assessment/AssessmentReview'
 import GradedAssessments from './components/assessment/GradedAssessments'
-import ResourceAnalytics from './components/admin/ResourceAnalytics'
 import StudentAssessments from './components/assessment/StudentAssessments'
 import CreateUser from './components/users/CreateUser'
 import UpdateUserPassword from './components/users/UpdateUserPassword'
@@ -227,14 +226,6 @@ function App() {
                               <Route path="/profile" element={<Profile />} />
 
                               {/* Admin only routes continued */}
-                              <Route 
-                                path="/resource-analytics" 
-                                element={
-                                  <PrivateRoute requiredRole={[1]}>
-                                    <ResourceAnalytics />
-                                  </PrivateRoute>
-                                } 
-                              />
                               <Route 
                                 path="/students/:studentId/profile" 
                                 element={

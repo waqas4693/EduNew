@@ -6,22 +6,31 @@ import { UserPropTypes } from '../../types/assessmentTypes'
 /**
  * Role selection form component for assessor, moderator, and verifier
  */
-const RoleSelectionForm = ({ 
-  assessors, 
-  moderators, 
-  verifiers, 
-  onAssessorChange, 
-  onModeratorChange, 
-  onVerifierChange 
+const RoleSelectionForm = ({
+  assessors,
+  moderators,
+  verifiers,
+  assessorId = '',
+  moderatorId = '',
+  verifierId = '',
+  onAssessorChange,
+  onModeratorChange,
+  onVerifierChange,
+  disabled = false
 }) => {
+  const findUser = (users, id) => users.find((user) => String(user._id) === String(id)) || null
+
   return (
     <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
       <Autocomplete
         fullWidth
         size="small"
         options={assessors}
-        getOptionLabel={(option) => option.name}
-        onChange={(_, newValue) => onAssessorChange(newValue?._id)}
+        value={findUser(assessors, assessorId)}
+        getOptionLabel={(option) => option.name || ''}
+        isOptionEqualToValue={(option, value) => String(option._id) === String(value._id)}
+        onChange={(_, newValue) => onAssessorChange(newValue?._id || '')}
+        disabled={disabled}
         renderInput={(params) => (
           <TextField
             {...params}
@@ -36,8 +45,11 @@ const RoleSelectionForm = ({
         fullWidth
         size="small"
         options={moderators}
-        getOptionLabel={(option) => option.name}
-        onChange={(_, newValue) => onModeratorChange(newValue?._id)}
+        value={findUser(moderators, moderatorId)}
+        getOptionLabel={(option) => option.name || ''}
+        isOptionEqualToValue={(option, value) => String(option._id) === String(value._id)}
+        onChange={(_, newValue) => onModeratorChange(newValue?._id || '')}
+        disabled={disabled}
         renderInput={(params) => (
           <TextField
             {...params}
@@ -52,8 +64,11 @@ const RoleSelectionForm = ({
         fullWidth
         size="small"
         options={verifiers}
-        getOptionLabel={(option) => option.name}
-        onChange={(_, newValue) => onVerifierChange(newValue?._id)}
+        value={findUser(verifiers, verifierId)}
+        getOptionLabel={(option) => option.name || ''}
+        isOptionEqualToValue={(option, value) => String(option._id) === String(value._id)}
+        onChange={(_, newValue) => onVerifierChange(newValue?._id || '')}
+        disabled={disabled}
         renderInput={(params) => (
           <TextField
             {...params}
@@ -71,9 +86,13 @@ RoleSelectionForm.propTypes = {
   assessors: PropTypes.arrayOf(PropTypes.shape(UserPropTypes)).isRequired,
   moderators: PropTypes.arrayOf(PropTypes.shape(UserPropTypes)).isRequired,
   verifiers: PropTypes.arrayOf(PropTypes.shape(UserPropTypes)).isRequired,
+  assessorId: PropTypes.string,
+  moderatorId: PropTypes.string,
+  verifierId: PropTypes.string,
   onAssessorChange: PropTypes.func.isRequired,
   onModeratorChange: PropTypes.func.isRequired,
-  onVerifierChange: PropTypes.func.isRequired
+  onVerifierChange: PropTypes.func.isRequired,
+  disabled: PropTypes.bool
 }
 
 export default RoleSelectionForm

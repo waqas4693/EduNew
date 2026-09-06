@@ -70,5 +70,6 @@ export const INITIAL_MCQ = {
 }
 
 export const INITIAL_QUESTION = {
-  question: ''
+  question: '',
+  answer: ''
 }

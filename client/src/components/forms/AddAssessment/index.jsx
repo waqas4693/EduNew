@@ -1,5 +1,5 @@
-import { Box, Typography, Backdrop, CircularProgress, LinearProgress, Alert, Button, Chip, Paper } from '@mui/material'
-import { Add as AddIcon } from '@mui/icons-material'
+import { Box, Typography, Backdrop, CircularProgress, LinearProgress, Alert, Button, Chip, IconButton, Paper } from '@mui/material'
+import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material'
 import PropTypes from 'prop-types'
 import { useEffect, useState } from 'react'
 import { useAssessmentForm } from './hooks/useAssessmentForm'
@@ -9,6 +9,7 @@ import { useMCQManagement } from './hooks/useMCQManagement'
 import { useFormValidation } from './hooks/useFormValidation'
 import { shouldShowTimeOptions } from './utils/assessmentHelpers'
 import { createNewQuestion } from './utils/assessmentHelpers'
+import HardDeleteDialog from '../../common/HardDeleteDialog'
 
 // UI Components
 import FormSection from './components/ui/FormSection'
@@ -34,9 +35,10 @@ import FileAssessmentForm from './components/forms/FileAssessmentForm'
 /**
  * Refactored AddAssessment component using compartmentalized structure
  */
-const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false }) => {
+const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false, onNotify }) => {
   const [assessmentsLoaded, setAssessmentsLoaded] = useState(false)
   const [showCreateForm, setShowCreateForm] = useState(!builderMode)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   // Form state management
   const {
     formData,
@@ -315,13 +317,28 @@ const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false 
                   />
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography sx={{ fontWeight: 600, fontSize: 14 }} noWrap>
-                      {assessment.title}
+                      {assessment.title || `${assessment.assessmentType} assessment`}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       {assessment.totalMarks} marks · {assessment.percentage}% of section
                       {assessment.interval ? ` · due in ${assessment.interval} days` : ''}
                     </Typography>
                   </Box>
+                  <IconButton
+                    size="small"
+                    color="error"
+                    aria-label="Permanently delete assessment"
+                    onClick={() =>
+                      setDeleteTarget({
+                        id: assessment._id,
+                        name:
+                          assessment.title ||
+                          `${assessment.assessmentType} assessment (${assessment.percentage}%)`
+                      })
+                    }
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
                 </Box>
               ))
             )}
@@ -411,6 +428,19 @@ const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false 
           </>
         )}
       </form>
+
+      <HardDeleteDialog
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        entityType="assessment"
+        entityId={deleteTarget?.id}
+        entityName={deleteTarget?.name}
+        onDeleted={async () => {
+          setDeleteTarget(null)
+          await fetchExistingAssessments()
+          onNotify?.('Assessment permanently deleted.', 'success')
+        }}
+      />
     </>
   )
 }
@@ -418,13 +448,15 @@ const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false 
 AddAssessment.propTypes = {
   courseId: PropTypes.string,
   editMode: PropTypes.bool,
-  builderMode: PropTypes.bool
+  builderMode: PropTypes.bool,
+  onNotify: PropTypes.func
 }
 
 AddAssessment.defaultProps = {
   courseId: null,
   editMode: false,
-  builderMode: false
+  builderMode: false,
+  onNotify: undefined
 }
 
 export default AddAssessment

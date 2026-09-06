@@ -14,9 +14,11 @@ import {
 import {
   Add as AddIcon,
   ArrowDownward,
-  ArrowUpward
+  ArrowUpward,
+  Delete as DeleteIcon
 } from '@mui/icons-material'
 import { postData, getData, patchData } from '../../api/api'
+import HardDeleteDialog from '../common/HardDeleteDialog'
 
 const AddSection = ({
   courseId: propsCourseId,
@@ -34,6 +36,7 @@ const AddSection = ({
   const [error, setError] = useState('')
   const [nextNumber, setNextNumber] = useState(1)
   const [reordering, setReordering] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   useEffect(() => {
     if (!builderMode) {
@@ -373,6 +376,20 @@ const AddSection = ({
                         </IconButton>
                       </span>
                     </Tooltip>
+                    <Tooltip title="Permanently delete section">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() =>
+                          setDeleteTarget({
+                            id: section._id,
+                            name: section.name || `Section ${section.number}`
+                          })
+                        }
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   </Box>
                 )}
               </Box>
@@ -410,6 +427,21 @@ const AddSection = ({
           Save sections
         </Button>
       </Box>
+
+      <HardDeleteDialog
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        entityType="section"
+        entityId={deleteTarget?.id}
+        entityName={deleteTarget?.name}
+        onDeleted={() => {
+          const id = deleteTarget?.id
+          setSections((prev) => prev.filter((section) => section._id !== id))
+          setDeleteTarget(null)
+          onNotify?.('Section permanently deleted.', 'success')
+          onStructureChange?.()
+        }}
+      />
     </Box>
   )
 }

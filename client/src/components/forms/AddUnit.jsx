@@ -17,6 +17,7 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material'
 import { postData, getData, patchData } from '../../api/api'
+import HardDeleteDialog from '../common/HardDeleteDialog'
 
 const AddUnit = ({ courseId, editMode, builderMode = false, onStructureChange, onNotify }) => {
   const [units, setUnits] = useState([])
@@ -25,6 +26,7 @@ const AddUnit = ({ courseId, editMode, builderMode = false, onStructureChange, o
   const [error, setError] = useState('')
   const [nextNumber, setNextNumber] = useState(1)
   const [reordering, setReordering] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   useEffect(() => {
     if (!builderMode) {
@@ -351,6 +353,20 @@ const AddUnit = ({ courseId, editMode, builderMode = false, onStructureChange, o
                       </IconButton>
                     </span>
                   </Tooltip>
+                  <Tooltip title="Permanently delete unit">
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() =>
+                        setDeleteTarget({
+                          id: unit._id,
+                          name: unit.name || `Unit ${unit.number}`
+                        })
+                      }
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
                 </Box>
               )}
 
@@ -396,6 +412,21 @@ const AddUnit = ({ courseId, editMode, builderMode = false, onStructureChange, o
           Save units
         </Button>
       </Box>
+
+      <HardDeleteDialog
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        entityType="unit"
+        entityId={deleteTarget?.id}
+        entityName={deleteTarget?.name}
+        onDeleted={() => {
+          const id = deleteTarget?.id
+          setUnits((prev) => prev.filter((unit) => unit._id !== id))
+          setDeleteTarget(null)
+          onNotify?.('Unit permanently deleted.', 'success')
+          onStructureChange?.()
+        }}
+      />
     </Box>
   )
 }

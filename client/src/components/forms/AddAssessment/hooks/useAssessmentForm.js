@@ -1,31 +1,42 @@
 import { useState, useCallback } from 'react'
 import { INITIAL_FORM_DATA } from '../utils/constants'
-import { resetFormData } from '../utils/assessmentHelpers'
+import { mapAssessmentToFormData, resetFormData } from '../utils/assessmentHelpers'
 
 /**
  * Custom hook for managing assessment form state
  */
 export const useAssessmentForm = () => {
-  const [formData, setFormData] = useState(INITIAL_FORM_DATA)
+  const [formData, setFormData] = useState({
+    ...INITIAL_FORM_DATA,
+    assessor: '',
+    moderator: '',
+    verifier: ''
+  })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
 
   const handleFormChange = useCallback((field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [field]: value
     }))
   }, [])
 
   const handleContentChange = useCallback((contentType, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       content: {
         ...prev.content,
         [contentType]: value
       }
     }))
+  }, [])
+
+  const loadFormData = useCallback((assessment) => {
+    setFormData(mapAssessmentToFormData(assessment))
+    setSuccessMessage('')
+    setErrorMessage('')
   }, [])
 
   const resetForm = useCallback(() => {
@@ -60,6 +71,7 @@ export const useAssessmentForm = () => {
     errorMessage,
     handleFormChange,
     handleContentChange,
+    loadFormData,
     resetForm,
     setSubmitting,
     setSuccess,

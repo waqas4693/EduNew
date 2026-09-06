@@ -30,6 +30,7 @@ import statsRouter from './routes/stats.js'
 import scriptRoutes from './routes/scriptRoutes.js'
 import emailVerificationRoutes from './routes/emailVerification.js'
 import passwordResetRoutes from './routes/passwordReset.js'
+import hardDeleteRoutes from './routes/hardDelete.js'
 import { countAllExistingStats } from './controllers/stats.js'
 
 import Course from './models/course.js'
@@ -106,6 +107,7 @@ app.use('/api/stats', statsRouter)
 app.use('/api/scripts', scriptRoutes)
 app.use('/api/email-verification', emailVerificationRoutes)
 app.use('/api/password-reset', passwordResetRoutes)
+app.use('/api/hard-delete', hardDeleteRoutes)
 mongoose.set('strictQuery', false)
 
 await mongoose

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getData, postFormData } from '../../../../api/api'
-import { prepareAssessmentData } from '../utils/assessmentHelpers'
+import { getData, postFormData, putFormData } from '../../../../api/api'
+import { buildAssessmentFormData } from '../utils/assessmentHelpers'
 
 export const useAssessmentAPI = () => {
   const [assessors, setAssessors] = useState([])
@@ -29,52 +29,7 @@ export const useAssessmentAPI = () => {
   const submitAssessment = useCallback(async (formData, courseId, unitId, sectionId) => {
     try {
       setUploadProgress(0)
-      const assessmentData = prepareAssessmentData(formData, courseId, unitId, sectionId)
-      const submitFormData = new FormData()
-
-      Object.keys(assessmentData).forEach((key) => {
-        if (formData.assessmentType === 'MCQ' && ['assessor', 'moderator', 'verifier'].includes(key)) {
-          return
-        }
-
-        if (key === 'content') {
-          const contentCopy = { ...assessmentData.content }
-
-          if (formData.assessmentType === 'MCQ' && contentCopy.mcqs) {
-            contentCopy.mcqs = contentCopy.mcqs.map((mcq, index) => {
-              const mcqCopy = { ...mcq }
-
-              if (mcq.imageFile && mcq.imageFile instanceof File) {
-                submitFormData.append(`mcqImage_${index}`, mcq.imageFile)
-                delete mcqCopy.imageFile
-              }
-
-              if (mcq.audioFile && mcq.audioFile instanceof File) {
-                submitFormData.append(`mcqAudio_${index}`, mcq.audioFile)
-                delete mcqCopy.audioFile
-              }
-
-              return mcqCopy
-            })
-          }
-
-          if (formData.assessmentType === 'FILE') {
-            if (contentCopy.assessmentFile instanceof File) {
-              submitFormData.append('assessmentFile', contentCopy.assessmentFile)
-              delete contentCopy.assessmentFile
-            }
-
-            if (contentCopy.supportingFile instanceof File) {
-              submitFormData.append('supportingFile', contentCopy.supportingFile)
-              delete contentCopy.supportingFile
-            }
-          }
-
-          submitFormData.append('content', JSON.stringify(contentCopy))
-        } else {
-          submitFormData.append(key, assessmentData[key])
-        }
-      })
+      const submitFormData = buildAssessmentFormData(formData, courseId, unitId, sectionId)
 
       const response = await postFormData('assessments', submitFormData, {
         onUploadProgress: (progressEvent) => {
@@ -103,11 +58,44 @@ export const useAssessmentAPI = () => {
     }
   }, [])
 
+  const updateAssessment = useCallback(async (assessmentId, formData, courseId, unitId, sectionId) => {
+    try {
+      setUploadProgress(0)
+      const submitFormData = buildAssessmentFormData(formData, courseId, unitId, sectionId)
+
+      const response = await putFormData(`assessments/${assessmentId}`, submitFormData, {
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          )
+          setUploadProgress(percentCompleted)
+        }
+      })
+
+      if (response.status === 200) {
+        return {
+          success: true,
+          message: 'Assessment updated successfully!'
+        }
+      }
+
+      throw new Error('Unexpected response status')
+    } catch (error) {
+      console.error('Error updating assessment:', error)
+      setUploadProgress(0)
+      return {
+        success: false,
+        message: error.data?.message || error.message || 'Error updating assessment'
+      }
+    }
+  }, [])
+
   return {
     assessors,
     moderators,
     verifiers,
     submitAssessment,
+    updateAssessment,
     fetchUsers,
     uploadProgress
   }

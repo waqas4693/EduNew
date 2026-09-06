@@ -15,11 +15,13 @@ import {
 } from '@mui/material'
 import {
   Add as AddIcon,
+  Delete as DeleteIcon,
   ExpandLess,
   ExpandMore
 } from '@mui/icons-material'
 import { getData, postFormData, putFormData } from '../../../api/api'
 import MediaViewer from '../../MediaViewer'
+import HardDeleteDialog from '../../common/HardDeleteDialog'
 import FileUploader from './components/FileUploader'
 import ExternalLinks from './components/ExternalLinks'
 import MCQForm from './components/MCQForm'
@@ -84,6 +86,7 @@ const AddResource = ({ courseId: propsCourseId, editMode, builderMode = false, o
     type: '',
     title: ''
   })
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   const {
     resources,
@@ -613,13 +616,30 @@ const AddResource = ({ courseId: propsCourseId, editMode, builderMode = false, o
                       </Typography>
                     </Box>
 
-                    <IconButton
-                      size="small"
-                      onClick={() => setExpandedKey(isExpanded ? null : resourceKey)}
-                      aria-label={isExpanded ? 'Collapse resource' : 'Edit resource'}
-                    >
-                      {isExpanded ? <ExpandLess /> : <ExpandMore />}
-                    </IconButton>
+                    <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                      {!isNew && (
+                        <IconButton
+                          size="small"
+                          color="error"
+                          aria-label="Permanently delete resource"
+                          onClick={() =>
+                            setDeleteTarget({
+                              id: resource._id,
+                              name: resource.name || `Resource ${resource.number}`
+                            })
+                          }
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                      <IconButton
+                        size="small"
+                        onClick={() => setExpandedKey(isExpanded ? null : resourceKey)}
+                        aria-label={isExpanded ? 'Collapse resource' : 'Edit resource'}
+                      >
+                        {isExpanded ? <ExpandLess /> : <ExpandMore />}
+                      </IconButton>
+                    </Box>
                   </Box>
 
                   {isExpanded && renderResourceEditor(resource, safeIndex)}
@@ -648,6 +668,20 @@ const AddResource = ({ courseId: propsCourseId, editMode, builderMode = false, o
         url={mediaViewer.url}
         type={mediaViewer.type}
         title={mediaViewer.title}
+      />
+
+      <HardDeleteDialog
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        entityType="resource"
+        entityId={deleteTarget?.id}
+        entityName={deleteTarget?.name}
+        onDeleted={() => {
+          const id = deleteTarget?.id
+          setResources((prev) => prev.filter((resource) => resource._id !== id))
+          setDeleteTarget(null)
+          onNotify?.('Resource permanently deleted.', 'success')
+        }}
       />
 
       {isUploading && (

@@ -16,6 +16,7 @@ import {
 import {
   ArrowBack,
   AssessmentOutlined,
+  DeleteOutline,
   LayersOutlined,
   MenuBookOutlined,
   SettingsOutlined,
@@ -26,6 +27,7 @@ import AddUnit from '../forms/AddUnit'
 import AddSection from '../forms/AddSection'
 import AddResource from '../forms/AddResource/index'
 import AddAssessment from '../forms/AddAssessment/index'
+import HardDeleteDialog from '../common/HardDeleteDialog'
 import { getData, postFormData, putData } from '../../api/api'
 import PageShell from '../layout/PageShell'
 
@@ -49,6 +51,7 @@ const CourseBuilder = () => {
   const [thumbnailPreview, setThumbnailPreview] = useState('')
   const [savingOverview, setSavingOverview] = useState(false)
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
+  const [deleteCourseOpen, setDeleteCourseOpen] = useState(false)
 
   const validTab = useMemo(
     () => BUILDER_TABS.some((item) => item.id === tab),
@@ -203,6 +206,16 @@ const CourseBuilder = () => {
               >
                 {savingOverview ? 'Saving…' : 'Save settings'}
               </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                startIcon={<DeleteOutline />}
+                onClick={() => setDeleteCourseOpen(true)}
+                sx={{ borderRadius: '8px' }}
+              >
+                Delete course
+              </Button>
             </Box>
 
             {thumbnailPreview && (
@@ -258,7 +271,16 @@ const CourseBuilder = () => {
           />
         )
       case 'assessments':
-        return <AddAssessment courseId={courseId} editMode builderMode />
+        return (
+          <AddAssessment
+            courseId={courseId}
+            editMode
+            builderMode
+            onNotify={(message, severity = 'success') =>
+              setSnackbar({ open: true, message, severity })
+            }
+          />
+        )
       default:
         return null
     }
@@ -347,6 +369,22 @@ const CourseBuilder = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      <HardDeleteDialog
+        open={deleteCourseOpen}
+        onClose={() => setDeleteCourseOpen(false)}
+        entityType="course"
+        entityId={courseId}
+        entityName={course?.name || name}
+        onDeleted={() => {
+          setSnackbar({
+            open: true,
+            message: 'Course permanently deleted.',
+            severity: 'success'
+          })
+          navigate('/admin/dashboard')
+        }}
+      />
     </PageShell>
   )
 }
