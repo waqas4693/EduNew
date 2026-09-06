@@ -43,6 +43,16 @@ export const validateForm = (formData, sectionId, remainingPercentage) => {
     errors.push(...mcqErrors)
   }
 
+  if (formData.assessmentType === 'QNA') {
+    const qnaErrors = validateQNAContent(formData.content.questions)
+    errors.push(...qnaErrors)
+  }
+
+  if (formData.assessmentType === 'FILE') {
+    const fileErrors = validateFileContent(formData.content)
+    errors.push(...fileErrors)
+  }
+
   return {
     isValid: errors.length === 0,
     errors

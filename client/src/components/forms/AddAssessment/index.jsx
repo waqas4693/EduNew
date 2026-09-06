@@ -1,28 +1,38 @@
-import { Box, Typography, Backdrop, CircularProgress, LinearProgress, Alert, Button, Chip, IconButton, Paper } from '@mui/material'
-import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material'
+import {
+  Box,
+  Typography,
+  Backdrop,
+  CircularProgress,
+  LinearProgress,
+  Alert,
+  Button,
+  Chip,
+  IconButton,
+  Paper
+} from '@mui/material'
+import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material'
 import PropTypes from 'prop-types'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAssessmentForm } from './hooks/useAssessmentForm'
 import { useHierarchyData } from './hooks/useHierarchyData'
 import { useAssessmentAPI } from './hooks/useAssessmentAPI'
 import { useMCQManagement } from './hooks/useMCQManagement'
 import { useFormValidation } from './hooks/useFormValidation'
-import { shouldShowTimeOptions } from './utils/assessmentHelpers'
-import { createNewQuestion } from './utils/assessmentHelpers'
+import {
+  calculateRemainingPercentage,
+  shouldShowTimeOptions
+} from './utils/assessmentHelpers'
 import HardDeleteDialog from '../../common/HardDeleteDialog'
 
-// UI Components
 import FormSection from './components/ui/FormSection'
 import SuccessMessage from './components/ui/SuccessMessage'
 import ErrorMessage from './components/ui/ErrorMessage'
 import SubmitButton from './components/ui/SubmitButton'
 
-// Selector Components
 import CourseSelector from './components/selectors/CourseSelector'
 import UnitSelector from './components/selectors/UnitSelector'
 import SectionSelector from './components/selectors/SectionSelector'
 
-// Form Components
 import AssessmentBasicInfo from './components/forms/AssessmentBasicInfo'
 import AssessmentTypeSelector from './components/forms/AssessmentTypeSelector'
 import AssessmentMetrics from './components/forms/AssessmentMetrics'
@@ -32,14 +42,12 @@ import MCQForm from './components/forms/MCQForm'
 import QNAForm from './components/forms/QNAForm'
 import FileAssessmentForm from './components/forms/FileAssessmentForm'
 
-/**
- * Refactored AddAssessment component using compartmentalized structure
- */
 const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false, onNotify }) => {
   const [assessmentsLoaded, setAssessmentsLoaded] = useState(false)
-  const [showCreateForm, setShowCreateForm] = useState(!builderMode)
+  const [showForm, setShowForm] = useState(!builderMode)
+  const [editingId, setEditingId] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
-  // Form state management
+
   const {
     formData,
     isSubmitting,
@@ -47,13 +55,13 @@ const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false,
     errorMessage,
     handleFormChange,
     handleContentChange,
+    loadFormData,
     resetForm,
     setSubmitting,
     setSuccess,
     setError
   } = useAssessmentForm()
 
-  // Hierarchy data management
   const {
     courseId,
     unitId,
@@ -69,37 +77,39 @@ const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false,
     fetchExistingAssessments
   } = useHierarchyData({ manualAssessmentLoad: builderMode })
 
-  // API operations
   const {
     assessors,
     moderators,
     verifiers,
     submitAssessment,
+    updateAssessment,
     uploadProgress
   } = useAssessmentAPI()
 
-  // MCQ management
   const {
     mcqOptionCounts,
     addMCQ,
     removeMCQ,
     handleMCQChange,
     handleMCQOptionChange,
-    addMCQOption,
-    removeMCQOption,
     handleMCQFileChange,
     setTotalOptions
   } = useMCQManagement(formData.content?.mcqs, (mcqs) => {
     handleContentChange('mcqs', mcqs)
   })
 
-  // Form validation
-  const {
-    validateAssessmentForm,
-    showValidationErrors
-  } = useFormValidation()
+  const { validateAssessmentForm, showValidationErrors } = useFormValidation()
 
-  // Initialize courseId if passed as prop
+  const availablePercentage = useMemo(
+    () =>
+      editingId
+        ? calculateRemainingPercentage(existingAssessments, editingId)
+        : remainingPercentage,
+    [editingId, existingAssessments, remainingPercentage]
+  )
+
+  const isEditing = Boolean(editingId)
+
   useEffect(() => {
     if (propsCourseId && !courseId) {
       setCourseId(propsCourseId)
@@ -108,44 +118,68 @@ const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false,
 
   useEffect(() => {
     setAssessmentsLoaded(false)
-    setShowCreateForm(!builderMode)
-  }, [sectionId, builderMode])
+    setShowForm(!builderMode)
+    setEditingId(null)
+    resetForm()
+  }, [sectionId, builderMode, resetForm])
 
   const handleLoadAssessments = async () => {
     await fetchExistingAssessments()
     setAssessmentsLoaded(true)
   }
 
-  // Handle Questions for QNA
   const handleQuestionsChange = (questions) => {
     handleContentChange('questions', questions)
   }
 
-  // Handle form submission
+  const handleStartCreate = () => {
+    setEditingId(null)
+    resetForm()
+    setShowForm(true)
+  }
+
+  const handleStartEdit = (assessment) => {
+    setEditingId(assessment._id)
+    loadFormData(assessment)
+    setShowForm(true)
+  }
+
+  const handleCancelForm = () => {
+    setEditingId(null)
+    resetForm()
+    if (builderMode) {
+      setShowForm(false)
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
-    const validation = validateAssessmentForm(formData, sectionId, remainingPercentage)
+
+    const validation = validateAssessmentForm(formData, sectionId, availablePercentage)
     if (!validation.isValid) {
       showValidationErrors(validation.errors)
       return
     }
 
     setSubmitting(true)
-    
+
     try {
-      const result = await submitAssessment(formData, courseId, unitId, sectionId)
-      
+      const result = isEditing
+        ? await updateAssessment(editingId, formData, courseId, unitId, sectionId)
+        : await submitAssessment(formData, courseId, unitId, sectionId)
+
       if (result.success) {
         setSuccess(result.message)
-        setTimeout(() => {
+        onNotify?.(result.message, 'success')
+        setTimeout(async () => {
           resetForm()
-          fetchExistingAssessments()
+          setEditingId(null)
+          await fetchExistingAssessments()
           setAssessmentsLoaded(true)
           if (builderMode) {
-            setShowCreateForm(false)
+            setShowForm(false)
           }
-        }, 2000)
+        }, 1200)
       } else {
         setError(result.message)
       }
@@ -156,7 +190,6 @@ const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false,
     }
   }
 
-  // Render assessment type specific content
   const renderAssessmentContent = () => {
     switch (formData.assessmentType) {
       case 'MCQ':
@@ -178,6 +211,7 @@ const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false,
           <QNAForm
             questions={formData.content.questions || []}
             onQuestionsChange={handleQuestionsChange}
+            disabled={isSubmitting}
           />
         )
       case 'FILE':
@@ -187,6 +221,7 @@ const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false,
             supportingFile={formData.content.supportingFile}
             onAssessmentFileChange={(file) => handleContentChange('assessmentFile', file)}
             onSupportingFileChange={(file) => handleContentChange('supportingFile', file)}
+            readOnly={isEditing}
           />
         )
       default:
@@ -195,11 +230,10 @@ const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false,
   }
 
   return (
-    <> 
-      {/* Loading Backdrop */}
+    <>
       <Backdrop
-        sx={{ 
-          color: '#fff', 
+        sx={{
+          color: '#fff',
           zIndex: (theme) => theme.zIndex.drawer + 1,
           flexDirection: 'column',
           gap: 2
@@ -208,14 +242,14 @@ const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false,
       >
         <CircularProgress color="inherit" size={60} />
         <Typography variant="h6" sx={{ mt: 2 }}>
-          Uploading Assessment...
+          {isEditing ? 'Updating Assessment...' : 'Uploading Assessment...'}
         </Typography>
         <Typography variant="body2" sx={{ textAlign: 'center', maxWidth: 300 }}>
-          Please wait while we process your files and create the assessment
+          Please wait while we process your assessment
         </Typography>
         <Box sx={{ width: 300, mt: 2 }}>
-          <LinearProgress 
-            variant={uploadProgress > 0 ? "determinate" : "indeterminate"}
+          <LinearProgress
+            variant={uploadProgress > 0 ? 'determinate' : 'indeterminate'}
             value={uploadProgress}
           />
           {uploadProgress > 0 && (
@@ -228,7 +262,7 @@ const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false,
 
       <SuccessMessage message={successMessage} />
       <ErrorMessage message={errorMessage} />
-      
+
       <form onSubmit={handleSubmit}>
         <FormSection>
           <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5, flexWrap: 'wrap' }}>
@@ -237,20 +271,20 @@ const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false,
                 courses={courses}
                 value={courseId}
                 onChange={setCourseId}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isEditing}
               />
             )}
             <UnitSelector
               units={units}
               value={unitId}
               onChange={setUnitId}
-              disabled={!courseId || isSubmitting}
+              disabled={!courseId || isSubmitting || isEditing}
             />
             <SectionSelector
               sections={sections}
               value={sectionId}
               onChange={setSectionId}
-              disabled={!unitId || isSubmitting}
+              disabled={!unitId || isSubmitting || isEditing}
             />
           </Box>
         </FormSection>
@@ -269,7 +303,7 @@ const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false,
               startIcon={<AddIcon />}
               size="small"
               variant="contained"
-              onClick={() => setShowCreateForm(true)}
+              onClick={handleStartCreate}
               sx={{ borderRadius: '8px' }}
             >
               Add assessment
@@ -307,7 +341,12 @@ const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false,
                       index < existingAssessments.length - 1
                         ? '1px solid rgba(10, 37, 64, 0.08)'
                         : 'none',
-                    bgcolor: index % 2 === 0 ? '#fff' : 'rgba(245, 248, 251, 0.7)'
+                    bgcolor:
+                      editingId === assessment._id
+                        ? 'rgba(31, 126, 194, 0.08)'
+                        : index % 2 === 0
+                          ? '#fff'
+                          : 'rgba(245, 248, 251, 0.7)'
                   }}
                 >
                   <Chip
@@ -324,6 +363,14 @@ const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false,
                       {assessment.interval ? ` · due in ${assessment.interval} days` : ''}
                     </Typography>
                   </Box>
+                  <IconButton
+                    size="small"
+                    color="primary"
+                    aria-label="Edit assessment"
+                    onClick={() => handleStartEdit(assessment)}
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
                   <IconButton
                     size="small"
                     color="error"
@@ -345,86 +392,100 @@ const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false,
           </Paper>
         )}
 
-        {sectionId && builderMode && !assessmentsLoaded && !showCreateForm && (
+        {sectionId && builderMode && !assessmentsLoaded && !showForm && (
           <Alert severity="info" sx={{ mb: 1.5 }}>
             Load existing assessments or click &quot;Add assessment&quot; to create a new one.
           </Alert>
         )}
 
-        {showCreateForm && (
+        {showForm && (
           <>
-        {/* Basic Assessment Information */}
-        <FormSection>
-          <AssessmentBasicInfo
-            title={formData.title}
-            onTitleChange={(value) => handleFormChange('title', value)}
-            disabled={isSubmitting}
-          />
-        </FormSection>
+            <Alert severity={isEditing ? 'info' : 'success'} sx={{ mb: 1.5 }}>
+              {isEditing
+                ? formData.assessmentType === 'FILE'
+                  ? 'Editing assessment settings. Uploaded files stay unchanged.'
+                  : 'Editing assessment content and settings.'
+                : 'Creating a new assessment.'}
+            </Alert>
 
-        {/* Role selection — manual grading only (QNA / FILE) */}
-        {formData.assessmentType !== 'MCQ' && (
-          <FormSection>
-            <RoleSelectionForm
-              assessors={assessors}
-              moderators={moderators}
-              verifiers={verifiers}
-              onAssessorChange={(value) => handleFormChange('assessor', value)}
-              onModeratorChange={(value) => handleFormChange('moderator', value)}
-              onVerifierChange={(value) => handleFormChange('verifier', value)}
-            />
-          </FormSection>
-        )}
+            <FormSection>
+              <AssessmentBasicInfo
+                title={formData.title}
+                onTitleChange={(value) => handleFormChange('title', value)}
+                disabled={isSubmitting}
+              />
+            </FormSection>
 
-        {/* Assessment Type and Metrics */}
-        <FormSection>
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <AssessmentTypeSelector
-              value={formData.assessmentType}
-              onChange={(value) => {
-                handleFormChange('assessmentType', value)
-                if (value === 'MCQ') {
-                  handleFormChange('assessor', '')
-                  handleFormChange('moderator', '')
-                  handleFormChange('verifier', '')
-                }
-              }}
-              disabled={isSubmitting}
-            />
-          </Box>
-          <AssessmentMetrics
-            totalMarks={formData.totalMarks}
-            percentage={formData.percentage}
-            interval={formData.interval}
-            remainingPercentage={remainingPercentage}
-            onTotalMarksChange={(value) => handleFormChange('totalMarks', value)}
-            onPercentageChange={(value) => handleFormChange('percentage', value)}
-            onIntervalChange={(value) => handleFormChange('interval', value)}
-            disabled={isSubmitting}
-          />
-        </FormSection>
+            {formData.assessmentType !== 'MCQ' && (
+              <FormSection>
+                <RoleSelectionForm
+                  assessors={assessors}
+                  moderators={moderators}
+                  verifiers={verifiers}
+                  assessorId={formData.assessor}
+                  moderatorId={formData.moderator}
+                  verifierId={formData.verifier}
+                  onAssessorChange={(value) => handleFormChange('assessor', value)}
+                  onModeratorChange={(value) => handleFormChange('moderator', value)}
+                  onVerifierChange={(value) => handleFormChange('verifier', value)}
+                  disabled={isSubmitting}
+                />
+              </FormSection>
+            )}
 
-        {/* Assessment Content */}
-        <FormSection title="Assessment Content">
-          {renderAssessmentContent()}
-        </FormSection>
+            <FormSection>
+              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                <AssessmentTypeSelector
+                  value={formData.assessmentType}
+                  onChange={(value) => {
+                    handleFormChange('assessmentType', value)
+                    if (value === 'MCQ') {
+                      handleFormChange('assessor', '')
+                      handleFormChange('moderator', '')
+                      handleFormChange('verifier', '')
+                    }
+                  }}
+                  disabled={isSubmitting || isEditing}
+                />
+              </Box>
+              <AssessmentMetrics
+                totalMarks={formData.totalMarks}
+                percentage={formData.percentage}
+                interval={formData.interval}
+                remainingPercentage={availablePercentage}
+                onTotalMarksChange={(value) => handleFormChange('totalMarks', value)}
+                onPercentageChange={(value) => handleFormChange('percentage', value)}
+                onIntervalChange={(value) => handleFormChange('interval', value)}
+                disabled={isSubmitting}
+              />
+            </FormSection>
 
-        {/* Time Options */}
-        <FormSection>
-          <TimeOptionsForm
-            isTimeBound={formData.isTimeBound}
-            timeAllowed={formData.timeAllowed}
-            onTimeBoundChange={(value) => handleFormChange('isTimeBound', value)}
-            onTimeAllowedChange={(value) => handleFormChange('timeAllowed', value)}
-            showTimeOptions={shouldShowTimeOptions(formData.assessmentType)}
-            disabled={isSubmitting}
-          />
-        </FormSection>
+            <FormSection title="Assessment Content">{renderAssessmentContent()}</FormSection>
 
-        <SubmitButton
-          isSubmitting={isSubmitting}
-          disabled={!sectionId}
-        />
+            <FormSection>
+              <TimeOptionsForm
+                isTimeBound={formData.isTimeBound}
+                timeAllowed={formData.timeAllowed}
+                onTimeBoundChange={(value) => handleFormChange('isTimeBound', value)}
+                onTimeAllowedChange={(value) => handleFormChange('timeAllowed', value)}
+                showTimeOptions={shouldShowTimeOptions(formData.assessmentType)}
+                disabled={isSubmitting}
+              />
+            </FormSection>
+
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, flexWrap: 'wrap' }}>
+              {(builderMode || isEditing) && (
+                <Button onClick={handleCancelForm} disabled={isSubmitting} sx={{ mt: 2 }}>
+                  Cancel
+                </Button>
+              )}
+              <SubmitButton
+                isSubmitting={isSubmitting}
+                disabled={!sectionId}
+                label={isEditing ? 'Save changes' : 'Create Assessment'}
+                loadingLabel={isEditing ? 'Saving…' : 'Creating Assessment...'}
+              />
+            </Box>
           </>
         )}
       </form>
@@ -436,7 +497,11 @@ const AddAssessment = ({ courseId: propsCourseId, editMode, builderMode = false,
         entityId={deleteTarget?.id}
         entityName={deleteTarget?.name}
         onDeleted={async () => {
+          const deletedId = deleteTarget?.id
           setDeleteTarget(null)
+          if (editingId && String(editingId) === String(deletedId)) {
+            handleCancelForm()
+          }
           await fetchExistingAssessments()
           onNotify?.('Assessment permanently deleted.', 'success')
         }}

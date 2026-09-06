@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Alert, Box, Button, TextField } from '@mui/material'
-import { getData, postData, postFormData } from '../../api/api'
+import { ArrowBack } from '@mui/icons-material'
+import { postData, postFormData } from '../../api/api'
 import PageShell from '../layout/PageShell'
 
 const CreateCourse = () => {
@@ -70,6 +71,17 @@ const CreateCourse = () => {
       kicker="Courses"
       title="Create Course"
       subtitle="Start with the basics, then build units, sections, and resources in the course builder."
+      actions={
+        <Button
+          startIcon={<ArrowBack />}
+          onClick={() => navigate('/admin/courses')}
+          sx={{ borderRadius: '8px', color: '#fff', borderColor: 'rgba(255,255,255,0.4)' }}
+          variant="outlined"
+          size="small"
+        >
+          Course Management
+        </Button>
+      }
     >
       <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 640 }}>
         {error && (

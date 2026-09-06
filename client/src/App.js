@@ -3,6 +3,7 @@ import Profile from './components/profile/Profile'
 import CssBaseline from '@mui/material/CssBaseline'
 import CreateCourse from './components/course-builder/CreateCourse'
 import CourseBuilder from './components/course-builder/CourseBuilder'
+import CourseManagement from './components/courses/CourseManagement'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Units from './components/app-components/Units'
 import courseReducer from './redux/slices/courseSlice'
@@ -135,6 +136,14 @@ function App() {
                                 element={
                                   <PrivateRoute requiredRole={[1]}>
                                     <AdminDashboard />
+                                  </PrivateRoute>
+                                } 
+                              />
+                              <Route 
+                                path="/courses" 
+                                element={
+                                  <PrivateRoute requiredRole={[1]}>
+                                    <CourseManagement />
                                   </PrivateRoute>
                                 } 
                               />

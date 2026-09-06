@@ -38,7 +38,11 @@ const MCQFileUpload = ({
             textOverflow: 'ellipsis'
           }}
         >
-          {imageFile ? truncateFileName(imageFile.name || 'Image') : 'Add Image'}
+          {imageFile
+            ? truncateFileName(
+                typeof imageFile === 'string' ? imageFile : imageFile.name || 'Image'
+              )
+            : 'Add Image'}
         </Typography>
         <input
           type="file"
@@ -65,7 +69,11 @@ const MCQFileUpload = ({
             textOverflow: 'ellipsis'
           }}
         >
-          {audioFile ? truncateFileName(audioFile.name || 'Audio') : 'Add Audio'}
+          {audioFile
+            ? truncateFileName(
+                typeof audioFile === 'string' ? audioFile : audioFile.name || 'Audio'
+              )
+            : 'Add Audio'}
         </Typography>
         <input
           type="file"

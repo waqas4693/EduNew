@@ -166,8 +166,8 @@ const CourseBuilder = () => {
         <Alert severity="error" sx={{ mb: 2 }}>
           {loadError}
         </Alert>
-        <Button variant="contained" onClick={() => navigate('/admin/dashboard')}>
-          Back to dashboard
+        <Button variant="contained" onClick={() => navigate('/admin/courses')}>
+          Back to Course Management
         </Button>
       </PageShell>
     )
@@ -296,11 +296,11 @@ const CourseBuilder = () => {
         <Button
           startIcon={<ArrowBack />}
           size="small"
-          onClick={() => navigate('/admin/dashboard')}
+          onClick={() => navigate('/admin/courses')}
           sx={{ borderRadius: '8px', color: '#fff', borderColor: 'rgba(255,255,255,0.4)' }}
           variant="outlined"
         >
-          Dashboard
+          Course Management
         </Button>
       }
     >
@@ -382,7 +382,7 @@ const CourseBuilder = () => {
             message: 'Course permanently deleted.',
             severity: 'success'
           })
-          navigate('/admin/dashboard')
+          navigate('/admin/courses')
         }}
       />
     </PageShell>
