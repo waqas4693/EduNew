@@ -167,7 +167,7 @@ const AddResource = ({ courseId: propsCourseId, editMode, builderMode = false, o
   const resetSectionState = () => {
     setResources([])
     setResourcesLoaded(false)
-    setExpandedIndex(null)
+    setExpandedKey(null)
     setError('')
   }
 
@@ -471,7 +471,7 @@ const AddResource = ({ courseId: propsCourseId, editMode, builderMode = false, o
           )}
 
           <ExternalLinks
-            links={resource.content.externalLinks}
+            links={resource.content.externalLinks || [{ name: '', url: '' }]}
             onChange={(newLinks) => handleContentChange(index, 'externalLinks', newLinks)}
           />
         </Box>
@@ -489,6 +489,7 @@ const AddResource = ({ courseId: propsCourseId, editMode, builderMode = false, o
             options={units}
             value={selectedUnit}
             getOptionLabel={(option) => option?.name || ''}
+            isOptionEqualToValue={(option, value) => option?._id === value?._id}
             onChange={(_, newValue) => handleUnitSelect(newValue)}
             disabled={!courseId}
             sx={{ flex: 1, minWidth: 200 }}
@@ -498,6 +499,7 @@ const AddResource = ({ courseId: propsCourseId, editMode, builderMode = false, o
             options={sections}
             value={selectedSection}
             getOptionLabel={(option) => option?.name || ''}
+            isOptionEqualToValue={(option, value) => option?._id === value?._id}
             onChange={(_, newValue) => handleSectionSelect(newValue)}
             disabled={!unitId}
             sx={{ flex: 1, minWidth: 200 }}
@@ -562,12 +564,20 @@ const AddResource = ({ courseId: propsCourseId, editMode, builderMode = false, o
             </Box>
           ) : (
             sortedResources.map((resource, index) => {
-              const resourceIndex = resources.indexOf(resource)
-              const resourceKey = getResourceKey(resource, resourceIndex)
+              const resourceIndex = resources.findIndex(
+                (item) =>
+                  (item._id && item._id === resource._id) ||
+                  (!item._id &&
+                    !resource._id &&
+                    item.number === resource.number &&
+                    item.name === resource.name)
+              )
+              const safeIndex = resourceIndex >= 0 ? resourceIndex : index
+              const isNew = !resource._id
+              const resourceKey = getResourceKey(resource, safeIndex)
               const isExpanded =
                 expandedKey === resourceKey ||
                 (expandedKey === '__new__' && isNew && index === sortedResources.length - 1)
-              const isNew = !resource._id
 
               return (
                 <Box key={resourceKey}>
@@ -612,7 +622,7 @@ const AddResource = ({ courseId: propsCourseId, editMode, builderMode = false, o
                     </IconButton>
                   </Box>
 
-                  {isExpanded && renderResourceEditor(resource, resourceIndex)}
+                  {isExpanded && renderResourceEditor(resource, safeIndex)}
                 </Box>
               )
             })
