@@ -276,7 +276,7 @@ const Units = () => {
               variant="body2"
               sx={{
                 cursor: 'pointer',
-                color: '#fff',
+                color: 'secondary.dark',
                 display: 'inline-flex',
                 alignItems: 'center',
                 whiteSpace: 'nowrap'
@@ -313,7 +313,7 @@ const Units = () => {
               variant="body2"
               sx={{
                 cursor: 'pointer',
-                color: '#fff',
+                color: 'secondary.dark',
                 display: 'inline-flex',
                 alignItems: 'center',
                 whiteSpace: 'nowrap'

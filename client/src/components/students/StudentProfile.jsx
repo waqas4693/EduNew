@@ -179,11 +179,8 @@ const StudentProfile = () => {
           <Chip 
             label={student?.status === 1 ? 'Active' : 'Inactive'} 
             size="small"
-            sx={{
-              bgcolor: student?.status === 1 ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
-              color: '#fff',
-              fontWeight: 600
-            }}
+            color={student?.status === 1 ? 'success' : 'default'}
+            sx={{ fontWeight: 600 }}
           />
         }
       >

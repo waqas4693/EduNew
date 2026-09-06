@@ -81,115 +81,131 @@ const DashboardLayout = ({ children }) => {
 
   return (
     <LayoutChromeProvider value={chromeValue}>
-      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+        <Sidebar open={sidebarOpen} onClose={toggleSidebar} />
         <Box
-          component="header"
           sx={{
-            position: 'sticky',
-            top: 0,
-            zIndex: (muiTheme) => muiTheme.zIndex.drawer + 1,
-            width: '100%',
-            height: LAYOUT_HEADER_HEIGHT,
-            minHeight: LAYOUT_HEADER_HEIGHT,
+            flexGrow: 1,
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 2,
-            px: { xs: 1.5, md: 2.5 },
-            py: 0,
-            color: '#fff',
-            background: brandGradient,
-            boxShadow: '0 8px 24px rgba(10, 37, 64, 0.18)'
+            flexDirection: 'column',
+            minWidth: 0,
+            transition: theme.transitions.create('margin', {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.leavingScreen
+            })
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
-            <LayoutChromeNavButtons light />
-            <Box sx={{ minWidth: 0 }}>
-              {pageChrome?.kicker && (
-                <Typography
-                  sx={{
-                    fontFamily: '"Source Sans 3", sans-serif',
-                    fontSize: 10,
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    opacity: 0.82,
-                    lineHeight: 1.15
-                  }}
-                >
-                  {pageChrome.kicker}
-                </Typography>
-              )}
-              {pageChrome?.title ? (
-                <Typography
-                  sx={{
-                    fontFamily: '"Fraunces", serif',
-                    fontWeight: 600,
-                    fontSize: { xs: '1.05rem', md: '1.2rem' },
-                    lineHeight: 1.2,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}
-                >
-                  {pageChrome.title}
-                </Typography>
-              ) : (
-                <Typography
-                  sx={{
-                    fontFamily: '"Fraunces", serif',
-                    fontWeight: 600,
-                    fontSize: { xs: '1.05rem', md: '1.2rem' },
-                    lineHeight: 1.2
-                  }}
-                >
-                  EduSupplements
-                </Typography>
-              )}
-              {pageChrome?.subtitle && (
-                <Typography
-                  sx={{
-                    mt: 0.1,
-                    fontSize: 12,
-                    opacity: 0.88,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    display: { xs: 'none', sm: 'block' }
-                  }}
-                >
-                  {pageChrome.subtitle}
-                </Typography>
-              )}
+          <Box
+            component="header"
+            sx={{
+              position: 'sticky',
+              top: 0,
+              zIndex: (muiTheme) => muiTheme.zIndex.appBar,
+              height: LAYOUT_HEADER_HEIGHT,
+              minHeight: LAYOUT_HEADER_HEIGHT,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 2,
+              px: { xs: 1.5, md: 2.5 },
+              py: 0,
+              color: 'secondary.dark',
+              bgcolor: '#fff',
+              borderBottom: '1px solid rgba(10, 37, 64, 0.1)',
+              boxShadow: '0 2px 10px rgba(10, 37, 64, 0.06)'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
+              <LayoutChromeNavButtons />
+              <Box sx={{ minWidth: 0 }}>
+                {pageChrome?.kicker && (
+                  <Typography
+                    sx={{
+                      fontFamily: '"Source Sans 3", sans-serif',
+                      fontSize: 10,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: 'text.secondary',
+                      lineHeight: 1.15
+                    }}
+                  >
+                    {pageChrome.kicker}
+                  </Typography>
+                )}
+                {pageChrome?.title ? (
+                  <Typography
+                    sx={{
+                      fontFamily: '"Fraunces", serif',
+                      fontWeight: 600,
+                      fontSize: { xs: '1.05rem', md: '1.2rem' },
+                      lineHeight: 1.2,
+                      color: 'secondary.dark',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}
+                  >
+                    {pageChrome.title}
+                  </Typography>
+                ) : (
+                  <Typography
+                    sx={{
+                      fontFamily: '"Fraunces", serif',
+                      fontWeight: 600,
+                      fontSize: { xs: '1.05rem', md: '1.2rem' },
+                      lineHeight: 1.2,
+                      color: 'secondary.dark'
+                    }}
+                  >
+                    EduSupplements
+                  </Typography>
+                )}
+                {pageChrome?.subtitle && (
+                  <Typography
+                    sx={{
+                      mt: 0.1,
+                      fontSize: 12,
+                      color: 'text.secondary',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: { xs: 'none', sm: 'block' }
+                    }}
+                  >
+                    {pageChrome.subtitle}
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                flexShrink: 0,
+                ml: 'auto',
+                color: 'secondary.dark',
+                '& .MuiIconButton-root': { color: 'secondary.dark' },
+                '& .MuiButton-root': { color: 'secondary.dark' },
+                '& .MuiTypography-root': { color: 'secondary.dark' }
+              }}
+            >
+              <Box
+                ref={setActionsSlotEl}
+                sx={{ display: 'flex', alignItems: 'center', gap: 1, minHeight: 40 }}
+              />
+              <LayoutChromePaletteButton />
             </Box>
           </Box>
 
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              flexShrink: 0,
-              ml: 'auto'
-            }}
-          >
-            <Box
-              ref={setActionsSlotEl}
-              sx={{ display: 'flex', alignItems: 'center', gap: 1, minHeight: 40 }}
-            />
-            <LayoutChromePaletteButton light />
-          </Box>
-        </Box>
-
-        <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
-          <Sidebar open={sidebarOpen} onClose={toggleSidebar} />
           <Box
             component="main"
             sx={{
               flexGrow: 1,
               p: { xs: 2, md: 3 },
               width: '100%',
-              minWidth: 0,
-              minHeight: `calc(100vh - ${LAYOUT_HEADER_HEIGHT}px)`,
+              minHeight: 0,
               backgroundImage: background ? `url(${background})` : 'none',
               backgroundColor: 'transparent',
               backgroundSize: 'cover',
@@ -236,7 +252,7 @@ const DashboardLayout = ({ children }) => {
         {appearanceTab === 0 ? (
           <Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-            This color fills the sidebar. The top bar uses the same color as a full-width gradient.
+              This color fills the sidebar. The top header stays white.
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25, mb: 2 }}>
               {BRAND_COLOR_PRESETS.map((preset) => {

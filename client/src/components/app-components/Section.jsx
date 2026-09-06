@@ -343,7 +343,7 @@ const Section = () => {
             <Typography
               variant="body2"
               sx={{
-                color: '#fff',
+                color: 'secondary.dark',
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -527,7 +527,7 @@ const Section = () => {
             <Typography
               variant="body2"
               sx={{
-                color: '#fff',
+                color: 'secondary.dark',
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',

@@ -297,7 +297,7 @@ const CourseBuilder = () => {
           startIcon={<ArrowBack />}
           size="small"
           onClick={() => navigate('/admin/courses')}
-          sx={{ borderRadius: '8px', color: '#fff', borderColor: 'rgba(255,255,255,0.4)' }}
+          sx={{ borderRadius: '8px', color: 'secondary.dark', borderColor: 'rgba(10, 37, 64, 0.25)' }}
           variant="outlined"
         >
           Course Management

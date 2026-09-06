@@ -456,7 +456,7 @@ const LearnerFrame = () => {
             <Typography
               variant="body2"
               sx={{
-                color: '#fff',
+                color: 'secondary.dark',
                 cursor: isCompleting ? 'default' : 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
