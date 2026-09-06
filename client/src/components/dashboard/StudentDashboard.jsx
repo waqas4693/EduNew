@@ -29,35 +29,61 @@ import PageShell from '../layout/PageShell'
 const useAllAssessmentDueDates = (courseEnrollments) => {
   const [allDueDates, setAllDueDates] = useState({})
   const [error, setError] = useState(null)
+  const enrollmentKey = JSON.stringify(
+    (courseEnrollments || []).map((course) => ({
+      id: course?.courseId,
+      date: course?.enrollmentDate
+    }))
+  )
 
   useEffect(() => {
+    let cancelled = false
+
     const fetchAllDueDates = async () => {
-      if (!courseEnrollments?.length) return
+      const enrollments = courseEnrollments || []
+      if (!enrollments.length) {
+        setAllDueDates({})
+        return
+      }
 
       try {
         const dueDates = {}
         await Promise.all(
-          courseEnrollments.map(async (course) => {
+          enrollments.map(async (course) => {
+            if (!course?.courseId) return
             try {
-              const response = await getData(`assessments/due-dates/${course.courseId}?enrollmentDate=${course.enrollmentDate}`)
-              if (response.data) {
-                Object.assign(dueDates, response.data)
+              const response = await getData(
+                `assessments/due-dates/${course.courseId}?enrollmentDate=${course.enrollmentDate}`
+              )
+              const payload = response?.data
+              if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+                Object.assign(dueDates, payload)
               }
             } catch (err) {
               console.error(`Error fetching due dates for course ${course.courseId}:`, err)
             }
           })
         )
-        setAllDueDates(dueDates)
-        setError(null)
+        if (!cancelled) {
+          setAllDueDates(dueDates)
+          setError(null)
+        }
       } catch (err) {
         console.error('Error fetching all due dates:', err)
-        setError(err)
+        if (!cancelled) {
+          setAllDueDates({})
+          setError(err)
+        }
       }
     }
 
     fetchAllDueDates()
-  }, [courseEnrollments])
+    return () => {
+      cancelled = true
+    }
+    // enrollmentKey captures relevant enrollment identity without unstable array refs
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enrollmentKey])
 
   return { allDueDates, error }
 }
@@ -322,11 +348,16 @@ const StudentDashboard = () => {
     console.error('Error loading assessment due dates:', error)
   }
 
+  const dueDateEntries =
+    allDueDates && typeof allDueDates === 'object' && !Array.isArray(allDueDates)
+      ? Object.keys(allDueDates)
+      : []
+
   return (
     <Box sx={{ p: { xs: 0, md: 0.5 } }}>
     <Grid container spacing={2}>
       <Grid 
-        size={{ xs: 12, md: Object.keys(allDueDates || {}).length > 0 ? 8 : 12 }}
+        size={{ xs: 12, md: dueDateEntries.length > 0 ? 8 : 12 }}
         order={{ xs: 1, md: 1 }}
       >
         <PageShell kicker="Learning" title="Current courses">
@@ -349,7 +380,7 @@ const StudentDashboard = () => {
       </Grid>
 
       {/* Calendar — only when due-date data exists */}
-      {!isMobile && Object.keys(allDueDates || {}).length > 0 && (
+      {!isMobile && dueDateEntries.length > 0 && (
         <Grid 
           size={{ md: 4 }}
           order={{ md: 2 }}

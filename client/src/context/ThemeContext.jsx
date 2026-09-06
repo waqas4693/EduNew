@@ -58,6 +58,3 @@ export const useAppTheme = () => {
   }
   return context
 }
-
-/** @deprecated Use useAppTheme */
-export const useTheme = useAppTheme

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import {
   Box,
   useMediaQuery,
@@ -16,10 +16,13 @@ import {
   LayoutChromeProvider,
   LayoutChromeNavButtons,
   LayoutChromePaletteButton,
-  usePageChromeState
+  usePageChromeState,
+  useActionsSlot,
+  useLayoutChromeValue
 } from './LayoutChrome'
 import { useAppTheme } from '../../context/ThemeContext'
 import { BRAND_COLOR_PRESETS, normalizeHex } from '../../utils/brandTheme'
+import { LAYOUT_HEADER_HEIGHT } from './layoutConstants'
 
 const backgroundImages = ['1.jpg', '2.jpg', '3.jpg', '4.jpg']
 
@@ -28,7 +31,7 @@ const DashboardLayout = ({ children }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const { brandColor, brandGradient, setBrandColor, background, setBackground } = useAppTheme()
   const { pageChrome, setPageChrome } = usePageChromeState()
-  const [actionsSlotEl, setActionsSlotEl] = useState(null)
+  const { setActionsSlotEl, getActionsSlot } = useActionsSlot()
 
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile)
   const [openDialog, setOpenDialog] = useState(false)
@@ -36,51 +39,76 @@ const DashboardLayout = ({ children }) => {
   const [appearanceTab, setAppearanceTab] = useState(0)
   const [customColor, setCustomColor] = useState(brandColor)
 
-  const handleImageSelect = (image) => {
-    setBackground(`/background-images/${image}`)
-    setOpenDialog(false)
-  }
+  const handleImageSelect = useCallback(
+    (image) => {
+      setBackground(`/background-images/${image}`)
+      setOpenDialog(false)
+    },
+    [setBackground]
+  )
 
-  const applyBrandColor = (color) => {
-    const normalized = normalizeHex(color)
-    if (!normalized) return
-    setBrandColor(normalized)
-    setCustomColor(normalized)
-  }
+  const applyBrandColor = useCallback(
+    (color) => {
+      const normalized = normalizeHex(color)
+      if (!normalized) return
+      setBrandColor(normalized)
+      setCustomColor(normalized)
+    },
+    [setBrandColor]
+  )
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen)
-  }
+  const toggleSidebar = useCallback(() => {
+    setSidebarOpen((open) => !open)
+  }, [])
+
+  const openPalette = useCallback(() => {
+    setCustomColor(brandColor)
+    setOpenDialog(true)
+  }, [brandColor])
+
+  const openCalendar = useCallback(() => {
+    setCalendarOpen(true)
+  }, [])
+
+  const chromeValue = useLayoutChromeValue({
+    toggleSidebar,
+    openPalette,
+    openCalendar,
+    isMobile,
+    setPageChrome,
+    getActionsSlot
+  })
 
   return (
-    <LayoutChromeProvider
-      value={{
-        toggleSidebar,
-        openPalette: () => {
-          setCustomColor(brandColor)
-          setOpenDialog(true)
-        },
-        openCalendar: () => setCalendarOpen(true),
-        isMobile,
-        setPageChrome,
-        actionsSlotEl
-      }}
-    >
+    <LayoutChromeProvider value={chromeValue}>
       <Box sx={{ display: 'flex', minHeight: '100vh' }}>
         <Sidebar open={sidebarOpen} onClose={toggleSidebar} />
-        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <Box
+          sx={{
+            flexGrow: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            minWidth: 0,
+            transition: theme.transitions.create('margin', {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.leavingScreen
+            })
+          }}
+        >
           <Box
             component="header"
             sx={{
               position: 'sticky',
               top: 0,
               zIndex: (muiTheme) => muiTheme.zIndex.appBar,
+              height: LAYOUT_HEADER_HEIGHT,
+              minHeight: LAYOUT_HEADER_HEIGHT,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: 2,
               px: { xs: 1.5, md: 2.5 },
-              py: { xs: 1.25, md: 1.5 },
+              py: 0,
               color: '#fff',
               background: brandGradient,
               boxShadow: '0 8px 24px rgba(10, 37, 64, 0.18)'
@@ -93,11 +121,11 @@ const DashboardLayout = ({ children }) => {
                   <Typography
                     sx={{
                       fontFamily: '"Source Sans 3", sans-serif',
-                      fontSize: 11,
+                      fontSize: 10,
                       letterSpacing: '0.08em',
                       textTransform: 'uppercase',
                       opacity: 0.82,
-                      lineHeight: 1.2
+                      lineHeight: 1.15
                     }}
                   >
                     {pageChrome.kicker}
@@ -108,7 +136,7 @@ const DashboardLayout = ({ children }) => {
                     sx={{
                       fontFamily: '"Fraunces", serif',
                       fontWeight: 600,
-                      fontSize: { xs: '1.15rem', md: '1.35rem' },
+                      fontSize: { xs: '1.05rem', md: '1.2rem' },
                       lineHeight: 1.2,
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
@@ -122,7 +150,7 @@ const DashboardLayout = ({ children }) => {
                     sx={{
                       fontFamily: '"Fraunces", serif',
                       fontWeight: 600,
-                      fontSize: { xs: '1.15rem', md: '1.35rem' },
+                      fontSize: { xs: '1.05rem', md: '1.2rem' },
                       lineHeight: 1.2
                     }}
                   >
@@ -132,8 +160,8 @@ const DashboardLayout = ({ children }) => {
                 {pageChrome?.subtitle && (
                   <Typography
                     sx={{
-                      mt: 0.15,
-                      fontSize: 12.5,
+                      mt: 0.1,
+                      fontSize: 12,
                       opacity: 0.88,
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
@@ -158,7 +186,7 @@ const DashboardLayout = ({ children }) => {
             >
               <Box
                 ref={setActionsSlotEl}
-                sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                sx={{ display: 'flex', alignItems: 'center', gap: 1, minHeight: 40 }}
               />
               <LayoutChromePaletteButton light />
             </Box>
@@ -171,7 +199,8 @@ const DashboardLayout = ({ children }) => {
               p: { xs: 2, md: 3 },
               width: '100%',
               minHeight: 0,
-              backgroundImage: `url(${background})`,
+              backgroundImage: background ? `url(${background})` : 'none',
+              backgroundColor: 'transparent',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',

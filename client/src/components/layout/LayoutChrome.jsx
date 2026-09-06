@@ -1,8 +1,11 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useLayoutEffect,
+  useMemo,
+  useRef,
   useState
 } from 'react'
 import { createPortal } from 'react-dom'
@@ -13,46 +16,53 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
 
 const LayoutChromeContext = createContext(null)
 
-export const LayoutChromeProvider = LayoutChromeContext.Provider
+export const LayoutChromeProvider = ({ value, children }) => (
+  <LayoutChromeContext.Provider value={value}>{children}</LayoutChromeContext.Provider>
+)
 
 export const useLayoutChrome = () => useContext(LayoutChromeContext)
 
 /**
  * Registers page title into the sticky layout header.
- * Actions are portaled into the header actions slot (avoids setState loops).
+ * Actions are portaled into the header actions slot.
  */
 export const usePageChrome = ({ kicker, title, subtitle, actions } = {}) => {
   const chrome = useLayoutChrome()
+  const setPageChrome = chrome?.setPageChrome
+  const slotEl = chrome?.getActionsSlot?.() || null
 
   useLayoutEffect(() => {
-    if (!chrome?.setPageChrome) return
-    chrome.setPageChrome({
+    if (!setPageChrome) return
+    setPageChrome({
       kicker: kicker || '',
       title: title || '',
       subtitle: subtitle || ''
     })
-  }, [chrome, kicker, title, subtitle])
+  }, [setPageChrome, kicker, title, subtitle])
 
   useEffect(() => {
-    if (!chrome?.setPageChrome) return undefined
-    return () => chrome.setPageChrome(null)
-  }, [chrome])
+    if (!setPageChrome) return undefined
+    return () => setPageChrome(null)
+  }, [setPageChrome])
 
-  if (!chrome?.actionsSlotEl || !actions) return null
-  return createPortal(actions, chrome.actionsSlotEl)
+  if (!slotEl || !actions) return null
+
+  try {
+    return createPortal(actions, slotEl)
+  } catch {
+    return null
+  }
 }
 
 /** Drop-in component form of usePageChrome for pages that don't use PageShell */
 export const PageChrome = ({ kicker, title, subtitle, actions }) =>
   usePageChrome({ kicker, title, subtitle, actions })
 
-
 /** @deprecated Header chrome is always layout-owned now */
 export const useClaimLayoutChrome = () => {}
 
 const iconSx = (light) => ({ color: light ? '#fff' : 'secondary.dark' })
 
-/** Menu (+ calendar on mobile) — left side of the header */
 export const LayoutChromeNavButtons = ({ light = false }) => {
   const chrome = useLayoutChrome()
   if (!chrome) return null
@@ -79,7 +89,6 @@ export const LayoutChromeNavButtons = ({ light = false }) => {
   )
 }
 
-/** Appearance picker — extreme right of the header */
 export const LayoutChromePaletteButton = ({ light = false }) => {
   const chrome = useLayoutChrome()
   if (!chrome) return null
@@ -95,7 +104,6 @@ export const LayoutChromePaletteButton = ({ light = false }) => {
   )
 }
 
-/** @deprecated Prefer NavButtons + PaletteButton for left/right layout */
 export const LayoutChromeButtons = ({ light = false }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
     <LayoutChromeNavButtons light={light} />
@@ -106,7 +114,7 @@ export const LayoutChromeButtons = ({ light = false }) => (
 export const usePageChromeState = () => {
   const [pageChrome, setPageChromeState] = useState(null)
 
-  const setPageChrome = (next) => {
+  const setPageChrome = useCallback((next) => {
     setPageChromeState((prev) => {
       if (!next) return null
       if (
@@ -123,7 +131,43 @@ export const usePageChromeState = () => {
         subtitle: next.subtitle || ''
       }
     })
-  }
+  }, [])
 
   return { pageChrome, setPageChrome }
 }
+
+/** Stable actions-slot bridge: ref for portal target + tick when it mounts */
+export const useActionsSlot = () => {
+  const actionsSlotRef = useRef(null)
+  const [slotVersion, setSlotVersion] = useState(0)
+
+  const setActionsSlotEl = useCallback((node) => {
+    if (actionsSlotRef.current === node) return
+    actionsSlotRef.current = node
+    setSlotVersion((version) => version + 1)
+  }, [])
+
+  const getActionsSlot = useCallback(() => actionsSlotRef.current, [slotVersion])
+
+  return { setActionsSlotEl, getActionsSlot, slotVersion }
+}
+
+export const useLayoutChromeValue = ({
+  toggleSidebar,
+  openPalette,
+  openCalendar,
+  isMobile,
+  setPageChrome,
+  getActionsSlot
+}) =>
+  useMemo(
+    () => ({
+      toggleSidebar,
+      openPalette,
+      openCalendar,
+      isMobile,
+      setPageChrome,
+      getActionsSlot
+    }),
+    [toggleSidebar, openPalette, openCalendar, isMobile, setPageChrome, getActionsSlot]
+  )

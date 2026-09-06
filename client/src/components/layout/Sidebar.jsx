@@ -26,6 +26,8 @@ import {
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useState } from 'react'
+import { useAppTheme } from '../../context/ThemeContext'
+import { LAYOUT_HEADER_HEIGHT } from './layoutConstants'
 
 const ADMIN_ROLE = 1
 const STUDENT_ROLE = 2
@@ -51,21 +53,26 @@ const SidebarContent = ({
     <Box sx={{ overflow: 'auto', height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Box
         sx={{
-          p: 2,
+          height: LAYOUT_HEADER_HEIGHT,
+          minHeight: LAYOUT_HEADER_HEIGHT,
+          px: 2,
+          py: 0,
           display: 'flex',
           alignItems: 'center',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.12)'
+          borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+          flexShrink: 0,
+          overflow: 'hidden'
         }}
       >
-        <Avatar sx={{ bgcolor: 'primary.dark', mr: open ? 2 : 0 }}>
+        <Avatar sx={{ bgcolor: 'primary.dark', mr: open ? 2 : 0, width: 36, height: 36 }}>
           {user?.name?.charAt(0).toUpperCase()}
         </Avatar>
         {open && (
-          <Box sx={{ overflow: 'hidden' }}>
-            <Typography sx={{ color: 'white', fontSize: '16px', fontWeight: 'bold' }}>
+          <Box sx={{ overflow: 'hidden', minWidth: 0 }}>
+            <Typography sx={{ color: 'white', fontSize: '15px', fontWeight: 'bold', lineHeight: 1.2 }}>
               {getRoleName(user?.role)}
             </Typography>
-            <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '14px', lineHeight: 1 }}>
+            <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '13px', lineHeight: 1.2 }}>
               {user?.name}
             </Typography>
           </Box>
@@ -239,6 +246,7 @@ const SidebarContent = ({
 
 const Sidebar = ({ open, onClose }) => {
   const theme = useTheme()
+  const { brandColor } = useAppTheme()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
@@ -252,6 +260,24 @@ const Sidebar = ({ open, onClose }) => {
   }
 
   const drawerWidth = getDrawerWidth()
+  const widthTransition = theme.transitions.create('width', {
+    easing: theme.transitions.easing.sharp,
+    duration: open
+      ? theme.transitions.duration.enteringScreen
+      : theme.transitions.duration.leavingScreen
+  })
+
+  const paperSx = {
+    width: drawerWidth,
+    boxSizing: 'border-box',
+    bgcolor: brandColor,
+    color: '#fff',
+    borderRight: 'none',
+    overflowX: 'hidden',
+    whiteSpace: 'nowrap',
+    transition: widthTransition,
+    backgroundImage: 'none'
+  }
 
   const adminMenuItems = [
     {
@@ -376,11 +402,7 @@ const Sidebar = ({ open, onClose }) => {
         onClose={onClose}
         ModalProps={{ keepMounted: true }}
         sx={{
-          '& .MuiDrawer-paper': {
-            width: drawerWidth,
-            boxSizing: 'border-box',
-            bgcolor: 'primary.main'
-          }
+          '& .MuiDrawer-paper': paperSx
         }}
       >
         <SidebarContent {...contentProps} />
@@ -392,19 +414,12 @@ const Sidebar = ({ open, onClose }) => {
     <Drawer
       variant="permanent"
       open={open}
-      onClose={onClose}
       sx={{
         width: drawerWidth,
         flexShrink: 0,
-        '& .MuiDrawer-paper': {
-          width: drawerWidth,
-          boxSizing: 'border-box',
-          bgcolor: 'primary.main',
-          transition: theme.transitions.create('width', {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.enteringScreen
-          })
-        }
+        whiteSpace: 'nowrap',
+        transition: widthTransition,
+        '& .MuiDrawer-paper': paperSx
       }}
     >
       <SidebarContent {...contentProps} />
