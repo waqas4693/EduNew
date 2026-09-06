@@ -36,7 +36,7 @@ import StudentProfile from './components/students/StudentProfile'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
 import { AuthProvider } from './context/AuthContext'
-import { ThemeProvider } from './context/ThemeContext'
+import { ThemeProvider, useAppTheme } from './context/ThemeContext'
 import { LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles'
@@ -45,6 +45,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import DeploymentCacheGuard from './components/system/DeploymentCacheGuard'
 import StudentSessionRefresh from './components/system/StudentSessionRefresh'
+import { useMemo } from 'react'
 
 // Create Redux store
 const store = configureStore({
@@ -65,44 +66,50 @@ const queryClient = new QueryClient({
   },
 })
 
-// MUI theme — aligned with Splash / Login brand
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#1F7EC2',
-      dark: '#155A8F',
-      light: '#4A9AD4',
-      contrastText: '#FFFFFF'
+const buildMuiTheme = (brandPalette) =>
+  createTheme({
+    palette: {
+      primary: {
+        main: brandPalette.main,
+        dark: brandPalette.dark,
+        light: brandPalette.light,
+        contrastText: '#FFFFFF'
+      },
+      secondary: {
+        main: '#12304A',
+        dark: '#0A2540',
+        light: '#2A4A66',
+        contrastText: '#FFFFFF'
+      },
+      background: {
+        default: '#F5F8FB',
+        paper: '#FFFFFF'
+      },
+      text: {
+        primary: '#0A2540',
+        secondary: 'rgba(10, 37, 64, 0.68)'
+      }
     },
-    secondary: {
-      main: '#12304A',
-      dark: '#0A2540',
-      light: '#2A4A66',
-      contrastText: '#FFFFFF'
+    typography: {
+      fontFamily: '"Source Sans 3", sans-serif',
+      h1: { fontFamily: '"Fraunces", serif', fontWeight: 600 },
+      h2: { fontFamily: '"Fraunces", serif', fontWeight: 600 },
+      h3: { fontFamily: '"Fraunces", serif', fontWeight: 600 },
+      h4: { fontFamily: '"Fraunces", serif', fontWeight: 600 },
+      h5: { fontFamily: '"Fraunces", serif', fontWeight: 600 },
+      h6: { fontFamily: '"Fraunces", serif', fontWeight: 600 },
+      button: { textTransform: 'none', fontWeight: 600 }
     },
-    background: {
-      default: '#F5F8FB',
-      paper: '#FFFFFF'
-    },
-    text: {
-      primary: '#0A2540',
-      secondary: 'rgba(10, 37, 64, 0.68)'
+    shape: {
+      borderRadius: 10
     }
-  },
-  typography: {
-    fontFamily: '"Source Sans 3", sans-serif',
-    h1: { fontFamily: '"Fraunces", serif', fontWeight: 600 },
-    h2: { fontFamily: '"Fraunces", serif', fontWeight: 600 },
-    h3: { fontFamily: '"Fraunces", serif', fontWeight: 600 },
-    h4: { fontFamily: '"Fraunces", serif', fontWeight: 600 },
-    h5: { fontFamily: '"Fraunces", serif', fontWeight: 600 },
-    h6: { fontFamily: '"Fraunces", serif', fontWeight: 600 },
-    button: { textTransform: 'none', fontWeight: 600 }
-  },
-  shape: {
-    borderRadius: 10
-  }
-})
+  })
+
+const DynamicMuiTheme = ({ children }) => {
+  const { brandPalette } = useAppTheme()
+  const theme = useMemo(() => buildMuiTheme(brandPalette), [brandPalette])
+  return <MuiThemeProvider theme={theme}>{children}</MuiThemeProvider>
+}
 
 function App() {
   return (
@@ -113,7 +120,7 @@ function App() {
             <DeploymentCacheGuard />
             <StudentSessionRefresh />
             <ThemeProvider>
-              <MuiThemeProvider theme={theme}>
+              <DynamicMuiTheme>
                 <LocalizationProvider dateAdapter={AdapterDayjs}>
                   <CssBaseline />
                   <Routes>
@@ -303,7 +310,7 @@ function App() {
                     />
                   </Routes>
                 </LocalizationProvider>
-              </MuiThemeProvider>
+              </DynamicMuiTheme>
             </ThemeProvider>
           </AuthProvider>
         </BrowserRouter>

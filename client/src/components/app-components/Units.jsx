@@ -24,11 +24,7 @@ import { useUnits } from '../../hooks/useUnits'
 import { useUnlockStatus } from '../../hooks/useUnlockStatus'
 import { useCompletedUnits } from '../../hooks/useCompletedUnits'
 import { useSyncCourseUnlock } from '../../hooks/useUnlockSync'
-import {
-  LayoutChromeNavButtons,
-  LayoutChromePaletteButton,
-  useClaimLayoutChrome
-} from '../layout/LayoutChrome'
+import { PageChrome } from '../layout/LayoutChrome'
 
 import Grid from '@mui/material/Grid2'
 
@@ -37,7 +33,6 @@ const Units = () => {
   const location = useLocation()
   const dispatch = useDispatch()
   const { currentCourse } = useSelector((state) => state.course)
-  useClaimLayoutChrome()
 
   const { user } = useAuth()
   const { courseId } = useParams()
@@ -144,46 +139,6 @@ const Units = () => {
     }))
     navigate(`/units/${courseId}/section/${unitId}`)
   }
-
-  const handleBackToDashboard = () => {
-    navigate('/dashboard')
-  }
-
-  const unitsHeader = (
-    <Box
-      sx={{
-        px: 2,
-        py: 1.5,
-        background: 'linear-gradient(135deg, #1F7EC2 0%, #155A8F 55%, #0A2540 100%)',
-        color: '#fff',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 1
-      }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-        <LayoutChromeNavButtons light />
-        <Typography
-          variant='body2'
-          sx={{
-            cursor: 'pointer',
-            color: '#fff',
-            display: 'inline-flex',
-            alignItems: 'center',
-            width: 'fit-content',
-            gap: 0
-          }}
-          onClick={handleBackToDashboard}
-        >
-          <ChevronLeft sx={{ ml: -1, color: '#fff' }} /> Back To Dashboard
-        </Typography>
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto', flexShrink: 0 }}>
-        <LayoutChromePaletteButton light />
-      </Box>
-    </Box>
-  )
 
   const unitsContent = (
     <Box sx={{ px: isMobile ? '12px' : '24px', py: '24px', bgcolor: 'white' }}>
@@ -313,6 +268,25 @@ const Units = () => {
     // Mobile: Only units, no calendar
     return (
       <Box>
+        <PageChrome
+          kicker="Learning"
+          title={currentCourse?.name || 'Course units'}
+          actions={
+            <Typography
+              variant="body2"
+              sx={{
+                cursor: 'pointer',
+                color: '#fff',
+                display: 'inline-flex',
+                alignItems: 'center',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={() => navigate('/dashboard')}
+            >
+              <ChevronLeft sx={{ ml: -0.5 }} /> Back to dashboard
+            </Typography>
+          }
+        />
         <Paper
           elevation={5}
           sx={{
@@ -321,7 +295,6 @@ const Units = () => {
             overflow: 'hidden'
           }}
         >
-          {unitsHeader}
           {unitsContent}
         </Paper>
       </Box>
@@ -332,6 +305,25 @@ const Units = () => {
   return (
     <Grid container spacing={2}>
       <Grid size={12}>
+        <PageChrome
+          kicker="Learning"
+          title={currentCourse?.name || 'Course units'}
+          actions={
+            <Typography
+              variant="body2"
+              sx={{
+                cursor: 'pointer',
+                color: '#fff',
+                display: 'inline-flex',
+                alignItems: 'center',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={() => navigate('/dashboard')}
+            >
+              <ChevronLeft sx={{ ml: -0.5 }} /> Back to dashboard
+            </Typography>
+          }
+        />
         <Paper
           elevation={5}
           sx={{
@@ -340,7 +332,6 @@ const Units = () => {
             overflow: 'hidden'
           }}
         >
-          {unitsHeader}
           {unitsContent}
         </Paper>
       </Grid>

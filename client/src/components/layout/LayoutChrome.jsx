@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useState
+} from 'react'
+import { createPortal } from 'react-dom'
 import { Box, IconButton } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import PaletteIcon from '@mui/icons-material/Palette'
@@ -10,15 +17,38 @@ export const LayoutChromeProvider = LayoutChromeContext.Provider
 
 export const useLayoutChrome = () => useContext(LayoutChromeContext)
 
-export const useClaimLayoutChrome = () => {
+/**
+ * Registers page title into the sticky layout header.
+ * Actions are portaled into the header actions slot (avoids setState loops).
+ */
+export const usePageChrome = ({ kicker, title, subtitle, actions } = {}) => {
   const chrome = useLayoutChrome()
 
+  useLayoutEffect(() => {
+    if (!chrome?.setPageChrome) return
+    chrome.setPageChrome({
+      kicker: kicker || '',
+      title: title || '',
+      subtitle: subtitle || ''
+    })
+  }, [chrome, kicker, title, subtitle])
+
   useEffect(() => {
-    if (!chrome?.setOwnsChrome) return undefined
-    chrome.setOwnsChrome(true)
-    return () => chrome.setOwnsChrome(false)
+    if (!chrome?.setPageChrome) return undefined
+    return () => chrome.setPageChrome(null)
   }, [chrome])
+
+  if (!chrome?.actionsSlotEl || !actions) return null
+  return createPortal(actions, chrome.actionsSlotEl)
 }
+
+/** Drop-in component form of usePageChrome for pages that don't use PageShell */
+export const PageChrome = ({ kicker, title, subtitle, actions }) =>
+  usePageChrome({ kicker, title, subtitle, actions })
+
+
+/** @deprecated Header chrome is always layout-owned now */
+export const useClaimLayoutChrome = () => {}
 
 const iconSx = (light) => ({ color: light ? '#fff' : 'secondary.dark' })
 
@@ -49,7 +79,7 @@ export const LayoutChromeNavButtons = ({ light = false }) => {
   )
 }
 
-/** Background picker — extreme right of the header */
+/** Appearance picker — extreme right of the header */
 export const LayoutChromePaletteButton = ({ light = false }) => {
   const chrome = useLayoutChrome()
   if (!chrome) return null
@@ -57,7 +87,7 @@ export const LayoutChromePaletteButton = ({ light = false }) => {
   return (
     <IconButton
       onClick={chrome.openPalette}
-      aria-label="Change background"
+      aria-label="Change appearance"
       sx={iconSx(light)}
     >
       <PaletteIcon />
@@ -72,3 +102,28 @@ export const LayoutChromeButtons = ({ light = false }) => (
     <LayoutChromePaletteButton light={light} />
   </Box>
 )
+
+export const usePageChromeState = () => {
+  const [pageChrome, setPageChromeState] = useState(null)
+
+  const setPageChrome = (next) => {
+    setPageChromeState((prev) => {
+      if (!next) return null
+      if (
+        prev &&
+        prev.kicker === next.kicker &&
+        prev.title === next.title &&
+        prev.subtitle === next.subtitle
+      ) {
+        return prev
+      }
+      return {
+        kicker: next.kicker || '',
+        title: next.title || '',
+        subtitle: next.subtitle || ''
+      }
+    })
+  }
+
+  return { pageChrome, setPageChrome }
+}

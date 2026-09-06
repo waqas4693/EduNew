@@ -23,11 +23,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useSections, useUnlockedSections } from '../../hooks/useSections'
 import { setCurrentUnit } from '../../redux/slices/courseSlice'
 import { useCompletedSections, useSyncCourseUnlock } from '../../hooks/useUnlockSync'
-import {
-  LayoutChromeNavButtons,
-  LayoutChromePaletteButton,
-  useClaimLayoutChrome
-} from '../layout/LayoutChrome'
+import { PageChrome } from '../layout/LayoutChrome'
 
 import Grid from '@mui/material/Grid2'
 import IconButton from '@mui/material/IconButton'
@@ -44,7 +40,6 @@ const Section = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const dispatch = useDispatch()
-  useClaimLayoutChrome()
 
   const { user } = useAuth()
   const { courseId, unitId } = useParams()
@@ -249,42 +244,6 @@ const Section = () => {
     }
   }
 
-  const sectionHeader = (
-    <Box
-      sx={{
-        px: 2,
-        py: 1.5,
-        background: 'linear-gradient(135deg, #1F7EC2 0%, #155A8F 55%, #0A2540 100%)',
-        color: '#fff',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 1
-      }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-        <LayoutChromeNavButtons light />
-        <Typography
-          variant='body2'
-          sx={{
-            color: '#fff',
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            width: 'fit-content',
-            gap: 0
-          }}
-          onClick={handleBackToUnit}
-        >
-          <ChevronLeft sx={{ ml: -1, color: '#fff' }} /> Back To Unit
-        </Typography>
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto', flexShrink: 0 }}>
-        <LayoutChromePaletteButton light />
-      </Box>
-    </Box>
-  )
-
   const sectionListSkeleton = (
     [...Array(3)].map((_, index) => (
       <Box key={index} sx={{ mb: 3 }}>
@@ -376,6 +335,26 @@ const Section = () => {
     // Mobile: Only section content, no calendar
     return (
       <Box>
+        <PageChrome
+          kicker="Learning"
+          title={unitName || courseName || 'Sections'}
+          subtitle={courseName && unitName ? courseName : ''}
+          actions={
+            <Typography
+              variant="body2"
+              sx={{
+                color: '#fff',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={handleBackToUnit}
+            >
+              <ChevronLeft sx={{ ml: -0.5 }} /> Back to unit
+            </Typography>
+          }
+        />
         <Paper
           elevation={5}
           sx={{
@@ -384,7 +363,6 @@ const Section = () => {
             overflow: 'hidden'
           }}
         >
-          {sectionHeader}
           <Box sx={{ px: '12px', py: '24px', bgcolor: 'white' }}>
             {sectionCourseIntro}
 
@@ -541,6 +519,26 @@ const Section = () => {
   return (
     <Grid container spacing={2}>
       <Grid size={12}>
+        <PageChrome
+          kicker="Learning"
+          title={unitName || courseName || 'Sections'}
+          subtitle={courseName && unitName ? courseName : ''}
+          actions={
+            <Typography
+              variant="body2"
+              sx={{
+                color: '#fff',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={handleBackToUnit}
+            >
+              <ChevronLeft sx={{ ml: -0.5 }} /> Back to unit
+            </Typography>
+          }
+        />
         <Paper
           elevation={5}
           sx={{
@@ -549,7 +547,6 @@ const Section = () => {
             overflow: 'hidden'
           }}
         >
-          {sectionHeader}
           <Box sx={{ px: '24px', py: '24px', bgcolor: 'white' }}>
             {sectionCourseIntro}
 

@@ -19,11 +19,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
 import LinearProgress from '@mui/material/LinearProgress'
 import VolumeUpIcon from '@mui/icons-material/VolumeUp'
-import {
-  LayoutChromeNavButtons,
-  LayoutChromePaletteButton,
-  useClaimLayoutChrome
-} from '../layout/LayoutChrome'
+import { PageChrome } from '../layout/LayoutChrome'
 
 const AssessmentRenderer = ({
   assessment,
@@ -581,7 +577,6 @@ const AssessmentRenderer = ({
 const ViewAssessment = () => {
   const { user } = useAuth()
   const { courseId, sectionId } = useParams()
-  useClaimLayoutChrome()
 
   const [dueDates, setDueDates] = useState({})
   const [audioUrls, setAudioUrls] = useState({})
@@ -1012,36 +1007,15 @@ const ViewAssessment = () => {
         minHeight: '70vh'
       }}
     >
-      <Box
-        sx={{
-          px: { xs: 2, md: 2.5 },
-          py: 1.5,
-          background: 'linear-gradient(135deg, #1F7EC2 0%, #155A8F 55%, #0A2540 100%)',
-          color: '#fff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 2,
-          flexWrap: 'nowrap'
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
-          <LayoutChromeNavButtons light />
-          <Typography
-            sx={{
-              fontFamily: '"Fraunces", serif',
-              fontWeight: 600,
-              fontSize: { xs: '1.1rem', md: '1.25rem' }
-            }}
-          >
-            Assessments
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, ml: 'auto' }}>
-          <LayoutChromePaletteButton light />
-        </Box>
-      </Box>
-
+      <PageChrome
+        kicker="Learning"
+        title="Assessments"
+        subtitle={
+          selectedAssessment
+            ? `${selectedAssessment.assessmentType} · ${selectedAssessment.totalMarks || 0} marks`
+            : 'Select an assessment to begin'
+        }
+      />
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, flex: 1, minHeight: 0 }}>
         <Box
           sx={{
@@ -1092,7 +1066,9 @@ const ViewAssessment = () => {
                         cursor: 'pointer',
                         borderBottom: '1px solid rgba(10, 37, 64, 0.06)',
                         bgcolor: selected ? 'rgba(31, 126, 194, 0.12)' : 'transparent',
-                        borderLeft: selected ? '3px solid #1F7EC2' : '3px solid transparent',
+                        borderLeftWidth: 3,
+                        borderLeftStyle: 'solid',
+                        borderLeftColor: selected ? 'primary.main' : 'transparent',
                         transition: 'background 0.15s',
                         '&:hover': { bgcolor: 'rgba(31, 126, 194, 0.08)' }
                       }}
