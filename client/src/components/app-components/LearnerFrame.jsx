@@ -54,8 +54,20 @@ const LearnerFrame = () => {
   const {
     progress,
     isLoading: progressLoading,
+    isError: progressError,
+    error: progressQueryError,
     refetch: refetchProgress
   } = useGetStudentProgress(user?.studentId, courseId, unitId, sectionId)
+
+  useEffect(() => {
+    const status = progressQueryError?.response?.status
+    if (progressError && status === 403) {
+      navigate(`/units/${courseId}/section/${unitId}`, {
+        replace: true,
+        state: { refresh: true }
+      })
+    }
+  }, [progressError, progressQueryError, navigate, courseId, unitId])
 
   const isAtLastLoadedResource =
     resources.length > 0 && currentIndex === resources.length - 1 && !hasMore
@@ -93,12 +105,17 @@ const LearnerFrame = () => {
 
   const invalidateUnlockQueries = useCallback(async () => {
     await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['unitsUnlockView', user?.studentId, courseId] }),
+      queryClient.invalidateQueries({ queryKey: ['sectionsUnlockView', user?.studentId, courseId] }),
       queryClient.invalidateQueries({ queryKey: ['unlockStatus', user?.studentId, courseId] }),
       queryClient.invalidateQueries({
         queryKey: ['unlockedSections', user?.studentId, courseId]
       }),
       queryClient.invalidateQueries({
         queryKey: ['completedUnits', user?.studentId, courseId]
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ['completedSections', user?.studentId, courseId]
       })
     ])
   }, [queryClient, user?.studentId, courseId])

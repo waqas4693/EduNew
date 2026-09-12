@@ -70,10 +70,10 @@ const McqRenderer = ({
           key={`${option}-${index}`}
           elevation={0}
           sx={{
-            px: 1.25,
-            py: 1,
+            px: 1.5,
+            py: 1.25,
             cursor: readOnly || hasSubmitted ? 'default' : 'pointer',
-            minHeight: 44,
+            minHeight: 52,
             display: 'flex',
             alignItems: 'center',
             ...getOptionStyle(option),
@@ -89,9 +89,9 @@ const McqRenderer = ({
         >
           <Typography
             sx={{
-              fontSize: 14,
+              fontSize: { xs: 15, md: 16 },
               fontWeight: 600,
-              lineHeight: 1.35,
+              lineHeight: 1.4,
               wordBreak: 'break-word'
             }}
           >

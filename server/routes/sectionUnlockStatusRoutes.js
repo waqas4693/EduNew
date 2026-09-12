@@ -7,7 +7,9 @@ import {
   getStudentCourseUnlockStatus,
   syncCourseUnlockFromProgress,
   repairCourseUnlockFromProgress,
-  repairAllCourseUnlocks
+  repairAllCourseUnlocks,
+  getUnitsUnlockView,
+  getSectionsUnlockView
 } from '../controllers/courseUnlock.js'
 import { verifyToken, requireAdmin } from '../middleware/auth.js'
 
@@ -15,6 +17,8 @@ const router = express.Router()
 
 router.use(verifyToken)
 
+router.get('/units/:studentId/:courseId', getUnitsUnlockView)
+router.get('/sections/:studentId/:courseId/:unitId', getSectionsUnlockView)
 router.get('/completed/:studentId/:courseId', getCompletedUnits)
 router.get('/completed-sections/:studentId/:courseId', getCompletedSections)
 router.get('/status/:studentId/:courseId', getStudentCourseUnlockStatus)

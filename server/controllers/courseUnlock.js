@@ -11,7 +11,6 @@ import { handleError } from "../utils/errorHandler.js";
 import { calculateAndUpdateUnitProgress, recalculateAllUnitProgress } from "../utils/unitProgressCalculator.js";
 import {
   getSectionPosition,
-  isAtOrBeyond,
   isSectionFullyCompleted,
 } from "../utils/sectionCompletion.js";
 import {
@@ -20,6 +19,52 @@ import {
   repairStudentCourseUnlock,
   repairAllStudentCourseUnlocks,
 } from "../utils/unlockSync.js";
+import {
+  assertSectionCanOpen,
+  buildSectionsUnlockView,
+  buildUnitsUnlockView,
+  isSameOrImmediateNext,
+} from "../utils/unlockAccess.js";
+
+export const getUnitsUnlockView = async (req, res) => {
+  try {
+    const { studentId, courseId } = req.params;
+    const view = await buildUnitsUnlockView(studentId, courseId);
+
+    res.status(200).json({
+      success: true,
+      ...view,
+    });
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    handleError(res, error);
+  }
+};
+
+export const getSectionsUnlockView = async (req, res) => {
+  try {
+    const { studentId, courseId, unitId } = req.params;
+    const view = await buildSectionsUnlockView(studentId, courseId, unitId);
+
+    res.status(200).json({
+      success: true,
+      ...view,
+    });
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    handleError(res, error);
+  }
+};
 
 export const getUnlockedUnitAndSection = async (req, res) => {
   try {
@@ -94,6 +139,18 @@ export const setUnlockedUnitAndSection = async (req, res) => {
       });
     }
 
+    try {
+      await assertSectionCanOpen({ studentId, courseId, unitId, sectionId });
+    } catch (accessError) {
+      if (accessError.statusCode) {
+        return res.status(accessError.statusCode).json({
+          success: false,
+          message: accessError.message,
+        });
+      }
+      throw accessError;
+    }
+
     const sectionComplete = await isSectionFullyCompleted({
       studentId,
       courseId,
@@ -134,7 +191,16 @@ export const setUnlockedUnitAndSection = async (req, res) => {
     const isLastSection =
       lastSection && String(lastSection._id) === String(sectionId);
 
-    if (isLastSection) {
+    let unlockStatus = await CourseUnlock.findOne({ studentId, courseId });
+
+    // Advance only to the same section (idempotent) or the immediate next — never jump gaps
+    const shouldAdvanceSection = await isSameOrImmediateNext(
+      courseId,
+      sectionId,
+      unlockStatus?.unlockedSection || null
+    );
+
+    if (isLastSection && shouldAdvanceSection) {
       try {
         await CompletedUnits.findOneAndUpdate(
           { studentId, courseId, unitId },
@@ -152,14 +218,6 @@ export const setUnlockedUnitAndSection = async (req, res) => {
       }
     }
 
-    let unlockStatus = await CourseUnlock.findOne({ studentId, courseId });
-    const currentPosition = unlockStatus?.unlockedSection
-      ? await getSectionPosition(unlockStatus.unlockedSection)
-      : null;
-
-    // Monotonic watermark: never move unlock pointer backward
-    const shouldAdvanceSection = isAtOrBeyond(completedPosition, currentPosition);
-
     const updateData = {
       lastUpdated: Date.now(),
     };
@@ -168,7 +226,7 @@ export const setUnlockedUnitAndSection = async (req, res) => {
       updateData.unlockedSection = sectionId;
     }
 
-    if (isLastSection) {
+    if (isLastSection && shouldAdvanceSection) {
       const currentUnit = await Unit.findById(unitId).select("number");
       let currentUnlockedUnitNumber = null;
 
@@ -189,11 +247,11 @@ export const setUnlockedUnitAndSection = async (req, res) => {
       unlockStatus = await CourseUnlock.create({
         studentId,
         courseId,
-        unlockedSection: updateData.unlockedSection || sectionId,
+        unlockedSection: updateData.unlockedSection || (shouldAdvanceSection ? sectionId : undefined),
         ...(updateData.unlockedUnit ? { unlockedUnit: updateData.unlockedUnit } : {}),
         lastUpdated: updateData.lastUpdated,
       });
-    } else if (Object.keys(updateData).length > 1 || shouldAdvanceSection || isLastSection) {
+    } else if (shouldAdvanceSection || updateData.unlockedUnit) {
       unlockStatus = await CourseUnlock.findOneAndUpdate(
         { studentId, courseId },
         updateData,

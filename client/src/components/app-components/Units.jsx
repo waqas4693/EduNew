@@ -17,135 +17,102 @@ import {
 import { getData } from '../../api/api'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import { useDispatch, useSelector } from 'react-redux'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
 import { setCurrentCourse, setCurrentUnit } from '../../redux/slices/courseSlice'
-import { useUnits } from '../../hooks/useUnits'
-import { useUnlockStatus } from '../../hooks/useUnlockStatus'
-import { useCompletedUnits } from '../../hooks/useCompletedUnits'
-import { useSyncCourseUnlock } from '../../hooks/useUnlockSync'
+import { useUnitsUnlockView } from '../../hooks/useCourseUnlockView'
 import { PageChrome } from '../layout/LayoutChrome'
 
 import Grid from '@mui/material/Grid2'
 
 const Units = () => {
   const navigate = useNavigate()
-  const location = useLocation()
   const dispatch = useDispatch()
-  const { currentCourse } = useSelector((state) => state.course)
-
   const { user } = useAuth()
   const { courseId } = useParams()
-
-  const { data: units, isLoading } = useUnits(courseId)
-  const { data: unlockStatus, refetch: refetchUnlockStatus } = useUnlockStatus(user?.studentId, courseId)
-  const { data: completedUnits = [], refetch: refetchCompletedUnits } = useCompletedUnits(user?.studentId, courseId)
-  const syncUnlock = useSyncCourseUnlock()
-  const [hasSynced, setHasSynced] = useState(false)
-
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
+  const {
+    data: unlockView,
+    isLoading,
+    isError,
+    error
+  } = useUnitsUnlockView(user?.studentId, courseId)
+
+  const [courseImage, setCourseImage] = useState('/background-images/1.jpg')
+
+  const courseName = unlockView?.course?.name || ''
+  const units = unlockView?.units || []
+
   useEffect(() => {
-    const runSync = async () => {
-      if (!user?.studentId || !courseId || user?.isDemo || hasSynced) return
-      try {
-        await syncUnlock.mutateAsync({
-          studentId: user.studentId,
-          courseId
-        })
-        await Promise.all([refetchUnlockStatus(), refetchCompletedUnits()])
-      } catch (error) {
-        console.error('Error syncing unit unlock status:', error)
-      } finally {
-        setHasSynced(true)
+    let cancelled = false
+
+    const loadThumbnail = async () => {
+      const thumbnail = unlockView?.course?.thumbnail
+      if (!thumbnail) {
+        setCourseImage('/background-images/1.jpg')
+        return
       }
-    }
 
-    runSync()
-  }, [user?.studentId, courseId, user?.isDemo, hasSynced])
-
-  const isUnitUnlocked = (unitId) => {
-    if (!unlockStatus?.unlockedUnit) {
-      return String(units?.[0]?._id) === String(unitId)
-    }
-
-    const unlockedUnitIndex = units?.findIndex(
-      (unit) => String(unit._id) === String(unlockStatus.unlockedUnit)
-    )
-
-    if (unlockedUnitIndex === -1) {
-      return String(units?.[0]?._id) === String(unitId)
-    }
-
-    const currentUnitIndex = units?.findIndex((unit) => String(unit._id) === String(unitId))
-    const maxUnlockedIndex = unlockedUnitIndex + 1
-
-    return currentUnitIndex !== -1 && currentUnitIndex <= maxUnlockedIndex
-  }
-
-  const isUnitCompleted = (unitId) => {
-    return completedUnits.some(
-      (completedUnitId) => String(completedUnitId) === String(unitId)
-    )
-  }
-
-  useEffect(() => {
-    const fetchCourseDetails = async () => {
-      if (!courseId) return
+      if (String(thumbnail).startsWith('http')) {
+        setCourseImage(thumbnail)
+        return
+      }
 
       try {
-        const response = await getData(`courses/${courseId}`)
-        if (response.status === 200) {
-          const course = response.data.data
-          let imageUrl = course.thumbnail
-
-          if (course.thumbnail) {
-            try {
-              const thumbnailResponse = await getData(
-                `resources/files/url/THUMBNAILS/${course.thumbnail}`
-              )
-              if (thumbnailResponse.status === 200) {
-                imageUrl = thumbnailResponse.data.signedUrl
-              }
-            } catch (thumbnailError) {
-              console.error('Error fetching course thumbnail:', thumbnailError)
-            }
-          }
-
-          dispatch(setCurrentCourse({
-            id: courseId,
-            name: course.name,
-            image: imageUrl
-          }))
+        const thumbnailResponse = await getData(`resources/files/url/THUMBNAILS/${thumbnail}`)
+        if (!cancelled && thumbnailResponse.status === 200) {
+          setCourseImage(thumbnailResponse.data.signedUrl)
         }
-      } catch (error) {
-        console.error('Error fetching course details:', error)
+      } catch (thumbnailError) {
+        console.error('Error fetching course thumbnail:', thumbnailError)
+        if (!cancelled) setCourseImage('/background-images/1.jpg')
       }
     }
 
-    fetchCourseDetails()
-  }, [courseId, dispatch])
-
-  const handleUnitClick = (unitId, unitName) => {
-    if (!isUnitUnlocked(unitId)) {
-      return
+    if (unlockView?.course) {
+      dispatch(setCurrentCourse({
+        id: courseId,
+        name: unlockView.course.name,
+        image: courseImage
+      }))
+      loadThumbnail()
     }
+
+    return () => {
+      cancelled = true
+    }
+  }, [unlockView?.course, courseId, dispatch])
+
+  useEffect(() => {
+    if (!unlockView?.course?.name) return
+    dispatch(setCurrentCourse({
+      id: courseId,
+      name: unlockView.course.name,
+      image: courseImage
+    }))
+  }, [courseImage, unlockView?.course?.name, courseId, dispatch])
+
+  const handleUnitClick = (unit) => {
+    if (!unit.canOpen) return
 
     dispatch(setCurrentUnit({
-      id: unitId,
-      name: unitName,
-      isFirstUnit: units[0]._id === unitId
+      id: unit._id,
+      name: unit.name,
+      isFirstUnit: String(units[0]?._id) === String(unit._id)
     }))
-    navigate(`/units/${courseId}/section/${unitId}`)
+    navigate(`/units/${courseId}/section/${unit._id}`)
   }
+
+  const listLoading = isLoading || !unlockView
 
   const unitsContent = (
     <Box sx={{ px: isMobile ? '12px' : '24px', py: '24px', bgcolor: 'white' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
         <CardMedia
           component='img'
-          image={currentCourse?.image || '/background-images/1.jpg'}
+          image={courseImage}
           alt='Course Image'
           sx={{
             width: 100,
@@ -161,11 +128,15 @@ const Units = () => {
             fontWeight: 'bold'
           }}
         >
-          {currentCourse?.name || 'Course Name Not Available'}
+          {listLoading ? <Skeleton width={220} /> : courseName}
         </Typography>
       </Box>
 
-      {isLoading ? (
+      {isError ? (
+        <Typography color='error'>
+          {error?.response?.data?.message || 'Could not load unit unlock status. Please refresh.'}
+        </Typography>
+      ) : listLoading ? (
         [...Array(3)].map((_, index) => (
           <Box key={index} sx={{ mb: 3 }}>
             <Skeleton variant="rectangular" height={80} sx={{ borderRadius: '6px', mb: 1 }} />
@@ -178,13 +149,13 @@ const Units = () => {
           </Box>
         ))
       ) : (
-        units?.map((unit) => {
-          const isUnlocked = isUnitUnlocked(unit._id)
-          const isCompleted = isUnitCompleted(unit._id)
+        units.map((unit) => {
+          const isUnlocked = Boolean(unit.canOpen)
+          const isCompleted = Boolean(unit.completed)
           return (
             <ListItem
               key={unit._id}
-              onClick={() => handleUnitClick(unit._id, unit.name)}
+              onClick={() => handleUnitClick(unit)}
               sx={{
                 pl: '80px',
                 pr: 2,
@@ -245,7 +216,7 @@ const Units = () => {
                     mt: 1
                   }}
                 >
-                  (Sections: {unit.sections.length})
+                  (Sections: {unit.sections?.length || 0})
                 </Typography>
               </Box>
               {isUnlocked ? (
@@ -264,13 +235,14 @@ const Units = () => {
     </Box>
   )
 
+  const pageTitle = courseName || 'Course units'
+
   if (isMobile) {
-    // Mobile: Only units, no calendar
     return (
       <Box>
         <PageChrome
           kicker="Learning"
-          title={currentCourse?.name || 'Course units'}
+          title={pageTitle}
           actions={
             <Typography
               variant="body2"
@@ -301,13 +273,12 @@ const Units = () => {
     )
   }
 
-  // Tablet and desktop: keep current layout
   return (
     <Grid container spacing={2}>
       <Grid size={12}>
         <PageChrome
           kicker="Learning"
-          title={currentCourse?.name || 'Course units'}
+          title={pageTitle}
           actions={
             <Typography
               variant="body2"

@@ -1,10 +1,23 @@
 import StudentProgress from '../models/studentProgress.js'
 
 import { handleError } from '../utils/errorHandler.js'
+import { assertSectionCanOpen } from '../utils/unlockAccess.js'
 
 export const getStudentProgress = async (req, res) => {
   try {
     const { studentId, courseId, unitId, sectionId } = req.params
+
+    try {
+      await assertSectionCanOpen({ studentId, courseId, unitId, sectionId })
+    } catch (accessError) {
+      if (accessError.statusCode) {
+        return res.status(accessError.statusCode).json({
+          success: false,
+          message: accessError.message
+        })
+      }
+      throw accessError
+    }
 
     let progress = await StudentProgress.findOne({
       studentId,
@@ -38,6 +51,18 @@ export const updateStudentProgress = async (req, res) => {
   try {
     const { studentId, courseId, unitId, sectionId } = req.params
     const { resourceId, resourceNumber, mcqData } = req.body
+
+    try {
+      await assertSectionCanOpen({ studentId, courseId, unitId, sectionId })
+    } catch (accessError) {
+      if (accessError.statusCode) {
+        return res.status(accessError.statusCode).json({
+          success: false,
+          message: accessError.message
+        })
+      }
+      throw accessError
+    }
 
     if (!resourceId) {
       return res.status(400).json({
