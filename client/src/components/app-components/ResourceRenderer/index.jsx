@@ -2,6 +2,7 @@ import { Box, Typography } from '@mui/material'
 import VideoRenderer from './components/VideoRenderer'
 import ImageRenderer from './components/ImageRenderer'
 import AudioPlayer from './components/common/AudioPlayer'
+import BlurUpImage from './components/common/BlurUpImage'
 import PdfRenderer from './components/PdfRenderer'
 import PptRenderer from './components/PptRenderer'
 import TextRenderer from './components/TextRenderer'
@@ -62,19 +63,19 @@ const ResourceRenderer = ({
               <Box
                 sx={{
                   width: '100%',
+                  height: '55vh',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  p: 1
                 }}
               >
-                <img
+                <BlurUpImage
                   src={signedUrls[resource.content.backgroundImage]}
                   alt={resource.name}
-                  style={{
-                    maxWidth: '100%',
-                    maxHeight: '100%',
-                    objectFit: 'contain'
-                  }}
+                  maxWidth="100%"
+                  maxHeight="100%"
+                  borderRadius="8px"
                 />
               </Box>
             )}

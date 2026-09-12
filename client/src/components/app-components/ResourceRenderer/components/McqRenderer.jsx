@@ -1,6 +1,7 @@
-import { Box, Typography, Paper, Button, Alert } from '@mui/material'
+import { Box, Typography, Paper, Button } from '@mui/material'
 import { NavigateNext } from '@mui/icons-material'
 import AudioPlayer from './common/AudioPlayer'
+import BlurUpImage from './common/BlurUpImage'
 
 const McqRenderer = ({
   resource,
@@ -9,119 +10,180 @@ const McqRenderer = ({
   onSubmit,
   onNext,
   isLastResource,
+  submitButtonText = 'Submit',
   signedUrls
 }) => {
   const { selectedAnswers, hasSubmitted, isCorrect, attempts } = state
   const alphabet = ['A', 'B', 'C', 'D', 'E', 'F']
+  const options = resource.content?.mcq?.options || []
+  const hasImage = Boolean(
+    resource.content?.mcq?.imageFile && signedUrls?.[resource.content.mcq.imageFile]
+  )
+  const hasAudio = Boolean(
+    resource.content?.mcq?.audioFile && signedUrls?.[resource.content.mcq.audioFile]
+  )
 
   const getOptionStyle = (option) => {
     if (!hasSubmitted) {
       const isSelected = selectedAnswers.includes(option)
-      console.log('Option:', option, 'Selected Answers:', selectedAnswers, 'Is Selected:', isSelected)
       return {
-        border: isSelected
-          ? '2px solid #3366CC'
-          : '1px solid #ddd'
+        border: isSelected ? '2px solid' : '1px solid',
+        borderColor: isSelected ? 'primary.main' : 'rgba(10, 37, 64, 0.16)',
+        bgcolor: isSelected ? 'rgba(31, 126, 194, 0.08)' : '#fff'
       }
     }
 
     const isSelected = selectedAnswers.includes(option)
     const isCorrectOption = resource.content.mcq.correctAnswers.includes(option)
 
-    if (isCorrect) {
-      if (isCorrectOption) {
-        return { bgcolor: '#4CAF50', color: 'white' }
-      }
-    } else {
-      if (isSelected) {
-        return { bgcolor: '#f44336', color: 'white' }
-      }
+    if (isCorrect && isCorrectOption) {
+      return { bgcolor: 'success.main', color: '#fff', border: '1px solid transparent' }
     }
 
-    return { border: '1px solid #ddd' }
+    if (!isCorrect && isSelected) {
+      return { bgcolor: 'error.main', color: '#fff', border: '1px solid transparent' }
+    }
+
+    if (state.completed && isCorrectOption) {
+      return { bgcolor: 'success.main', color: '#fff', border: '1px solid transparent' }
+    }
+
+    return {
+      border: '1px solid rgba(10, 37, 64, 0.16)',
+      bgcolor: '#fff'
+    }
   }
 
-  if (state.completed && !hasSubmitted) {
+  const renderOptions = (readOnly = false) => (
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+        gap: 1,
+        flex: 1,
+        minHeight: 0,
+        alignContent: 'start'
+      }}
+    >
+      {options.map((option, index) => (
+        <Paper
+          key={`${option}-${index}`}
+          elevation={0}
+          sx={{
+            px: 1.25,
+            py: 1,
+            cursor: readOnly || hasSubmitted ? 'default' : 'pointer',
+            minHeight: 44,
+            display: 'flex',
+            alignItems: 'center',
+            ...getOptionStyle(option),
+            '&:hover':
+              readOnly || hasSubmitted
+                ? undefined
+                : { bgcolor: 'rgba(10, 37, 64, 0.04)' }
+          }}
+          onClick={() => {
+            if (readOnly || hasSubmitted) return
+            actions.selectAnswer(option, resource.content.mcq.numberOfCorrectAnswers)
+          }}
+        >
+          <Typography
+            sx={{
+              fontSize: 14,
+              fontWeight: 600,
+              lineHeight: 1.35,
+              wordBreak: 'break-word'
+            }}
+          >
+            {`${alphabet[index]}. ${option}`}
+          </Typography>
+        </Paper>
+      ))}
+    </Box>
+  )
+
+  const renderActions = () => {
+    if (state.completed && !hasSubmitted) {
+      if (isLastResource) return null
+      return (
+        <Button
+          variant="contained"
+          color="primary"
+          size="small"
+          startIcon={<NavigateNext />}
+          onClick={onNext}
+        >
+          Next
+        </Button>
+      )
+    }
+
+    if (!hasSubmitted) {
+      return (
+        <Button
+          variant="contained"
+          size="small"
+          onClick={onSubmit}
+          disabled={
+            selectedAnswers.length !== resource.content.mcq.numberOfCorrectAnswers
+          }
+        >
+          {submitButtonText}
+        </Button>
+      )
+    }
 
     return (
-      <Box sx={{ p: 3 }}>
-        {/* MCQ Audio */}
-        {resource.content.mcq?.audioFile && signedUrls[resource.content.mcq.audioFile] && (
-          <Box sx={{ mb: 3 }}>
-            <AudioPlayer
-              src={signedUrls[resource.content.mcq.audioFile]}
-              repeatCount={1}
-            />
-          </Box>
-        )}
-        
-        <Typography variant="h6" gutterBottom sx={{ color: '#000', mb: 3 }}>
-          {resource.content.mcq.question}
-        </Typography>
-
-        <Alert severity="success" sx={{ mb: 3 }}>
-          You have already completed this MCQ correctly! You can proceed to the next one.
-        </Alert>
-
-        {/* Options and Image in horizontal layout */}
-        <Box sx={{ display: 'flex', gap: 3, mb: 3 }}>
-          {/* Options - Left 50% */}
-          <Box sx={{ flex: '0 0 50%', display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {resource.content.mcq.options.map((option, index) => (
-              <Paper
-                key={index}
-                sx={{
-                  p: 2,
-                  bgcolor: resource.content.mcq.correctAnswers.includes(option)
-                    ? 'success.main'
-                    : 'white',
-                  color: resource.content.mcq.correctAnswers.includes(option)
-                    ? 'white'
-                    : 'inherit',
-                }}
-              >
-                <Typography>{`${alphabet[index]}. ${option}`}</Typography>
-              </Paper>
-            ))}
-          </Box>
-
-          {/* MCQ Image - Right 50% */}
-          {resource.content.mcq?.imageFile && signedUrls[resource.content.mcq.imageFile] && (
-            <Box sx={{ flex: '0 0 50%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <img
-                src={signedUrls[resource.content.mcq.imageFile]}
-                alt="Question"
-                style={{ maxWidth: '100%', height: 'auto', objectFit: 'contain' }}
-              />
-            </Box>
-          )}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+        <Box
+          sx={{
+            px: 1.25,
+            py: 0.5,
+            borderRadius: '8px',
+            bgcolor: isCorrect ? 'rgba(46, 125, 50, 0.12)' : 'rgba(211, 47, 47, 0.12)',
+            color: isCorrect ? 'success.dark' : 'error.dark',
+            fontSize: 13,
+            fontWeight: 700
+          }}
+        >
+          {isCorrect ? 'Correct!' : 'Incorrect. Try again!'}
         </Box>
 
-        {/* Next button for already completed MCQs */}
-        {!isLastResource && (
+        {isCorrect && !isLastResource ? (
           <Button
             variant="contained"
             color="primary"
+            size="small"
             startIcon={<NavigateNext />}
-            onClick={() => {
-              onNext()
-            }}
-            sx={{ mt: 2 }}
+            onClick={onNext}
           >
             Next
           </Button>
+        ) : (
+          !isCorrect && (
+            <Button variant="outlined" size="small" onClick={() => actions.reset()}>
+              Try Again
+            </Button>
+          )
         )}
       </Box>
     )
   }
 
-
-
   return (
-    <Box sx={{ p: 3 }}>
-      {/* MCQ Audio */}
-      {resource.content.mcq?.audioFile && signedUrls[resource.content.mcq.audioFile] && (
-        <Box sx={{ mb: 3 }}>
+    <Box
+      sx={{
+        p: { xs: 1.5, md: 2 },
+        height: { xs: 'auto', md: 'min(62vh, 520px)' },
+        maxHeight: { md: '62vh' },
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 1.25,
+        overflow: 'hidden'
+      }}
+    >
+      {hasAudio && (
+        <Box sx={{ flexShrink: 0 }}>
           <AudioPlayer
             src={signedUrls[resource.content.mcq.audioFile]}
             repeatCount={1}
@@ -129,103 +191,95 @@ const McqRenderer = ({
         </Box>
       )}
 
-      <Typography variant="h6" gutterBottom sx={{ color: '#000', mb: 3 }}>
-        {resource.content.mcq.question}
-      </Typography>
-
-      {attempts > 0 && (
-        <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary' }}>
-          Attempts: {attempts}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 1,
+          flexShrink: 0
+        }}
+      >
+        <Typography
+          sx={{
+            color: 'secondary.dark',
+            fontWeight: 700,
+            fontSize: { xs: 15, md: 16 },
+            lineHeight: 1.35,
+            flex: 1
+          }}
+        >
+          {resource.content.mcq.question}
         </Typography>
+        {attempts > 0 && (
+          <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0, pt: 0.25 }}>
+            Attempts: {attempts}
+          </Typography>
+        )}
+      </Box>
+
+      {state.completed && !hasSubmitted && (
+        <Box
+          sx={{
+            px: 1.25,
+            py: 0.5,
+            borderRadius: '8px',
+            bgcolor: 'rgba(46, 125, 50, 0.12)',
+            color: 'success.dark',
+            fontSize: 13,
+            fontWeight: 600,
+            flexShrink: 0
+          }}
+        >
+          Already completed — you can continue.
+        </Box>
       )}
 
-      {/* Options and Image in horizontal layout */}
-      <Box sx={{ display: 'flex', gap: 3, mb: 3 }}>
-        {/* Options - Left 50% */}
-        <Box sx={{ flex: '0 0 50%', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {resource.content.mcq.options.map((option, index) => (
-            <Paper
-              key={index}
-              sx={{
-                p: 2,
-                cursor: hasSubmitted ? 'default' : 'pointer',
-                ...getOptionStyle(option),
-                '&:hover': {
-                  bgcolor: hasSubmitted
-                    ? getOptionStyle(option).bgcolor || 'white'
-                    : '#f5f5f5'
-                }
-              }}
-              onClick={() => {
-                console.log('Clicked option:', option, 'Index:', index)
-                actions.selectAnswer(option, resource.content.mcq.numberOfCorrectAnswers)
-              }}
-            >
-              <Typography>{`${alphabet[index]}. ${option}`}</Typography>
-            </Paper>
-          ))}
-        </Box>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: hasImage ? 'row' : 'column' },
+          gap: 1.5,
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden'
+        }}
+      >
+        {renderOptions(state.completed && !hasSubmitted)}
 
-        {/* MCQ Image - Right 50% */}
-        {resource.content.mcq?.imageFile && signedUrls[resource.content.mcq.imageFile] && (
-          <Box sx={{ flex: '0 0 50%', display: 'flex', justifyContent: 'center', alignItems: 'center', pr: 3 }}>
-            <img
+        {hasImage && (
+          <Box
+            sx={{
+              flex: { md: '0 0 42%' },
+              minHeight: { xs: 140, md: 0 },
+              maxHeight: { xs: 180, md: '100%' },
+              overflow: 'hidden'
+            }}
+          >
+            <BlurUpImage
               src={signedUrls[resource.content.mcq.imageFile]}
               alt="Question"
-              style={{ maxWidth: '100%', height: 'auto' }}
+              maxHeight="100%"
+              borderRadius="10px"
             />
           </Box>
         )}
       </Box>
 
-      {!hasSubmitted ? (
-        <Button
-          variant="contained"
-          onClick={() => {
-            onSubmit()
-          }}
-          sx={{ mt: 2 }}
-          disabled={selectedAnswers.length !== resource.content.mcq.numberOfCorrectAnswers}
-        >
-          Submit
-        </Button>
-      ) : (
-        <Box sx={{ mt: 2 }}>
-          <Alert severity={isCorrect ? 'success' : 'error'}>
-            {isCorrect ? 'Correct!' : 'Incorrect. Try again!'}
-          </Alert>
-
-          {/* Show Next button if answer is correct and not the last resource */}
-          {isCorrect && !isLastResource ? (
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<NavigateNext />}
-              onClick={() => {
-                onNext()
-              }}
-              sx={{ mt: 1 }}
-            >
-              Next
-            </Button>
-          ) : (
-            /* Only show Try Again button if the answer was incorrect */
-            !isCorrect && (
-              <Button
-                variant="outlined"
-                onClick={() => {
-                  actions.reset()
-                }}
-                sx={{ mt: 1 }}
-              >
-                Try Again
-              </Button>
-            )
-          )}
-        </Box>
-      )}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          gap: 1,
+          flexShrink: 0,
+          pt: 0.5
+        }}
+      >
+        {renderActions()}
+      </Box>
     </Box>
   )
 }
 
-export default McqRenderer 
+export default McqRenderer

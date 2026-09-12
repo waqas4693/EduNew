@@ -1,4 +1,5 @@
 import { Box } from '@mui/material'
+import BlurUpImage from './common/BlurUpImage'
 
 const PptRenderer = ({ signedUrl, signedUrls, resource }) => {
   return (
@@ -34,15 +35,12 @@ const PptRenderer = ({ signedUrl, signedUrls, resource }) => {
             p: 2
           }}
         >
-          <img
+          <BlurUpImage
             src={signedUrls[resource.content.backgroundImage]}
             alt="Presentation Preview"
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain',
-              borderRadius: '8px'
-            }}
+            maxWidth="100%"
+            maxHeight="100%"
+            borderRadius="8px"
           />
         </Box>
       )}

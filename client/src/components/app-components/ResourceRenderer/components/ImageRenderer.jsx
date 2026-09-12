@@ -1,4 +1,5 @@
 import { Box } from '@mui/material'
+import BlurUpImage from './common/BlurUpImage'
 
 const ImageRenderer = ({ signedUrl, resourceName }) => {
   return (
@@ -8,21 +9,20 @@ const ImageRenderer = ({ signedUrl, resourceName }) => {
         height: '70vh',
         display: 'flex',
         justifyContent: 'center',
-        alignItems: 'center'
+        alignItems: 'center',
+        p: 1
       }}
     >
-      <img
+      <BlurUpImage
         src={signedUrl}
         alt={resourceName}
         onContextMenu={(e) => e.preventDefault()}
-        style={{
-          maxWidth: '100%',
-          maxHeight: '100%',
-          objectFit: 'contain'
-        }}
+        maxWidth="100%"
+        maxHeight="100%"
+        borderRadius="8px"
       />
     </Box>
   )
 }
 
-export default ImageRenderer 
+export default ImageRenderer

@@ -1,5 +1,6 @@
 import { Box, Typography, Accordion, AccordionSummary, AccordionDetails } from '@mui/material'
 import { ExpandMore } from '@mui/icons-material'
+import BlurUpImage from './common/BlurUpImage'
 
 const TextRenderer = ({ signedUrls, resource }) => {
   return (
@@ -25,15 +26,12 @@ const TextRenderer = ({ signedUrls, resource }) => {
             mb: 3
           }}
         >
-          <img
+          <BlurUpImage
             src={signedUrls[resource.content.backgroundImage]}
-            alt='Background'
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain',
-              borderRadius: '8px'
-            }}
+            alt="Background"
+            maxWidth="100%"
+            maxHeight="100%"
+            borderRadius="8px"
           />
         </Box>
       )}
