@@ -13,13 +13,15 @@ const updateProgress = async ({
   sectionId,
   resourceId, 
   resourceNumber, 
-  mcqData // Optional parameter for MCQ updates
+  mcqData,
+  touchOnly
 }) => {
 
   const requestBody = {
     resourceId,
     resourceNumber,
-    ...(mcqData && { mcqData }) // Only include mcqData if it exists
+    ...(mcqData && { mcqData }),
+    ...(touchOnly ? { touchOnly: true } : {})
   }
 
   const response = await postData(
@@ -76,31 +78,13 @@ export const useUpdateProgress = () => {
   } = useMutation({
     mutationFn: updateProgress,
     onSuccess: (data, variables) => {
-        // Use IDs from mutation variables instead of API response
-        const { studentId, courseId, unitId, sectionId } = variables
-        
-        // Commenting this out because the staleTime which is 
-        // for how long the cache data will be used is 0 and for 
-        // every resource loaded in the learner frame the 
-        // getStudentProgress function is called therefore the idea 
-        // of using the updated data from the response of 
-        // updateProgress API is not useful at the moment this 
-        // will be used if the staleTime is set to something other that 0
+      const { studentId, courseId, unitId, sectionId, touchOnly } = variables
 
-        // queryClient.setQueryData(
-        //   ['progress', studentId, courseId, unitId, sectionId],
-        //   (oldData) => ({
-        //     ...oldData,
-        //     data: {
-        //       ...oldData?.data,
-        //       ...data.data.progress
-        //     }
-        //   })
-        // )
-        
-        // Then invalidate to ensure we have the latest data
-        queryClient.invalidateQueries(['progress', studentId, courseId, unitId, sectionId])
-      }
+      // Bookmark-only updates should not force a progress refetch loop
+      if (touchOnly) return
+
+      queryClient.invalidateQueries(['progress', studentId, courseId, unitId, sectionId])
+    }
   })
 
   return {

@@ -11,7 +11,7 @@ import {
 } from '@mui/material'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { useResources } from '../../hooks/useResources'
+import { useResources, RESOURCES_PAGE_SIZE, loadResourcesUntilId, ensureResourcesLoadedThroughPage } from '../../hooks/useResources'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useSignedUrls } from '../../hooks/useSignedUrls'
 import { ChevronLeft, ChevronRight, OpenInNew } from '@mui/icons-material'
@@ -37,6 +37,8 @@ const LearnerFrame = () => {
   const [unlockSucceeded, setUnlockSucceeded] = useState(false)
 
   const unlockInFlightRef = useRef(false)
+  const hasResumedRef = useRef(false)
+  const [resumeReady, setResumeReady] = useState(false)
 
   const {
     resources,
@@ -190,12 +192,27 @@ const LearnerFrame = () => {
   }, [isAtLastLoadedResource, areAllLoadedResourcesComplete, unlockSection])
 
   useEffect(() => {
-    if (!currentResource || !user?.studentId || progressLoading) return
+    if (!currentResource || !user?.studentId || progressLoading || !resumeReady) return
 
     const resourceId = currentResource._id
     const resourceType = currentResource.resourceType
     const isViewed = isResourceViewed(resourceId)
     const alreadyRecorded = recordedViews.has(resourceId)
+
+    // Bookmark MCQ position for resume without marking it complete/viewed
+    if (resourceType === 'MCQ' && !alreadyRecorded) {
+      setRecordedViews((prev) => new Set(prev).add(resourceId))
+      updateProgressMutation.mutate({
+        resourceId,
+        resourceNumber: currentResource.number,
+        studentId: user.studentId,
+        courseId,
+        unitId,
+        sectionId,
+        touchOnly: true
+      })
+      return
+    }
 
     if (resourceType !== 'MCQ' && !isViewed && !alreadyRecorded) {
       setRecordedViews((prev) => new Set(prev).add(resourceId))
@@ -237,23 +254,120 @@ const LearnerFrame = () => {
     progress?.viewedResources,
     progressLoading,
     isAtLastLoadedResource,
-    showSectionCompletion
+    showSectionCompletion,
+    resumeReady
   ])
 
-  useEffect(() => {
-    if (!progress?.lastAccessedResource || currentIndex !== 0 || !resources.length || progressLoading) {
-      return
+  const resolveResumeTargetId = useCallback((progressSnapshot) => {
+    if (!progressSnapshot) return null
+
+    if (progressSnapshot.lastAccessedResource) {
+      return String(progressSnapshot.lastAccessedResource)
     }
 
-    const lastAccessedResourceId = progress.lastAccessedResource
-    const resourceIndex = resources.findIndex(
-      (resource) => String(resource._id) === String(lastAccessedResourceId)
+    const viewed = [...(progressSnapshot.viewedResources || [])].sort(
+      (a, b) => new Date(b.viewedAt || 0) - new Date(a.viewedAt || 0)
     )
-
-    if (resourceIndex !== -1 && resourceIndex !== currentIndex) {
-      setCurrentIndex(resourceIndex)
+    if (viewed[0]?.resourceId) {
+      return String(viewed[0].resourceId)
     }
-  }, [progress?.lastAccessedResource, resources, progressLoading, currentIndex])
+
+    const mcqs = [...(progressSnapshot.mcqProgress || [])].sort(
+      (a, b) => new Date(b.lastAttemptAt || b.completedAt || 0) - new Date(a.lastAttemptAt || a.completedAt || 0)
+    )
+    if (mcqs[0]?.resourceId) {
+      return String(mcqs[0].resourceId)
+    }
+
+    return null
+  }, [])
+
+  const findResourceNumberHint = useCallback((progressSnapshot, resourceId) => {
+    if (!progressSnapshot || !resourceId) return null
+
+    const viewed = (progressSnapshot.viewedResources || []).find(
+      (item) => String(item.resourceId) === String(resourceId)
+    )
+    if (viewed?.resourceNumber) return viewed.resourceNumber
+
+    const mcq = (progressSnapshot.mcqProgress || []).find(
+      (item) => String(item.resourceId) === String(resourceId)
+    )
+    if (mcq?.resourceNumber) return mcq.resourceNumber
+
+    return null
+  }, [])
+
+  // Resume at last viewed / attempted resource (loads later pages when needed)
+  useEffect(() => {
+    let cancelled = false
+
+    const resume = async () => {
+      if (!sectionId || hasResumedRef.current) return
+      if (progressLoading || resourcesLoading) return
+      if (progress === undefined) return
+
+      const targetId = resolveResumeTargetId(progress)
+      if (!targetId) {
+        hasResumedRef.current = true
+        setResumeReady(true)
+        return
+      }
+
+      try {
+        const numberHint = findResourceNumberHint(progress, targetId)
+        if (numberHint) {
+          const targetPage = Math.max(1, Math.ceil(Number(numberHint) / RESOURCES_PAGE_SIZE))
+          await ensureResourcesLoadedThroughPage(queryClient, sectionId, targetPage)
+          if (cancelled) return
+        }
+
+        const located = await loadResourcesUntilId(queryClient, sectionId, targetId)
+        if (cancelled) return
+
+        if (located) {
+          await ensureResourcesLoadedThroughPage(queryClient, sectionId, located.page)
+          if (cancelled) return
+
+          const merged = []
+          for (let page = 1; page <= located.page; page += 1) {
+            const pageData = queryClient.getQueryData(['resources', sectionId, page])
+            if (pageData?.resources?.length) {
+              merged.push(...pageData.resources)
+            }
+          }
+
+          const mergedIndex = merged.findIndex(
+            (resource) => String(resource._id) === String(targetId)
+          )
+
+          setCurrentPage(located.page)
+          setCurrentIndex(mergedIndex !== -1 ? mergedIndex : located.index)
+        }
+      } catch (error) {
+        console.error('Error resuming learner frame position:', error)
+      } finally {
+        if (!cancelled) {
+          hasResumedRef.current = true
+          setResumeReady(true)
+        }
+      }
+    }
+
+    resume()
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    sectionId,
+    progress,
+    progressLoading,
+    resourcesLoading,
+    queryClient,
+    resolveResumeTargetId,
+    findResourceNumberHint
+  ])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -265,9 +379,11 @@ const LearnerFrame = () => {
     }
   }, [refreshExpiredUrls])
 
-  // Reset unlock flags when switching sections
+  // Reset when switching sections
   useEffect(() => {
     unlockInFlightRef.current = false
+    hasResumedRef.current = false
+    setResumeReady(false)
     setUnlockSucceeded(false)
     setShowSectionCompletion(false)
     setUnlockError(null)
@@ -375,7 +491,7 @@ const LearnerFrame = () => {
     navigate(`/units/${courseId}/section/${unitId}`)
   }
 
-  if (resourcesLoading || urlsLoading || progressLoading) {
+  if (resourcesLoading || progressLoading || !resumeReady || urlsLoading) {
     return (
       <Paper
         elevation={5}
@@ -399,7 +515,7 @@ const LearnerFrame = () => {
           }}
         />
         <Typography variant='h6' color="text.secondary">
-          Loading learning materials…
+          {resumeReady ? 'Loading learning materials…' : 'Resuming where you left off…'}
         </Typography>
       </Paper>
     )
@@ -587,7 +703,7 @@ const LearnerFrame = () => {
             </Box>
           </Box>
 
-          <Box sx={{ bgcolor: 'white' }}>
+          <Box sx={{ bgcolor: 'white', overflow: 'hidden' }}>
             {!showSectionCompletion ? (
               <ResourceRenderer
                 key={`resource-${currentResource._id}-${currentIndex}`}

@@ -50,7 +50,7 @@ export const getStudentProgress = async (req, res) => {
 export const updateStudentProgress = async (req, res) => {
   try {
     const { studentId, courseId, unitId, sectionId } = req.params
-    const { resourceId, resourceNumber, mcqData } = req.body
+    const { resourceId, resourceNumber, mcqData, touchOnly } = req.body
 
     try {
       await assertSectionCanOpen({ studentId, courseId, unitId, sectionId })
@@ -86,6 +86,18 @@ export const updateStudentProgress = async (req, res) => {
         sectionId,
         mcqProgress: [],
         viewedResources: []
+      })
+    }
+
+    // Resume bookmark only — do not mark the resource viewed/completed
+    if (touchOnly) {
+      progress.lastAccessedResource = resourceId
+      progress.lastAccessedAt = new Date()
+      await progress.save()
+
+      return res.status(200).json({
+        success: true,
+        progress
       })
     }
 

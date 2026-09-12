@@ -1,7 +1,7 @@
 import { Box, Typography } from '@mui/material'
 import { useRef, useEffect, useState } from 'react'
 
-const AudioPlayer = ({ src, repeatCount = 1, onPlaybackComplete }) => {
+const AudioPlayer = ({ src, repeatCount = 1, onPlaybackComplete, compact = false }) => {
   
   const audioRef = useRef(null)
   const [playCount, setPlayCount] = useState(0)
@@ -60,8 +60,8 @@ const AudioPlayer = ({ src, repeatCount = 1, onPlaybackComplete }) => {
   return (
     <Box
       sx={{
-        m: 1,
-        p: 1,
+        m: compact ? 0 : 1,
+        p: compact ? 0.5 : 1,
         display: 'flex',
         bgcolor: '#f5f5f5',
         borderRadius: '8px',

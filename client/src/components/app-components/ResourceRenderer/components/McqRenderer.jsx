@@ -71,9 +71,9 @@ const McqRenderer = ({
           elevation={0}
           sx={{
             px: 1.5,
-            py: 1.25,
+            py: 1,
             cursor: readOnly || hasSubmitted ? 'default' : 'pointer',
-            minHeight: 52,
+            minHeight: 48,
             display: 'flex',
             alignItems: 'center',
             ...getOptionStyle(option),
@@ -173,13 +173,14 @@ const McqRenderer = ({
   return (
     <Box
       sx={{
-        p: { xs: 1.5, md: 2 },
-        height: { xs: 'auto', md: 'min(62vh, 520px)' },
-        maxHeight: { md: '62vh' },
+        p: { xs: 1, md: 1.5 },
+        height: { xs: 'auto', md: 'min(52vh, 440px)' },
+        maxHeight: { md: '52vh' },
         display: 'flex',
         flexDirection: 'column',
-        gap: 1.25,
-        overflow: 'hidden'
+        gap: 1,
+        overflow: 'hidden',
+        boxSizing: 'border-box'
       }}
     >
       {hasAudio && (
@@ -187,6 +188,7 @@ const McqRenderer = ({
           <AudioPlayer
             src={signedUrls[resource.content.mcq.audioFile]}
             repeatCount={1}
+            compact
           />
         </Box>
       )}
@@ -205,7 +207,7 @@ const McqRenderer = ({
             color: 'secondary.dark',
             fontWeight: 700,
             fontSize: { xs: 15, md: 16 },
-            lineHeight: 1.35,
+            lineHeight: 1.3,
             flex: 1
           }}
         >
@@ -239,7 +241,7 @@ const McqRenderer = ({
         sx={{
           display: 'flex',
           flexDirection: { xs: 'column', md: hasImage ? 'row' : 'column' },
-          gap: 1.5,
+          gap: 1,
           flex: 1,
           minHeight: 0,
           overflow: 'hidden'
@@ -250,9 +252,9 @@ const McqRenderer = ({
         {hasImage && (
           <Box
             sx={{
-              flex: { md: '0 0 42%' },
-              minHeight: { xs: 140, md: 0 },
-              maxHeight: { xs: 180, md: '100%' },
+              flex: { md: '0 0 38%' },
+              minHeight: { xs: 120, md: 0 },
+              maxHeight: { xs: 160, md: '100%' },
               overflow: 'hidden'
             }}
           >
@@ -272,8 +274,7 @@ const McqRenderer = ({
           alignItems: 'center',
           justifyContent: 'flex-start',
           gap: 1,
-          flexShrink: 0,
-          pt: 0.5
+          flexShrink: 0
         }}
       >
         {renderActions()}
